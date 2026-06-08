@@ -3,6 +3,7 @@ import type { CanvasRenderingTarget2D, BitmapCoordinatesRenderingScope } from 'f
 
 import type { Curve } from './curve';
 import { applyStyle, drawControlPoints } from '../../rendering/canvas-utils';
+import { getDrawingConfig } from '../../core/config';
 
 export class CurvePaneView implements IPrimitivePaneView {
   private _renderer: CurvePaneRenderer;
@@ -112,10 +113,10 @@ class CurvePaneRenderer implements IPrimitivePaneRenderer {
     const state = this._drawing.state;
     if (state === 'selected' || state === 'editing') {
       const controlPoints = [
-        { index: 0, x: start.x, y: start.y, radius: 6 },
-        { index: 1, x: control1.x, y: control1.y, radius: 6 },
-        { index: 2, x: control2.x, y: control2.y, radius: 6 },
-        { index: 3, x: end.x, y: end.y, radius: 6 },
+        { index: 0, x: start.x, y: start.y, radius: getDrawingConfig().controlPointRadius },
+        { index: 1, x: control1.x, y: control1.y, radius: getDrawingConfig().controlPointRadius },
+        { index: 2, x: control2.x, y: control2.y, radius: getDrawingConfig().controlPointRadius },
+        { index: 3, x: end.x, y: end.y, radius: getDrawingConfig().controlPointRadius },
       ];
       drawControlPoints(ctx, controlPoints, null, pixelRatio);
     }

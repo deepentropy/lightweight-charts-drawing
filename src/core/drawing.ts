@@ -21,6 +21,7 @@ import type {
   ControlPoint,
 } from './types';
 import { DEFAULT_DRAWING_STYLE } from './types';
+import { getDrawingConfig } from './config';
 import type { Geometry } from './geometry';
 
 /**
@@ -257,7 +258,7 @@ export abstract class Drawing implements IDrawing {
           index: i,
           x: pixel.x,
           y: pixel.y,
-          radius: 6,
+          radius: getDrawingConfig().controlPointRadius,
         });
       }
     }
