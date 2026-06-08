@@ -4,6 +4,7 @@ import type { CanvasRenderingTarget2D, BitmapCoordinatesRenderingScope } from 'f
 import type { Brush } from './brush';
 import type { Point } from '../../core/types';
 import { applyStyle, drawControlPoints } from '../../rendering/canvas-utils';
+import { getDrawingConfig } from '../../core/config';
 
 export class BrushPaneView implements IPrimitivePaneView {
   private _renderer: BrushPaneRenderer;
@@ -89,8 +90,8 @@ class BrushPaneRenderer implements IPrimitivePaneRenderer {
     if (state === 'selected' || state === 'editing') {
       // Only show first and last control points for brush
       const controlPoints = [
-        { index: 0, x: points[0].x, y: points[0].y, radius: 6 },
-        { index: points.length - 1, x: points[points.length - 1].x, y: points[points.length - 1].y, radius: 6 },
+        { index: 0, x: points[0].x, y: points[0].y, radius: getDrawingConfig().controlPointRadius },
+        { index: points.length - 1, x: points[points.length - 1].x, y: points[points.length - 1].y, radius: getDrawingConfig().controlPointRadius },
       ];
       drawControlPoints(ctx, controlPoints, null, pixelRatio);
     }

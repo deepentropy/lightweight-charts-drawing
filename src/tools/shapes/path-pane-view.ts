@@ -4,6 +4,7 @@ import type { CanvasRenderingTarget2D, BitmapCoordinatesRenderingScope } from 'f
 import type { Path } from './path';
 import type { Point } from '../../core/types';
 import { applyStyle, drawControlPoints } from '../../rendering/canvas-utils';
+import { getDrawingConfig } from '../../core/config';
 
 export class PathPaneView implements IPrimitivePaneView {
   private _renderer: PathPaneRenderer;
@@ -89,7 +90,7 @@ class PathPaneRenderer implements IPrimitivePaneRenderer {
         index: i,
         x: p.x,
         y: p.y,
-        radius: 6,
+        radius: getDrawingConfig().controlPointRadius,
       }));
       drawControlPoints(ctx, controlPoints, null, pixelRatio);
     }

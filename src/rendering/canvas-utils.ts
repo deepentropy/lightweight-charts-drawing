@@ -68,8 +68,11 @@ export function drawControlPoint(
 ): void {
   const x = point.x * pixelRatio;
   const y = point.y * pixelRatio;
-  const radius = 4 * pixelRatio;
-  const ringWidth = 1.5 * pixelRatio;
+  // Visual radius driven by the control point's own radius (configurable via
+  // setDrawingConfig({ controlPointRadius })). Falls back to 4 if unset.
+  const r = point.radius ?? 4;
+  const radius = r * pixelRatio;
+  const ringWidth = Math.max(1.5, r * 0.25) * pixelRatio;
 
   // Dark filled center
   ctx.beginPath();

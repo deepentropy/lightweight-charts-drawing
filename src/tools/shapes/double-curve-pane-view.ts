@@ -3,6 +3,7 @@ import type { CanvasRenderingTarget2D, BitmapCoordinatesRenderingScope } from 'f
 
 import type { DoubleCurve } from './double-curve';
 import { applyStyle, drawControlPoints } from '../../rendering/canvas-utils';
+import { getDrawingConfig } from '../../core/config';
 
 export class DoubleCurvePaneView implements IPrimitivePaneView {
   private _renderer: DoubleCurvePaneRenderer;
@@ -140,9 +141,9 @@ class DoubleCurvePaneRenderer implements IPrimitivePaneRenderer {
     const state = this._drawing.state;
     if (state === 'selected' || state === 'editing') {
       const controlPoints = [
-        { index: 0, x: start.x, y: start.y, radius: 6 },
-        { index: 1, x: middle.x, y: middle.y, radius: 6 },
-        { index: 2, x: end.x, y: end.y, radius: 6 },
+        { index: 0, x: start.x, y: start.y, radius: getDrawingConfig().controlPointRadius },
+        { index: 1, x: middle.x, y: middle.y, radius: getDrawingConfig().controlPointRadius },
+        { index: 2, x: end.x, y: end.y, radius: getDrawingConfig().controlPointRadius },
       ];
       drawControlPoints(ctx, controlPoints, null, pixelRatio);
     }

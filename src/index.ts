@@ -35,6 +35,10 @@ export {
   type ControlPoint,
   // Constants
   DEFAULT_DRAWING_STYLE,
+  // Global config (control point radius, …)
+  getDrawingConfig,
+  setDrawingConfig,
+  type DrawingConfigOptions,
 } from './core';
 
 // ============ Geometry ============
