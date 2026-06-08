@@ -22,7 +22,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "demo": "vite --config vite.demo.config.ts",
-    "build:demo": "vite build --config vite.demo.config.ts"
+    "build:demo": "vite build --config vite.demo.config.ts",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "lightweight-charts": "^5.0.0"
