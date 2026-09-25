@@ -26,6 +26,8 @@ import { FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAU
 import type { Coords } from "../coords";
 import { positionLevels } from "./position";
 import { gannBox, gannFrame } from "./gann-square";
+import { gannFanDir } from "./gann-fan";
+import { pitchforkExtendRight, pitchforkGeom } from "./pitchfork";
 import { trendFibTimeLevels } from "./fib-time";
 import { priceNoteLabel } from "./price-note";
 import { rectangleTextLayout } from "./rectangle-text";
@@ -191,9 +193,6 @@ function positionHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | n
   return null;
 }
 
-/** Pitchfork geometry — mirrors DrawingsOverlay `pitchforkGeom` (kept local to
- *  avoid a circular import). pt0 = pivot, pt1/pt2 = prongs; variants shift the
- *  median origin (schiff / modified-schiff) or the tine anchors (inside). */
 /** A segment continued past its ends to beyond the pane (TV extendleft /
  *  extendright: the extended part hits like the line). */
 function extendHitSeg(l: Pt, r: Pt, extL: boolean, extR: boolean, big: number): [Pt, Pt] {
@@ -217,39 +216,14 @@ function inBand(cursor: Pt, a: Pt, b: Pt, n: Pt, lo: number, hi: number, extL: b
   return (extL || u >= 0) && (extR || u <= 1) && v >= Math.min(lo, hi) && v <= Math.max(lo, hi);
 }
 
-function pitchforkGeometry(
-  kind: string,
-  pts: Pt[],
-): { pivot: Pt; dir: Pt; mid: Pt; half: Pt } | null {
-  const [p1, p2, p3] = pts;
-  const mid = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
-  const half = { x: (p3.x - p2.x) / 2, y: (p3.y - p2.y) / 2 };
-  let pivot: Pt = p1;
-  let dir: Pt;
-  if (kind === "schiff-pitchfork") {
-    pivot = { x: p1.x, y: (p1.y + p2.y) / 2 };
-    dir = { x: mid.x - pivot.x, y: mid.y - pivot.y };
-  } else if (kind === "modified-schiff-pitchfork") {
-    pivot = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    dir = { x: mid.x - pivot.x, y: mid.y - pivot.y };
-  } else if (kind === "inside-pitchfork") {
-    const m01 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    pivot = mid;
-    dir = { x: p3.x - m01.x, y: p3.y - m01.y };
-  } else {
-    dir = { x: mid.x - pivot.x, y: mid.y - pivot.y };
-  }
-  if (Math.hypot(dir.x, dir.y) < 1e-6) return null;
-  return { pivot, dir, mid, half };
-}
 
 function pitchforkHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, height: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  const g = pitchforkGeometry(drawing.kind, pts);
+  const g = pitchforkGeom(drawing.kind, pts);
   if (!g) return null;
   const s = drawing.style;
-  const far = (o: Pt) => (g.dir.x <= 0 ? o : { x: width, y: o.y + g.dir.y * ((width - o.x) / g.dir.x) });
+  const far = (o: Pt) => pitchforkExtendRight(o, g.dir, width);
   // TV extendLines: the median and the level lines also run back.
   const big = (width + height) * 2;
   const dl = Math.hypot(g.dir.x, g.dir.y) || 1;
@@ -298,21 +272,18 @@ function fibExtHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
   return null;
 }
 
-/** Gann fan: every visible level ray is hit-testable (coeff scales the time
- *  leg - mirrors DrawingsOverlay gannFanDir). */
+/** Gann fan: every visible level ray is hit-testable (kinds/gann-fan
+ *  gannFanDir, as drawn). */
 function gannFanHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, height: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   const [a, b] = pts;
-  const dx = b.x - a.x || 1;
-  const dy = b.y - a.y;
   const big = (width + height) * 2;
   const levels = (drawing.style.levels ?? GANN_FAN_LEVEL_DEFAULTS).filter((l) => l.visible);
   for (const lvl of levels) {
-    const vx = dx * lvl.coeff;
-    const vy = dy;
-    const len = Math.hypot(vx, vy) || 1;
-    const e = { x: a.x + (vx / len) * big, y: a.y + (vy / len) * big };
+    const v = gannFanDir(a, b, lvl.coeff);
+    const len = Math.hypot(v.x, v.y) || 1;
+    const e = { x: a.x + (v.x / len) * big, y: a.y + (v.y / len) * big };
     if (distToSegment(cursor.x, cursor.y, a, e) <= HIT_TOLERANCE) return { hit: "body" };
   }
   return null;

@@ -9,6 +9,8 @@ import type { Drawing, DrawingStyle } from "../types";
 import { GANN_ARC_DEFAULTS, GANN_BOX_LEVEL_DEFAULTS, GANN_FAN_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, GANN_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS } from "../specs";
 import { tvTextLayout } from "../kinds/tv-text";
 import { gannArcPaths, gannArcs, gannBox, gannFanLines, gannFrame, gannLevelLines } from "../kinds/gann-square";
+import { gannFanDir } from "../kinds/gann-fan";
+import { pitchforkExtendRight, pitchforkGeom } from "../kinds/pitchfork";
 import type { Scene, SceneItem } from "./types";
 import { signedFixed, tvTextItems } from "./text";
 import { activeLevels, levelDash, levelFillOpacity, levelWidth } from "./levels";
@@ -71,15 +73,6 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
   for (const l of labels) items.push(tvTextItems(l, labelColor, s.bold, s.italic));
   items.push(...anchorsIf(selected, pts));
   return items;
-}
-
-/** Gann-fan ray direction for a level: coeff scales the time leg of the 1/1
- *  anchor move ("1/8" reaches the full dy in an eighth of the dt, the
- *  steepest ray; "8/1" the shallowest). */
-export function gannFanDir(a: Pt, b: Pt, coeff: number): Pt {
-  const dx = b.x - a.x || 1;
-  const dy = b.y - a.y;
-  return { x: dx * coeff, y: dy };
 }
 
 /** Gann fan (TV module 449964): a ray from p0 through each level's point
@@ -190,42 +183,6 @@ export function sceneGannBox(d: Drawing, pts: Pt[], selected: boolean, s: Drawin
   for (const [p, q] of fanLines) items.push({ t: "line", a: p, b: q, stroke: fans.color, strokeWidth: s.width, dash, inert: true });
   items.push(...anchorsIf(selected, corners));
   return items;
-}
-
-/** Pitchfork family geometry (TV): pivot and median direction per variant.
- *  Original: median from P0 through mid(P1,P2). Schiff: median base
- *  (P0.x, (P0.y + P1.y) / 2). Modified Schiff: base mid(P0, P1). Inside:
- *  median from mid(P1,P2) along (P2 − mid(P0,P1)). Level lines are parallel
- *  to the median at ±coeff·(P2−P1)/2 from mid(P1,P2). */
-export function pitchforkGeom(kind: string, pts: Pt[]): { pivot: Pt; dir: Pt; t1: Pt; t2: Pt; mid: Pt; half: Pt } | null {
-  const [p1, p2, p3] = pts;
-  const mid = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
-  const half = { x: (p3.x - p2.x) / 2, y: (p3.y - p2.y) / 2 };
-  let pivot: Pt = p1;
-  let dir: Pt;
-  if (kind === "schiff-pitchfork") {
-    pivot = { x: p1.x, y: (p1.y + p2.y) / 2 };
-    dir = { x: mid.x - pivot.x, y: mid.y - pivot.y };
-  } else if (kind === "modified-schiff-pitchfork") {
-    pivot = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    dir = { x: mid.x - pivot.x, y: mid.y - pivot.y };
-  } else if (kind === "inside-pitchfork") {
-    const m01 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    pivot = mid;
-    dir = { x: p3.x - m01.x, y: p3.y - m01.y };
-  } else {
-    dir = { x: mid.x - pivot.x, y: mid.y - pivot.y };
-  }
-  if (Math.hypot(dir.x, dir.y) < 1e-6) return null;
-  return { pivot, dir, t1: p2, t2: p3, mid, half };
-}
-
-/** A ray from `origin` along `dir` to the right pane edge; collapses to the
- *  origin when the direction has no rightward component. */
-export function pitchforkExtendRight(origin: Pt, dir: Pt, width: number): Pt {
-  if (dir.x <= 0) return origin;
-  const t = (width - origin.x) / dir.x;
-  return { x: width, y: origin.y + dir.y * t };
 }
 
 export function scenePitchfork(kind: string, pts: Pt[], selected: boolean, w: number, s: DrawingStyle): Scene {

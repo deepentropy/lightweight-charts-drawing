@@ -91,7 +91,7 @@ or build it the TradingView way.
 ## Status
 
 - [x] Phase 1 core extraction (25/09/2026): `src/tv` in place, OpenTrader imports it from source. Packaging of `src/tv` in `dist` (export `./tv`) left for phase 5. Placement survey pending (needs the FSLY 30m pane in OpenTrader).
-- [ ] Phase 2 scene layer (started 25/09/2026)
+- [x] Phase 2 scene layer (25/09/2026)
   - [x] scene types (`src/tv/scene/types.ts`), text helpers (`scene/text.ts`)
   - [x] group 1 line tools (`scene/lines.ts`): OpenTrader output identical
     on all 430 golden fixtures, no render slowdown
@@ -101,8 +101,9 @@ or build it the TradingView way.
   - [x] groups 3-5 fib + pitchfan (`scene/fib.ts`), Gann + pitchforks
     (`scene/gann.ts`): identical except a fixed OpenTrader bug (fib level
     label cut pointed to a missing clip); A/B render 0.53x to 0.87x
-  - [ ] hit tests: use the scene geometry (pitchforkGeom, gannFanDir) instead
-    of their private copies in kinds/hit-tests.ts
+  - [x] hit tests: pitchfork geometry (`kinds/pitchfork.ts`) and the Gann
+    fan ray (`kinds/gann-fan.ts`) shared by the scenes and the hit tests;
+    424 710 cursor checks before / after, 0 different
   - [x] group 6 shapes and cycles (`scene/shapes.ts`; new scene item
     `radialGradient` + paint `fillRef` for the sector): identical on 60 / 60
     fixtures and on 48 extra-option fixtures (fills, end arrows, middle
