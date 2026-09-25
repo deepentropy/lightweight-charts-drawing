@@ -118,7 +118,10 @@ or build it the TradingView way.
     15 / 15 fixtures and 12 extra-option fixtures; A/B render 0.68x
   - [x] group 10 data-driven tools (`scene/data.ts`): identical on 20 / 20
     fixtures and 24 extra-option / no-data fixtures; A/B render 0.91x
-  - [ ] text tools, positions / forecast
+  - [x] group 11 positions and forecast (`scene/positions.ts`; moved
+    `positionAnchors` / `positionTrade`, forecast icons, `tv/time.ts`):
+    identical on 15 / 15 fixtures and 18 extra fixtures; A/B render 0.84x
+  - [ ] text tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0

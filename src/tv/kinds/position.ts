@@ -12,6 +12,8 @@
  *               price distance, ticks = distance / tick size)
  */
 import type { Drawing, DrawingStyle, PositionStatKey } from "../types";
+import type { Pt } from "../_shared";
+import type { Coords } from "../coords";
 
 /** TV infoBlocks in the Stats list order, with their titles and factory
  *  visibility (all on except TP PL / SL PL). */
@@ -132,4 +134,81 @@ export function levelFromPrice(price: number, entry: number, pip: number, side: 
   const below = (side === 1) === (leg === "stop");
   const p = below ? Math.min(r, entry - pip) : Math.max(r, entry + pip);
   return Math.round(Math.abs(p - entry) * base) * pip;
+}
+
+/** Position-tool virtual anchors, shared by the renderer / hit-test / drag:
+ *  0 = entry (free), 1 = close point (time-only), 2 = stop (price-only),
+ *  3 = target (price-only). */
+export function positionAnchors(
+  d: Drawing,
+  pts: Pt[],
+  coords: Coords | null | undefined,
+): { anchors: Pt[]; yStop: number; yTarget: number; stop: number; profit: number } | null {
+  if (d.kind !== "long-position" && d.kind !== "short-position") return null;
+  const [a, b] = pts;
+  const entry = d.points[0].price;
+  const { stop, profit } = positionLevels(d, coords?.pipSize() ?? 0.01);
+  const sign = d.kind === "long-position" ? 1 : -1;
+  const yTarget = coords?.priceToY(entry + sign * profit) ?? a.y - 40;
+  const yStop = coords?.priceToY(entry - sign * stop) ?? a.y + 40;
+  if (yTarget == null || yStop == null) return null;
+  // TV risk-reward anchors: entry, close (same y), stop and target at the
+  // ENTRY x (the left edge of the box).
+  return {
+    anchors: [a, { x: b.x, y: a.y }, { x: a.x, y: yStop }, { x: a.x, y: yTarget }],
+    yStop,
+    yTarget,
+    stop,
+    profit,
+  };
+}
+
+/** TV risk-reward trade over the bars (RiskRewardCalculator, module 88161 +
+ *  the long / short `_checkStopPrice`): actual entry = first bar from the
+ *  entry bar to the bar before the close point with low <= entry <= high;
+ *  actual close = from that bar on, the first bar that hits the stop (long
+ *  low <= stop, short high >= stop) else the target (long high >= target,
+ *  short low <= target). closePrice = the stop / target price once closed,
+ *  else the close of the bar at the close point (last bar if later).
+ *  Indices are positions in `coords.bars()`. */
+export function positionTrade(
+  d: Drawing,
+  dir: "long" | "short",
+  stopPrice: number,
+  targetPrice: number,
+  coords: Coords | null | undefined,
+): { entryIndex: number | null; closeIndex: number | null; closed: boolean; closePrice: number; barIndex: number } | null {
+  if (!coords || d.points.length < 2) return null;
+  const bars = coords.bars();
+  if (bars.length === 0) return null;
+  const last = bars.length - 1;
+  const i0 = coords.timeToBarIndex(d.points[0].time);
+  const p1 = d.points[1];
+  if (!p1) return null;
+  const i1 = coords.timeToBarIndex(p1.time);
+  if (i0 == null || i1 == null || i1 < 0) return null;
+  const entry = d.points[0].price;
+  const end = Math.min(last, i1 - 1);
+  let entryIndex: number | null = null;
+  for (let i = Math.max(i0, 0); i <= end; i++) {
+    if (bars[i].high >= entry && bars[i].low <= entry) { entryIndex = i; break; }
+  }
+  let closeIndex: number | null = null;
+  let hit: number | null = null;
+  if (entryIndex != null) {
+    for (let i = entryIndex; i <= end; i++) {
+      const bar = bars[i];
+      if (dir === "long") {
+        if (bar.low <= stopPrice) hit = stopPrice;
+        else if (bar.high >= targetPrice) hit = targetPrice;
+      } else if (bar.high >= stopPrice) hit = stopPrice;
+      else if (bar.low <= targetPrice) hit = targetPrice;
+      if (hit != null) { closeIndex = i; break; }
+    }
+  }
+  if (closeIndex != null && hit != null) {
+    return { entryIndex, closeIndex, closed: true, closePrice: hit, barIndex: Math.min(last, closeIndex) };
+  }
+  const barIndex = Math.min(last, i1);
+  return { entryIndex, closeIndex: null, closed: false, closePrice: bars[barIndex].close, barIndex };
 }
