@@ -114,7 +114,9 @@ or build it the TradingView way.
     helpers `tv/color.ts`; scene items `glyph`, group opacity, circle
     cursor): identical on 40 / 40 fixtures and 32 extra-option fixtures;
     A/B render 0.95x
-  - [ ] text tools, ranges / positions / forecast, data-driven tools
+  - [x] group 9 ranges (`scene/ranges.ts`, rect `shadow`): identical on
+    15 / 15 fixtures and 12 extra-option fixtures; A/B render 0.68x
+  - [ ] text tools, positions / forecast, data-driven tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0

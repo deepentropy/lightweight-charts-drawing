@@ -22,6 +22,9 @@ export type Paint = {
   fillRef?: string;
 };
 
+/** Drop shadow (CSS drop-shadow / canvas shadow*): offset, blur in px. */
+export type Shadow = { dx: number; dy: number; blur: number; color: string };
+
 /** Fields every drawn item can carry. */
 export type ItemBase = {
   /** Name of a `clip` item: the item is drawn minus its cut-out polygons. */
@@ -35,7 +38,8 @@ export type SceneItem =
   | ({ t: "polyline"; pts: Pt[] } & Paint & ItemBase)
   | ({ t: "polygon"; pts: Pt[] } & Paint & ItemBase)
   | ({ t: "path"; d: string; transform?: string } & Paint & ItemBase)
-  | ({ t: "rect"; x: number; y: number; w: number; h: number; rx?: number; ry?: number } & Paint & ItemBase)
+  /** `shadow`: drop shadow under the rectangle (offset, blur, colour). */
+  | ({ t: "rect"; x: number; y: number; w: number; h: number; rx?: number; ry?: number; shadow?: Shadow } & Paint & ItemBase)
   /** `cursor`: pointer cursor over the circle (a DOM host sets it). */
   | ({ t: "circle"; cx: number; cy: number; r: number; cursor?: string } & Paint & ItemBase)
   | ({ t: "ellipse"; cx: number; cy: number; rx: number; ry: number; transform?: string } & Paint & ItemBase)
