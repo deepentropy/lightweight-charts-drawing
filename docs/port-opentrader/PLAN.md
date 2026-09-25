@@ -139,7 +139,15 @@ or build it the TradingView way.
   - [x] 3.2 canvas scene renderer (`src/runtime/scene-canvas.ts`): vs the
     OpenTrader SVG on 774 fixtures, 0.05 % of drawn pixels differ (text
     anti-aliasing); SVG "central" text baseline reproduced from font metrics
-  - [ ] 3.3 runtime, 3.4 old runtime removed, 3.5 demo
+  - [ ] 3.3 runtime (`src/runtime/`): `coords.ts` (makeCoords, moved from
+    OpenTrader), `manager.ts` (`DrawingManager`: one series primitive draws
+    every drawing + preview; placement incl. 1-click, freehand, variable
+    length, text editor request; hover, multi-select, anchor / body / group
+    drag, magnet + modifiers, Shift constraints, Escape / Delete, z-order,
+    JSON import / export); test page `demo/runtime/`, scripted check
+    `docs/port-opentrader/runtime-check/` (15 checks pass). Left: axis
+    labels, table / image host hooks
+  - [ ] 3.4 old runtime removed, 3.5 demo
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
 
