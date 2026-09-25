@@ -5,7 +5,7 @@
  * copies in .tmp/tv-bundles, 10/07/2026; checked against TV 3.4.1 screenshots
  * 25/09/2026, research/drawings-gap/captures/dialog-fix).
  */
-import type { Drawing } from "../types";
+import type { Drawing, DrawingStyle } from "../types";
 import type { Pt } from "../_shared";
 import { measureTextStyled, tvTextLayout, tvWordWrap } from "./tv-text";
 
@@ -22,6 +22,33 @@ export const TEXT_PLACEHOLDER: Record<string, string> = {
 export function annText(d: Drawing): { txt: string; faint: boolean } {
   const has = !!(d.text && d.text.length > 0);
   return { txt: has ? d.text! : (TEXT_PLACEHOLDER[d.kind] ?? "Text"), faint: !has };
+}
+
+/** Note (TV LineToolTextNote) text box at P1: text width + 16 by fs + 12
+ *  (padding 8 x 6). The box side follows the P0 → P1 direction (TV
+ *  alignByAngle): up → centred above P1, right → starts at P1, down →
+ *  centred below P1, left → ends at P1. Shared by the scene and the hit
+ *  test. */
+export function noteLayout(d: Drawing, s: DrawingStyle, a: Pt, b: Pt) {
+  const { txt, faint } = annText(d);
+  const fs = s.fontSize ?? 14;
+  const boxW = measureTextStyled(txt, fs, false, false) + 16;
+  const boxH = fs + 12;
+  const ang = Math.round((180 * Math.atan2(b.y - a.y, b.x - a.x)) / Math.PI);
+  let x = b.x;
+  let y = b.y - boxH / 2;
+  if (ang >= -135 && ang <= -45) {
+    x = b.x - boxW / 2;
+    y = b.y - boxH;
+  } else if (ang > -45 && ang < 45) {
+    x = b.x;
+  } else if (ang >= 45 && ang <= 135) {
+    x = b.x - boxW / 2;
+    y = b.y;
+  } else {
+    x = b.x - boxW;
+  }
+  return { txt, faint, fs, box: { left: x, top: y, width: boxW, height: boxH } };
 }
 export function toolText(d: Drawing): { text: string; faint: boolean } {
   return d.text ? { text: d.text, faint: false } : { text: TEXT_TOOL_PLACEHOLDER, faint: true };

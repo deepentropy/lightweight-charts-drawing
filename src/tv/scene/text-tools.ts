@@ -9,13 +9,13 @@ import { HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle } from "../types";
 import { applyOpacity, parseColor } from "../color";
-import { annText, calloutLayout, calloutPath, commentLayout, PIN_MARKER_PATH, pinLayout, pinTooltipPath, roundRectPath, textToolLayout, toolText } from "../kinds/text-tools";
+import { calloutLayout, calloutPath, commentLayout, noteLayout, PIN_MARKER_PATH, pinLayout, pinTooltipPath, roundRectPath, textToolLayout, toolText } from "../kinds/text-tools";
 import { SIGNPOST_COLORS, signpostLayout } from "../kinds/signpost";
 import { priceNoteLabel } from "../kinds/price-note";
 import { tableAnchors, tableLayout, TABLE_ACTIVE_COLOR, TABLE_ACTIVE_LINE, TABLE_BORDER, TABLE_EDGE_COLOR, TABLE_LINE_HEIGHT, TABLE_PAD, type TableUi } from "../kinds/table";
 import { drawingImage, imageAnchors, imageBox } from "../kinds/images";
 import type { Scene, SceneItem, Shadow } from "./types";
-import { measureText, tvTextItems } from "./text";
+import { tvTextItems } from "./text";
 import { SQUARE_ANCHORS } from "./lines";
 
 /** Drop shadow of the note / pin boxes: rgba(0,0,0,0.4) blur 4 offset 2. */
@@ -92,31 +92,16 @@ export function scenePin(d: Drawing, p: Pt, active: boolean, w: number): Scene {
 
 /** Note (TV LineToolTextNote): 2 points — a 1px leader line P0→P1 in the
  *  line colour (#DBDBDB), a dot at P0 (radius 2, 1px #1f1f1f ring) and the
- *  text box at P1: 14px #DBDBDB text on #2E2E2E, padding 8 × 6, radius 4,
- *  shadow rgba(0,0,0,0.4) blur 4 offset 2. The box side follows the line
- *  direction (TV alignByAngle): up → centred above P1, right → starts at P1,
- *  down → centred below P1, left → ends at P1. */
+ *  text box at P1 (kinds/text-tools noteLayout): 14px #DBDBDB text on
+ *  #2E2E2E, radius 4, shadow rgba(0,0,0,0.4) blur 4 offset 2. */
 export function sceneTextNote(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
   const [a, b] = pts;
   if (!b) return [];
-  const { txt, faint } = annText(d);
-  const fs = s.fontSize ?? 14;
-  const boxW = measureText(txt, fs) + 16;
-  const boxH = fs + 12;
-  const ang = Math.round((180 * Math.atan2(b.y - a.y, b.x - a.x)) / Math.PI);
-  let x = b.x;
-  let y = b.y - boxH / 2;
-  if (ang >= -135 && ang <= -45) {
-    x = b.x - boxW / 2;
-    y = b.y - boxH;
-  } else if (ang > -45 && ang < 45) {
-    x = b.x;
-  } else if (ang >= 45 && ang <= 135) {
-    x = b.x - boxW / 2;
-    y = b.y;
-  } else {
-    x = b.x - boxW;
-  }
+  const { txt, faint, fs, box } = noteLayout(d, s, a, b);
+  const x = box.left;
+  const y = box.top;
+  const boxW = box.width;
+  const boxH = box.height;
   const lineColor = s.color ?? "#dbdbdb";
   const out: Scene = [
     { t: "hit", a, b, width: HIT_TOLERANCE * 2 },

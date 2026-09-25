@@ -38,7 +38,7 @@ import { arrowMarkTextBox } from "./arrow-mark";
 import { tableAnchors, tableEdgeIndex, tableHitCell, tableLayout } from "./table";
 import { imageAnchors, imageBox } from "./images";
 import { signpostLayout } from "./signpost";
-import { calloutLayout, commentLayout, pinLayout, priceLabelLayout, textToolLayout } from "./text-tools";
+import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, textToolLayout } from "./text-tools";
 
 const HANDLE_R = HANDLE_RADIUS + HIT_TOLERANCE;
 
@@ -934,23 +934,8 @@ function timeCyclesHit(pts: Pt[], cursor: Pt, paneW: number, tol: number): HitRe
   return null;
 }
 
-/* ---------- text annotations (boxes sized to match DrawingsOverlay renderers) ---------- */
+/* ---------- text annotations (the boxes as drawn: kinds/text-tools layouts) ---------- */
 
-const ANN_PLACEHOLDER: Record<string, string> = {
-  text: "Text", note: "Note", comment: "Comment", "price-note": "Price note",
-  signpost: "Signpost", callout: "Callout",
-};
-/** Character count of the resolved annotation text (placeholder when empty),
- *  used to size the hit box exactly like the renderer. */
-function annLen(d: Drawing): number {
-  const t = d.text && d.text.length ? d.text : (ANN_PLACEHOLDER[d.kind] ?? "Text");
-  return t.length;
-}
-
-
-
-
-/** Price note: 2-point line + the price bubble above p0. */
 /** TV price note: the line, then the price label box at P1
  *  (kinds/price-note.ts). */
 function priceNoteHit(d: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null | undefined): HitResult | null {
@@ -1206,8 +1191,8 @@ export function hitTestKind(
       const h = endpointHit(pts, cursor);
       if (h) return h;
       if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= HIT_TOLERANCE) return { hit: "body" };
-      const b = pts[1];
-      if (b && Math.abs(cursor.x - b.x) <= Math.max(60, annLen(drawing) * 8 + 16) && Math.abs(cursor.y - b.y) <= 28) return { hit: "body" };
+      // The box as drawn (noteLayout); TV TextRenderer.hitTest: inside it.
+      if (pts[1] && inBox(cursor, noteLayout(drawing, drawing.style, pts[0], pts[1]).box)) return { hit: "body" };
       return null;
     }
     case "price-note":
