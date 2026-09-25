@@ -136,8 +136,10 @@ or build it the TradingView way.
     (checked byte-identical against OpenTrader HEAD); `finishPlacement` =
     the old placement sequence on 344 / 344 cases (OpenTrader
     `research/drawings-port/code/placement-ab.ts`)
-  - [ ] 3.2 canvas scene renderer, 3.3 runtime, 3.4 old runtime removed,
-    3.5 demo
+  - [x] 3.2 canvas scene renderer (`src/runtime/scene-canvas.ts`): vs the
+    OpenTrader SVG on 774 fixtures, 0.05 % of drawn pixels differ (text
+    anti-aliasing); SVG "central" text baseline reproduced from font metrics
+  - [ ] 3.3 runtime, 3.4 old runtime removed, 3.5 demo
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
 
