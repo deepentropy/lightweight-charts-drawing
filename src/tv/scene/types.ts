@@ -1,0 +1,68 @@
+/*
+ * Renderer-neutral drawing output ("scene"): what a tool draws, as plain data.
+ * A host turns it into SVG (OpenTrader) or canvas calls (this library's pane
+ * views). Items are drawn in order. Optional fields are left out of the
+ * output when undefined, so a host can reproduce the exact markup.
+ */
+import type { Pt } from "../_shared";
+
+/** Stroke / fill of a shape (SVG presentation attributes). */
+export type Paint = {
+  stroke?: string;
+  strokeWidth?: number;
+  strokeOpacity?: number;
+  /** SVG dash list ("4 2"); undefined = solid. */
+  dash?: string;
+  cap?: "round" | "butt" | "square";
+  join?: "round" | "miter" | "bevel";
+  fill?: string;
+  fillOpacity?: number;
+  fillRule?: "evenodd" | "nonzero";
+};
+
+/** Fields every drawn item can carry. */
+export type ItemBase = {
+  /** Name of a `clip` item: the item is drawn minus its cut-out polygons. */
+  clip?: string;
+  /** Not a pointer target (SVG pointer-events="none"). */
+  inert?: boolean;
+};
+
+export type SceneItem =
+  | ({ t: "line"; a: Pt; b: Pt } & Paint & ItemBase)
+  | ({ t: "polyline"; pts: Pt[] } & Paint & ItemBase)
+  | ({ t: "polygon"; pts: Pt[] } & Paint & ItemBase)
+  | ({ t: "path"; d: string; transform?: string } & Paint & ItemBase)
+  | ({ t: "rect"; x: number; y: number; w: number; h: number; rx?: number; ry?: number } & Paint & ItemBase)
+  | ({ t: "circle"; cx: number; cy: number; r: number } & Paint & ItemBase)
+  | ({ t: "ellipse"; cx: number; cy: number; rx: number; ry: number; transform?: string } & Paint & ItemBase)
+  | ({
+      t: "text";
+      x: number;
+      y: number;
+      text: string;
+      size: number;
+      fill: string;
+      anchor?: "start" | "middle" | "end";
+      baseline?: "central" | "hanging" | "middle" | "alphabetic";
+      weight?: number;
+      fontStyle?: "normal" | "italic";
+      family?: string;
+      /** Keep spaces (white-space: pre). */
+      pre?: boolean;
+    } & ItemBase)
+  | ({ t: "image"; href: string; x: number; y: number; w: number; h: number; opacity?: number } & ItemBase)
+  /** Items drawn together (a rotation / translation, a clip, not a pointer
+   *  target). */
+  | ({ t: "group"; items: SceneItem[]; transform?: string } & ItemBase)
+  /** Cut-out region: every item naming it is drawn outside the polygons
+   *  (TV addExclusionArea, even-odd). Draws nothing itself. */
+  | { t: "clip"; name: string; polys: Pt[][] }
+  /** Invisible pointer target (a host with DOM hit testing draws it
+   *  transparent; a canvas host skips it). */
+  | { t: "hit"; a: Pt; b: Pt; width: number }
+  /** Anchor handles (TV LineAnchorRenderer; the host draws them). `squares`
+   *  = indexes of one-axis anchors drawn as rounded squares. */
+  | { t: "anchors"; pts: Pt[]; squares?: readonly number[] };
+
+export type Scene = SceneItem[];

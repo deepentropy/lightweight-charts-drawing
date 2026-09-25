@@ -91,7 +91,13 @@ or build it the TradingView way.
 ## Status
 
 - [x] Phase 1 core extraction (25/09/2026): `src/tv` in place, OpenTrader imports it from source. Packaging of `src/tv` in `dist` (export `./tv`) left for phase 5. Placement survey pending (needs the FSLY 30m pane in OpenTrader).
-- [ ] Phase 2 scene layer
+- [ ] Phase 2 scene layer (started 25/09/2026)
+  - [x] scene types (`src/tv/scene/types.ts`), text helpers (`scene/text.ts`)
+  - [x] group 1 line tools (`scene/lines.ts`): OpenTrader output identical
+    on all 430 golden fixtures, no render slowdown
+    (OpenTrader `research/drawings-port`)
+  - [ ] channels, fib, gann, pitchforks, patterns, shapes, text tools,
+    ranges / positions / forecast, data-driven tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
