@@ -58,9 +58,15 @@ export type SceneItem =
   /** Cut-out region: every item naming it is drawn outside the polygons
    *  (TV addExclusionArea, even-odd). Draws nothing itself. */
   | { t: "clip"; name: string; polys: Pt[][] }
+  /** Keep-inside clip: every item naming it is drawn inside the rectangle
+   *  (e.g. Gann square arcs cut at the box). `idPrefix` names the host's
+   *  clip id. Draws nothing itself. */
+  | { t: "clipRect"; name: string; x: number; y: number; w: number; h: number; idPrefix?: string }
   /** Invisible pointer target (a host with DOM hit testing draws it
    *  transparent; a canvas host skips it). */
   | { t: "hit"; a: Pt; b: Pt; width: number }
+  /** Invisible curved pointer target (SVG path syntax). */
+  | { t: "hitPath"; d: string; width: number }
   /** Anchor handles (TV LineAnchorRenderer; the host draws them). `squares`
    *  = indexes of one-axis anchors drawn as rounded squares. */
   | { t: "anchors"; pts: Pt[]; squares?: readonly number[] };

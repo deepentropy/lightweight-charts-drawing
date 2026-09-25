@@ -98,7 +98,12 @@ or build it the TradingView way.
     (OpenTrader `research/drawings-port`)
   - [x] group 2 channels (`scene/channels.ts`, shared `scene/levels.ts`):
     identical on 430 / 430, A/B render 0.75x (control 0.78x)
-  - [ ] fib, gann, pitchforks, patterns, shapes, text tools,
+  - [x] groups 3-5 fib + pitchfan (`scene/fib.ts`), Gann + pitchforks
+    (`scene/gann.ts`): identical except a fixed OpenTrader bug (fib level
+    label cut pointed to a missing clip); A/B render 0.53x to 0.87x
+  - [ ] hit tests: use the scene geometry (pitchforkGeom, gannFanDir) instead
+    of their private copies in kinds/hit-tests.ts
+  - [ ] patterns, shapes, text tools,
     ranges / positions / forecast, data-driven tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
