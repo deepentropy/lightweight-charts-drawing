@@ -130,8 +130,14 @@ or build it the TradingView way.
 - [ ] Phase 3 library runtime (started 25/09/2026, plan below)
   - [x] 3.0 `scene/index.ts` `sceneOf`: the kind -> scene dispatcher moved
     from OpenTrader `renderKind` (golden / full A/B unchanged)
-  - [ ] 3.1 interaction core, 3.2 canvas scene renderer, 3.3 runtime,
-    3.4 old runtime removed, 3.5 demo
+  - [x] 3.1 interaction core (`src/tv/interact/`: constants, project,
+    placement + `finishPlacement`, drag; `src/tv/serialize.ts`:
+    `parseDrawings`, `migrateDrawing`). 33 declarations moved verbatim
+    (checked byte-identical against OpenTrader HEAD); `finishPlacement` =
+    the old placement sequence on 344 / 344 cases (OpenTrader
+    `research/drawings-port/code/placement-ab.ts`)
+  - [ ] 3.2 canvas scene renderer, 3.3 runtime, 3.4 old runtime removed,
+    3.5 demo
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
 
