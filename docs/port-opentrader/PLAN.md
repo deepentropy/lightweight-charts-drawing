@@ -110,8 +110,11 @@ or build it the TradingView way.
   - [x] group 7 patterns, Elliott waves, polyline / path / brush /
     highlighter (`scene/patterns.ts`): identical on 75 / 75 fixtures and 60
     extra-option fixtures; A/B render 0.79x
-  - [ ] text tools, ranges / positions / forecast, markers, data-driven
-    tools
+  - [x] group 8 markers and candle replicas (`scene/markers.ts`, colour
+    helpers `tv/color.ts`; scene items `glyph`, group opacity, circle
+    cursor): identical on 40 / 40 fixtures and 32 extra-option fixtures;
+    A/B render 0.95x
+  - [ ] text tools, ranges / positions / forecast, data-driven tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0

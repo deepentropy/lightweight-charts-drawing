@@ -36,7 +36,8 @@ export type SceneItem =
   | ({ t: "polygon"; pts: Pt[] } & Paint & ItemBase)
   | ({ t: "path"; d: string; transform?: string } & Paint & ItemBase)
   | ({ t: "rect"; x: number; y: number; w: number; h: number; rx?: number; ry?: number } & Paint & ItemBase)
-  | ({ t: "circle"; cx: number; cy: number; r: number } & Paint & ItemBase)
+  /** `cursor`: pointer cursor over the circle (a DOM host sets it). */
+  | ({ t: "circle"; cx: number; cy: number; r: number; cursor?: string } & Paint & ItemBase)
   | ({ t: "ellipse"; cx: number; cy: number; rx: number; ry: number; transform?: string } & Paint & ItemBase)
   | ({
       t: "text";
@@ -47,16 +48,19 @@ export type SceneItem =
       fill: string;
       anchor?: "start" | "middle" | "end";
       baseline?: "central" | "hanging" | "middle" | "alphabetic";
-      weight?: number;
+      weight?: number | "bold";
       fontStyle?: "normal" | "italic";
       family?: string;
       /** Keep spaces (white-space: pre). */
       pre?: boolean;
     } & ItemBase)
   | ({ t: "image"; href: string; x: number; y: number; w: number; h: number; opacity?: number } & ItemBase)
-  /** Items drawn together (a rotation / translation, a clip, not a pointer
-   *  target). */
-  | ({ t: "group"; items: SceneItem[]; transform?: string } & ItemBase)
+  /** Items drawn together (a rotation / translation, a clip, an opacity, not
+   *  a pointer target). */
+  | ({ t: "group"; items: SceneItem[]; transform?: string; opacity?: number } & ItemBase)
+  /** Icon glyph (an emoji / font character, or raw `<svg>` markup) in a
+   *  size x size box at (x, y), painted in `color`. */
+  | ({ t: "glyph"; x: number; y: number; size: number; glyph: string; color: string } & ItemBase)
   /** Cut-out region: every item naming it is drawn outside the polygons
    *  (TV addExclusionArea, even-odd). Draws nothing itself. */
   | { t: "clip"; name: string; polys: Pt[][] }
