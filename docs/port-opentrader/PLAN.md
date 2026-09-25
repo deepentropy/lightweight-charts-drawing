@@ -103,8 +103,12 @@ or build it the TradingView way.
     label cut pointed to a missing clip); A/B render 0.53x to 0.87x
   - [ ] hit tests: use the scene geometry (pitchforkGeom, gannFanDir) instead
     of their private copies in kinds/hit-tests.ts
-  - [ ] patterns, shapes, text tools,
-    ranges / positions / forecast, data-driven tools
+  - [x] group 6 shapes and cycles (`scene/shapes.ts`; new scene item
+    `radialGradient` + paint `fillRef` for the sector): identical on 60 / 60
+    fixtures and on 48 extra-option fixtures (fills, end arrows, middle
+    line); A/B render 0.89x
+  - [ ] patterns, text tools, ranges / positions / forecast, markers,
+    data-driven tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0

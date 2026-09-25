@@ -18,6 +18,8 @@ export type Paint = {
   fill?: string;
   fillOpacity?: number;
   fillRule?: "evenodd" | "nonzero";
+  /** Name of a `radialGradient` item used as the fill (instead of `fill`). */
+  fillRef?: string;
 };
 
 /** Fields every drawn item can carry. */
@@ -62,6 +64,18 @@ export type SceneItem =
    *  (e.g. Gann square arcs cut at the box). `idPrefix` names the host's
    *  clip id. Draws nothing itself. */
   | { t: "clipRect"; name: string; x: number; y: number; w: number; h: number; idPrefix?: string }
+  /** Radial gradient in screen units: every item naming it in `fillRef` is
+   *  filled with it. `idPrefix` names the host's gradient id. Draws nothing
+   *  itself. */
+  | {
+      t: "radialGradient";
+      name: string;
+      cx: number;
+      cy: number;
+      r: number;
+      stops: { offset: number; color: string; opacity: number }[];
+      idPrefix?: string;
+    }
   /** Invisible pointer target (a host with DOM hit testing draws it
    *  transparent; a canvas host skips it). */
   | { t: "hit"; a: Pt; b: Pt; width: number }
