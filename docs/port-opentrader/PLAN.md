@@ -121,7 +121,11 @@ or build it the TradingView way.
   - [x] group 11 positions and forecast (`scene/positions.ts`; moved
     `positionAnchors` / `positionTrade`, forecast icons, `tv/time.ts`):
     identical on 15 / 15 fixtures and 18 extra fixtures; A/B render 0.84x
-  - [ ] text tools
+  - [x] group 12 text tools (`scene/text-tools.ts`; placeholders in
+    `kinds/text-tools.ts`): identical on 45 / 45 fixtures and 54 extra
+    fixtures incl. table UI states; A/B render 0.62x. All tool renderers of
+    OpenTrader now draw the core scenes (full A/B 504 / 516, the rest = the
+    fib clip fix)
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0

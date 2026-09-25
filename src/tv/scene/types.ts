@@ -20,6 +20,8 @@ export type Paint = {
   fillRule?: "evenodd" | "nonzero";
   /** Name of a `radialGradient` item used as the fill (instead of `fill`). */
   fillRef?: string;
+  /** Drop shadow under the shape (rect, path, circle). */
+  shadow?: Shadow;
 };
 
 /** Drop shadow (CSS drop-shadow / canvas shadow*): offset, blur in px. */
@@ -37,9 +39,9 @@ export type SceneItem =
   | ({ t: "line"; a: Pt; b: Pt } & Paint & ItemBase)
   | ({ t: "polyline"; pts: Pt[] } & Paint & ItemBase)
   | ({ t: "polygon"; pts: Pt[] } & Paint & ItemBase)
-  | ({ t: "path"; d: string; transform?: string } & Paint & ItemBase)
-  /** `shadow`: drop shadow under the rectangle (offset, blur, colour). */
-  | ({ t: "rect"; x: number; y: number; w: number; h: number; rx?: number; ry?: number; shadow?: Shadow } & Paint & ItemBase)
+  /** `crisp`: pixel-aligned edges, no anti-aliasing (SVG crispEdges). */
+  | ({ t: "path"; d: string; transform?: string; crisp?: boolean } & Paint & ItemBase)
+  | ({ t: "rect"; x: number; y: number; w: number; h: number; rx?: number; ry?: number } & Paint & ItemBase)
   /** `cursor`: pointer cursor over the circle (a DOM host sets it). */
   | ({ t: "circle"; cx: number; cy: number; r: number; cursor?: string } & Paint & ItemBase)
   | ({ t: "ellipse"; cx: number; cy: number; rx: number; ry: number; transform?: string } & Paint & ItemBase)
@@ -49,7 +51,9 @@ export type SceneItem =
       y: number;
       text: string;
       size: number;
-      fill: string;
+      /** Undefined = the host default (black). */
+      fill?: string;
+      opacity?: number;
       anchor?: "start" | "middle" | "end";
       baseline?: "central" | "hanging" | "middle" | "alphabetic";
       weight?: number | "bold";
@@ -58,7 +62,8 @@ export type SceneItem =
       /** Keep spaces (white-space: pre). */
       pre?: boolean;
     } & ItemBase)
-  | ({ t: "image"; href: string; x: number; y: number; w: number; h: number; opacity?: number } & ItemBase)
+  /** `stretch`: fill the box, aspect ratio not kept. */
+  | ({ t: "image"; href: string; x: number; y: number; w: number; h: number; opacity?: number; stretch?: boolean } & ItemBase)
   /** Items drawn together (a rotation / translation, a clip, an opacity, not
    *  a pointer target). */
   | ({ t: "group"; items: SceneItem[]; transform?: string; opacity?: number } & ItemBase)

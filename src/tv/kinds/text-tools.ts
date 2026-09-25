@@ -11,6 +11,18 @@ import { measureTextStyled, tvTextLayout, tvWordWrap } from "./tv-text";
 
 /** TV placeholder of an empty text tool ("Add text", drawn at 50%). */
 export const TEXT_TOOL_PLACEHOLDER = "Add text";
+
+/** Placeholder text per annotation tool (the inline editor's hint, and the
+ *  note's faint text when empty). */
+export const TEXT_PLACEHOLDER: Record<string, string> = {
+  text: "Text", note: "Add text", pin: "Note", comment: "Comment", "price-note": "Price note",
+  signpost: "Signpost", callout: "Callout",
+};
+/** Resolved annotation text + whether it's the faint placeholder fallback. */
+export function annText(d: Drawing): { txt: string; faint: boolean } {
+  const has = !!(d.text && d.text.length > 0);
+  return { txt: has ? d.text! : (TEXT_PLACEHOLDER[d.kind] ?? "Text"), faint: !has };
+}
 export function toolText(d: Drawing): { text: string; faint: boolean } {
   return d.text ? { text: d.text, faint: false } : { text: TEXT_TOOL_PLACEHOLDER, faint: true };
 }
