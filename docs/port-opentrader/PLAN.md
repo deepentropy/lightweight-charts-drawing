@@ -127,6 +127,54 @@ or build it the TradingView way.
     fixtures incl. table UI states; A/B render 0.62x. All tool renderers of
     OpenTrader now draw the core scenes (full A/B 504 / 516, the rest = the
     fib clip fix)
-- [ ] Phase 3 library runtime
+- [ ] Phase 3 library runtime (started 25/09/2026, plan below)
+  - [x] 3.0 `scene/index.ts` `sceneOf`: the kind -> scene dispatcher moved
+    from OpenTrader `renderKind` (golden / full A/B unchanged)
+  - [ ] 3.1 interaction core, 3.2 canvas scene renderer, 3.3 runtime,
+    3.4 old runtime removed, 3.5 demo
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
+
+## Phase 3 plan (25/09/2026)
+
+Survey: the 0.1 runtime is one series primitive per drawing, click-to-select
+and anchor drag only (no placement, no body move, no snapping, no undo); the
+demo places drawings itself. OpenTrader has the full interaction, mostly in
+pure functions inside `DrawingsOverlay.tsx`, driven by SolidJS signals and
+DOM hit routing. Phase 3 moves the pure part into the core and builds a
+canvas runtime on it; the 0.1 runtime is replaced, not adapted.
+
+3.1 Interaction core (`src/tv/interact/`, UI-free), moved from OpenTrader
+    and imported back by it:
+    - projection: `screenPoints`, `projectPoint`, `unproject`,
+      `translateDrawing`, `replaceDrawingPoints`, `snapAngle`, `magnetSnap`
+    - placement: `buildNewDrawing` + the enrichers (position levels, bar
+      pattern snapshot, ghost feed seed / amplitude, curve controls, trend
+      angle), `snapGannSquare`, the kind sets (angle snap, segment preview)
+    - drag: `DragState`, `applyDrag` and the per-kind drags (position,
+      parallel / disjoint channel, rotated rectangle, table, image),
+      `floorTimeAt`, `anchorCursor`
+    - persistence migration `migrateDrawing`
+    Check: old (pre-port copy) vs new functions on generated drags /
+    placements per kind and handle, same results.
+3.2 Canvas scene renderer (`src/runtime/scene-canvas.ts`): every scene item
+    to CanvasRenderingContext2D (paths, dash, clips incl. even-odd cut-outs,
+    gradients, shadows, text baselines / anchors, images, glyphs, anchors in
+    the TV style). Check: each golden fixture drawn by the canvas renderer vs
+    the SVG rasterised in the same page, pixel difference per fixture.
+3.3 Runtime (`src/runtime/`): one pane primitive draws all drawings (one
+    canvas pass, latency) from `sceneOf`; `Coords` built from the chart /
+    series API; `DrawingManager` with the core `Drawing` model and tool names:
+    placement (point counts, variable length, freehand, 1-click tools),
+    hover / selection (multi-select), anchor and body drag, magnet and Shift
+    constraints, z-order, lock / hide / interval visibility, Escape / Delete,
+    events (added, updated, removed, selection, text-edit request) so a host
+    keeps undo / persistence / editors; JSON import / export of the core
+    model with `migrateDrawing`.
+3.4 Remove the 0.1 runtime (`src/core`, `src/interaction`, `src/registry`,
+    `src/rendering`, `src/tools`); new `src/index.ts`.
+3.5 Demo on the new runtime (all tools from `OVERLAY_SPECS`), screenshots
+    compared with OpenTrader.
+
+Not in phase 3 (host side): settings dialogs, inline text / table editors,
+undo stack, persistence storage, context menu, toolbar.
