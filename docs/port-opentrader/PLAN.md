@@ -96,7 +96,9 @@ or build it the TradingView way.
   - [x] group 1 line tools (`scene/lines.ts`): OpenTrader output identical
     on all 430 golden fixtures, no render slowdown
     (OpenTrader `research/drawings-port`)
-  - [ ] channels, fib, gann, pitchforks, patterns, shapes, text tools,
+  - [x] group 2 channels (`scene/channels.ts`, shared `scene/levels.ts`):
+    identical on 430 / 430, A/B render 0.75x (control 0.78x)
+  - [ ] fib, gann, pitchforks, patterns, shapes, text tools,
     ranges / positions / forecast, data-driven tools
 - [ ] Phase 3 library runtime
 - [ ] Phase 4 all tools
