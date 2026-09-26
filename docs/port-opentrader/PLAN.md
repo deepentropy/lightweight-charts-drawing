@@ -190,7 +190,7 @@ replacement is the Text tool with "Anchor drawing" on.
   - [x] `./tv` subpath export not added: `src/index.ts` exports the core API
     (model, specs, scenes, hit tests, interaction rules)
   - [ ] tag v0.2.0 (the publish workflow runs `npm publish` on a `v*` tag)
-  - [ ] no LICENSE file in the repo (package.json says MIT)
+  - [x] LICENSE (MIT, deepentropy) added; stray main.py removed
 
 ## Phase 3 plan (25/09/2026)
 
