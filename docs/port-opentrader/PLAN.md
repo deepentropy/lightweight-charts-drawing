@@ -189,7 +189,12 @@ replacement is the Text tool with "Anchor drawing" on.
     a rectangle placed by mouse, no page errors
   - [x] `./tv` subpath export not added: `src/index.ts` exports the core API
     (model, specs, scenes, hit tests, interaction rules)
-  - [ ] tag v0.2.0 (the publish workflow runs `npm publish` on a `v*` tag)
+  - [x] tag v0.2.0 pushed (26/09/2026, on 1c8d21a)
+  - [ ] npm publish: the Publish workflow (run 36254627257) built and packed
+    0.2.0 but the upload got `E404 Not Found - PUT` (npm's answer to a token
+    without publish rights; the `NPM_TOKEN` secret dates from 26/02/2026).
+    npm still has 0.1.0 / 0.1.1. Needs a new token (or npm trusted
+    publishing), then `gh run rerun 36254627257`
   - [x] LICENSE (MIT, deepentropy) added; stray main.py removed
 
 ## Phase 3 plan (25/09/2026)
