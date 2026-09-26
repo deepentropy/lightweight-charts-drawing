@@ -14,7 +14,9 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'LightweightChartsDrawing',
       formats: ['es', 'umd'],
-      fileName: (format) => `lightweight-charts-drawing.${format}.js`,
+      // The package is "type": "module": the UMD file needs the .cjs
+      // extension, else Node loads it as ESM and require() gets nothing.
+      fileName: (format) => `lightweight-charts-drawing.${format}.${format === 'umd' ? 'cjs' : 'js'}`,
     },
     rollupOptions: {
       external: ['lightweight-charts'],

@@ -1,5 +1,5 @@
 /**
- * lightweight-charts-drawing 0.2 (in progress)
+ * lightweight-charts-drawing 0.2
  *
  * TradingView-style drawing tools for lightweight-charts v5, built on a shared
  * drawing core (src/tv: tool model + TradingView factory defaults, hit tests,
@@ -45,4 +45,4 @@ export { finishPlacement, buildNewDrawing } from "./tv/interact/placement";
 export { applyDrag, anchorCursor, type DragState } from "./tv/interact/drag";
 export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./tv/interact/anchor";
 
-export const VERSION = "0.2.0-dev";
+export const VERSION = "0.2.0";

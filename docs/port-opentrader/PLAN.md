@@ -175,7 +175,22 @@ replacement is the Text tool with "Anchor drawing" on.
     table-only toggle), anchored pin anchor drag = move of the fixed
     position; runtime `toggleAnchored(id)`; demo "Anchor drawing" button
     (runtime-check/07)
-- [ ] Phase 5 release 0.2.0
+- [ ] Phase 5 release 0.2.0 (prepared 26/09/2026, not tagged / published)
+  - [x] version 0.2.0 (package.json, `VERSION`), CHANGELOG.md (breaking
+    changes, 0.1 -> 0.2 names, new API), README note, `fancy-canvas` moved
+    to devDependencies (types only), CHANGELOG in the package files
+  - [x] fixed: the UMD build was `.umd.js` in a `"type": "module"` package,
+    so Node loaded it as ESM and `require()` got nothing (also in 0.1.x);
+    now `.umd.cjs`
+  - [x] checks: typecheck, build, `npm pack` (7 files, 657 kB); the packed
+    tarball installed in a fresh Vite + TypeScript project: strict `tsc`
+    with library type checking OK, CJS and ESM entries load (VERSION 0.2.0,
+    86 tools), Vite build OK, the page draws a trend line added in code and
+    a rectangle placed by mouse, no page errors
+  - [x] `./tv` subpath export not added: `src/index.ts` exports the core API
+    (model, specs, scenes, hit tests, interaction rules)
+  - [ ] tag v0.2.0 (the publish workflow runs `npm publish` on a `v*` tag)
+  - [ ] no LICENSE file in the repo (package.json says MIT)
 
 ## Phase 3 plan (25/09/2026)
 

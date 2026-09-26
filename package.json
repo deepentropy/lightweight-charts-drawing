@@ -1,20 +1,21 @@
 {
   "name": "lightweight-charts-drawing",
-  "version": "0.1.1",
-  "description": "Drawing tools plugin for TradingView's lightweight-charts",
+  "version": "0.2.0",
+  "description": "TradingView-style drawing tools (86 tools, TradingView defaults and behaviour) for TradingView's lightweight-charts v5",
   "type": "module",
-  "main": "./dist/lightweight-charts-drawing.umd.js",
+  "main": "./dist/lightweight-charts-drawing.umd.cjs",
   "module": "./dist/lightweight-charts-drawing.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/lightweight-charts-drawing.es.js",
-      "require": "./dist/lightweight-charts-drawing.umd.js"
+      "require": "./dist/lightweight-charts-drawing.umd.cjs"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "dev": "vite",
@@ -28,6 +29,7 @@
     "lightweight-charts": "^5.0.0"
   },
   "devDependencies": {
+    "fancy-canvas": "^2.1.0",
     "lightweight-charts": "^5.0.9",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
@@ -40,14 +42,14 @@
     "drawing-tools",
     "technical-analysis",
     "trendline",
-    "fibonacci"
+    "fibonacci",
+    "tradingview",
+    "drawing",
+    "canvas"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/deepentropy/lightweight-charts-drawing"
-  },
-  "dependencies": {
-    "fancy-canvas": "^2.1.0"
   }
 }

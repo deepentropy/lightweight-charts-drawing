@@ -8,10 +8,8 @@ and anchor rules (trend lines, channels, pitchforks, Fibonacci and Gann
 tools, patterns, Elliott waves, cycles, forecasting and measuring tools,
 volume-based tools, shapes, text and notes). List: [docs/TOOLS.md](docs/TOOLS.md).
 
-> Version 0.2 is in progress (not published yet) and breaks the 0.1 API:
-> the tool classes of 0.1 are replaced by one `DrawingManager` on a shared
-> drawing core. Plan and status:
-> [docs/port-opentrader/PLAN.md](docs/port-opentrader/PLAN.md).
+> Version 0.2 breaks the 0.1 API: the tool classes of 0.1 are replaced by one
+> `DrawingManager` on a shared drawing core. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Installation
 
