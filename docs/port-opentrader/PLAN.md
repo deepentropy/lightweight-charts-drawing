@@ -175,7 +175,7 @@ replacement is the Text tool with "Anchor drawing" on.
     table-only toggle), anchored pin anchor drag = move of the fixed
     position; runtime `toggleAnchored(id)`; demo "Anchor drawing" button
     (runtime-check/07)
-- [ ] Phase 5 release 0.2.0 (prepared 26/09/2026, not tagged / published)
+- [x] Phase 5 release 0.2.0 (published on npm 26/09/2026)
   - [x] version 0.2.0 (package.json, `VERSION`), CHANGELOG.md (breaking
     changes, 0.1 -> 0.2 names, new API), README note, `fancy-canvas` moved
     to devDependencies (types only), CHANGELOG in the package files
@@ -191,7 +191,7 @@ replacement is the Text tool with "Anchor drawing" on.
     (model, specs, scenes, hit tests, interaction rules)
   - [x] tag v0.2.0 pushed (26/09/2026, on 1c8d21a); moved the same day to
     the `npm pkg fix` commit (repository.url `git+https://...git`)
-  - [ ] npm publish: run 36254627257 (old tag) and run 36263237092 (moved
+  - [x] npm publish: run 36254627257 (old tag) and run 36263237092 (moved
     tag) got `E404 Not Found - PUT` (the `NPM_TOKEN` secret from 26/02/2026
     had no publish rights); with a new token (26/09/2026) the re-run got
     `EOTP` (npm asked for a 2FA code). Switched to npm trusted publishing
@@ -199,6 +199,12 @@ replacement is the Text tool with "Anchor drawing" on.
     lightweight-charts-drawing / publish.yml), tokens disallowed; the
     workflow uses Node 24 + latest npm (11.5.1 or later), no token, no
     `--provenance` (npm adds it); tag v0.2.0 moved to that commit
+    (33bfe87). First run 36265834953 got `E403 OIDC permission denied`
+    (a trusted publisher made after 03/09/2026 allows only `npm stage
+    publish` until "npm publish" is ticked); after ticking it, the re-run
+    published 0.2.0 on 26/09/2026 (latest = 0.2.0, 9 files, provenance
+    attestation, MIT). Checked: fresh install from npm, CJS and ESM entries
+    load (VERSION 0.2.0)
   - [x] LICENSE (MIT, deepentropy) added; stray main.py removed
 
 ## Phase 3 plan (25/09/2026)
