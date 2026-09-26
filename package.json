@@ -50,6 +50,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/deepentropy/lightweight-charts-drawing"
+    "url": "git+https://github.com/deepentropy/lightweight-charts-drawing.git"
   }
 }
