@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.1 (26/09/2026)
+
+### Fixed
+
+- `DrawingManager.on(...)`: the first call in a TypeScript file failed with
+  TS2590 ("Expression produces a union type that is too complex to
+  represent"), also with the published 0.2.0 types. `on` now has one
+  overload per event.
+- Pin: a press on its anchor (the marker tip) missed about half of the time
+  (the tip is on the edge of the marker box). The anchor is now hit first,
+  as for the comment and note tools.
+
+### Demo
+
+- TradingView-style left toolbar with the tools under TradingView's groups
+  and sections (generated with docs/TOOLS.md by `docs/tools_md.py`), an
+  emoji group for the font icon, magnet (weak / strong), keep drawing and
+  remove all; a selection bar (Anchor drawing, remove); an inline editor for
+  text tools and table cells; export / import as JSON files (the export
+  wrote to localStorage before); no event log panel.
+
 ## 0.2.0 (26/09/2026)
 
 A new library built on a shared drawing core (`src/tv`) that is also used by

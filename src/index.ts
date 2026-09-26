@@ -45,4 +45,4 @@ export { finishPlacement, buildNewDrawing } from "./tv/interact/placement";
 export { applyDrag, anchorCursor, type DragState } from "./tv/interact/drag";
 export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./tv/interact/anchor";
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.2.1";

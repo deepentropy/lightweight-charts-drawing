@@ -2,30 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>lightweight-charts-drawing demo</title>
-  <style>
-    html, body { margin: 0; height: 100%; background: #0f0f0f; color: #dbdbdb; font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; font-size: 13px; }
-    #bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid #2e2e2e; }
-    #chart { position: absolute; top: 40px; left: 0; right: 320px; bottom: 0; }
-    #log { white-space: pre-wrap; position: absolute; top: 40px; right: 0; width: 320px; bottom: 0; overflow: auto; font: 11px monospace; padding: 4px; box-sizing: border-box; border-left: 1px solid #2e2e2e; }
-    select, button { background: #1e1e1e; color: #dbdbdb; border: 1px solid #3a3a3a; padding: 3px 6px; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>lightweight-charts-drawing: TradingView-style drawing tools for lightweight-charts</title>
+  <link rel="stylesheet" href="./demo.css" />
 </head>
 <body>
-  <div id="bar">
-    <select id="tool"><option value="">Cursor</option></select>
-    <select id="magnet"><option>off</option><option>weak</option><option>strong</option></select>
-    <label><input type="checkbox" id="stay" /> Keep drawing</label>
-    <button id="export">Export</button>
-    <button id="import">Import</button>
-    <button id="clear">Clear</button>
-    <button id="image">Image…</button>
-    <button id="anchor" disabled>Anchor drawing</button>
-    <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp" hidden />
-    <span id="count"></span>
+  <header id="top">
+    <div class="brand">
+      <span class="name">lightweight-charts-drawing</span>
+      <span id="version" class="badge"></span>
+    </div>
+    <div class="symbol"><b>SPY</b><span>SPDR S&amp;P 500 ETF</span><span class="tf">1D</span></div>
+    <div class="spacer"></div>
+    <button id="export" class="btn" title="Download the drawings as a JSON file"></button>
+    <button id="import" class="btn" title="Load drawings from a JSON file"></button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden />
+    <a class="btn link" href="https://github.com/deepentropy/lightweight-charts-drawing/blob/main/docs/TOOLS.md" target="_blank" rel="noopener">Tools</a>
+    <a class="btn link" href="https://www.npmjs.com/package/lightweight-charts-drawing" target="_blank" rel="noopener">npm</a>
+    <a id="github" class="btn link icon" href="https://github.com/deepentropy/lightweight-charts-drawing" target="_blank" rel="noopener" title="GitHub"></a>
+  </header>
+  <div id="main">
+    <nav id="rail" aria-label="Drawing tools"></nav>
+    <div id="chartWrap">
+      <div id="chart"></div>
+      <div id="selbar" hidden></div>
+      <textarea id="editor" hidden spellcheck="false"></textarea>
+    </div>
+    <div id="flyout" role="menu" hidden></div>
   </div>
-  <div id="chart"></div>
-  <div id="log"></div>
+  <footer id="status">
+    <span id="hint"></span>
+    <span class="spacer"></span>
+    <span id="count"></span>
+  </footer>
+  <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp" hidden />
   <script type="module" src="./demo.ts"></script>
 </body>
 </html>

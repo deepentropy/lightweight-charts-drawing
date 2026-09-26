@@ -1170,7 +1170,11 @@ export function hitTestKind(
       return inBox(cursor, commentLayout(drawing, pts[0]).l.box) ? { hit: "body" } : null;
     }
     case "pin": {
-      // TV pin: the marker; the tooltip only while shown (hover / selection).
+      // TV pin: the anchor (the marker tip, on the marker's bottom edge, so
+      // a press on it missed the box half of the time), the marker, the
+      // tooltip only while shown (hover / selection).
+      const a = endpointHit(pts, cursor);
+      if (a) return a;
       const t = pinLayout(drawing, pts[0], width);
       const m = t.marker;
       if (cursor.x >= m.left && cursor.x <= m.right && cursor.y >= m.top && cursor.y <= m.bottom) return { hit: "body" };

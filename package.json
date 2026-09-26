@@ -1,6 +1,6 @@
 {
   "name": "lightweight-charts-drawing",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "TradingView-style drawing tools (86 tools, TradingView defaults and behaviour) for TradingView's lightweight-charts v5",
   "type": "module",
   "main": "./dist/lightweight-charts-drawing.umd.cjs",

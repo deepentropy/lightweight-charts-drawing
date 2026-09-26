@@ -134,6 +134,19 @@ export class DrawingManager {
 
   // ── public API ────────────────────────────────────────────────────────────
 
+  // One overload per event: the generic form alone (cb: Events[K]) made tsc
+  // build a contextual signature from all callbacks, whose Drawing
+  // parameters intersect into a union too large (TS2590) at a consumer's
+  // first on() call.
+  on(event: "change", cb: DrawingManagerEvents["change"]): () => void;
+  on(event: "add", cb: DrawingManagerEvents["add"]): () => void;
+  on(event: "update", cb: DrawingManagerEvents["update"]): () => void;
+  on(event: "remove", cb: DrawingManagerEvents["remove"]): () => void;
+  on(event: "selection", cb: DrawingManagerEvents["selection"]): () => void;
+  on(event: "tool", cb: DrawingManagerEvents["tool"]): () => void;
+  on(event: "textEdit", cb: DrawingManagerEvents["textEdit"]): () => void;
+  on(event: "gestureEnd", cb: DrawingManagerEvents["gestureEnd"]): () => void;
+  on(event: "tableEdit", cb: DrawingManagerEvents["tableEdit"]): () => void;
   on<K extends keyof DrawingManagerEvents>(event: K, cb: DrawingManagerEvents[K]): () => void {
     (this.listeners[event] as Set<DrawingManagerEvents[K]>).add(cb);
     return () => (this.listeners[event] as Set<DrawingManagerEvents[K]>).delete(cb);
