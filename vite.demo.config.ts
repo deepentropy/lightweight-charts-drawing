@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
 
+// Demo (npm run demo / build:demo): root demo/, static data in demo/public
+// (SPY.csv). The demo imports the library from source (../src).
 export default defineConfig({
   root: 'demo',
-  publicDir: '.',
+  publicDir: 'public',
   base: '/lightweight-charts-drawing/',
   build: {
     outDir: '../dist-demo',
@@ -11,10 +13,5 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-  },
-  resolve: {
-    alias: {
-      'lightweight-charts-drawing': '/src/index.ts',
-    },
   },
 });

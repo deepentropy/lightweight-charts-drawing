@@ -2,7 +2,16 @@
 
 **[Live Demo](https://deepentropy.github.io/lightweight-charts-drawing/)**
 
-68 drawing tools for TradingView's lightweight-charts library. Includes trend lines, Fibonacci tools, Gann analysis, channels, pitchforks, shapes, annotations, and forecasting tools.
+TradingView-style drawing tools for [lightweight-charts](https://github.com/tradingview/lightweight-charts) v5:
+86 tools with TradingView's factory defaults, labels, hit tests, placement
+and anchor rules (trend lines, channels, pitchforks, Fibonacci and Gann
+tools, patterns, Elliott waves, cycles, forecasting and measuring tools,
+volume-based tools, shapes, text and notes). List: [docs/TOOLS.md](docs/TOOLS.md).
+
+> Version 0.2 is in progress (not published yet) and breaks the 0.1 API:
+> the tool classes of 0.1 are replaced by one `DrawingManager` on a shared
+> drawing core. Plan and status:
+> [docs/port-opentrader/PLAN.md](docs/port-opentrader/PLAN.md).
 
 ## Installation
 
@@ -10,216 +19,91 @@
 npm install lightweight-charts-drawing lightweight-charts
 ```
 
-## Quick Start
+## Quick start
 
 ```typescript
 import { createChart, CandlestickSeries } from 'lightweight-charts';
-import { DrawingManager, TrendLine, FibRetracement } from 'lightweight-charts-drawing';
+import { DrawingManager } from 'lightweight-charts-drawing';
 
-// Create chart
-const chart = createChart(document.getElementById('chart')!, {
-  width: 800,
-  height: 400,
-});
-
+const chart = createChart(document.getElementById('chart')!, { autoSize: true });
 const series = chart.addSeries(CandlestickSeries);
-series.setData([/* ... your OHLC data ... */]);
+series.setData(bars); // your OHLC data
 
-// Set up drawing manager
-const manager = new DrawingManager();
-manager.attach(chart, series, document.getElementById('chart')!);
+const drawings = new DrawingManager(chart, series, { magnet: 'weak' });
 
-// Add a trend line
-const trendLine = new TrendLine('tl-1', [
-  { time: '2024-01-15', price: 100 },
-  { time: '2024-02-15', price: 110 },
-], { lineColor: '#2962FF', lineWidth: 2 });
+// Arm a tool: the user places it with the mouse (TV clicks / drag rules).
+drawings.setTool('fib-retracement');
 
-manager.addDrawing(trendLine);
+// Or add one in code (the tool's TradingView defaults fill the style).
+drawings.add({ kind: 'trend-line', points: [
+  { time: bars[10].time, price: bars[10].low },
+  { time: bars[40].time, price: bars[40].high },
+] });
 
-// Add a Fibonacci retracement
-const fib = new FibRetracement('fib-1', [
-  { time: '2024-01-01', price: 95 },
-  { time: '2024-03-01', price: 115 },
-]);
-
-manager.addDrawing(fib);
+// Save / restore (the core Drawing model, checked and migrated on import).
+localStorage.setItem('drawings', drawings.exportJSON());
+drawings.importJSON(localStorage.getItem('drawings') ?? '[]');
 ```
 
-## Lightweight-Charts Integration Example
+## DrawingManager
 
-```typescript
-import { createChart, CandlestickSeries, ColorType } from 'lightweight-charts';
-import {
-  DrawingManager,
-  TrendLine,
-  HorizontalLine,
-  Rectangle,
-  TextAnnotation,
-  getToolRegistry,
-} from 'lightweight-charts-drawing';
+`new DrawingManager(chart, series, options?)` attaches one series primitive
+that draws every drawing, the placement preview, the anchors and the
+drawings' axis labels.
 
-// Create chart
-const container = document.getElementById('chart')!;
-const chart = createChart(container, {
-  layout: {
-    background: { type: ColorType.Solid, color: '#131722' },
-    textColor: '#d1d4dc',
-  },
-  width: 1000,
-  height: 500,
-});
+Options: `bars` (bar getter; default the series data), `fontFamily`
+(default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
+(per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
 
-const series = chart.addSeries(CandlestickSeries);
-series.setData([/* ... OHLC data ... */]);
+| Method | |
+|---|---|
+| `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)` | settings |
+| `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
+| `select(ids)`, `selection()` | selection (multi-select with Ctrl / Cmd) |
+| `bringToFront(id)`, `sendToBack(id)` | z-order |
+| `exportJSON()`, `importJSON(json)` | save / restore |
+| `on(event, cb)` → unsubscribe | events |
+| `redraw()`, `destroy()` | |
 
-// Initialize drawing manager
-const manager = new DrawingManager();
-manager.attach(chart, series, container);
+Events: `change`, `add`, `update`, `remove`, `selection`, `tool`,
+`textEdit` (a text tool was placed or double-clicked: open your editor at
+the given pane point and `update` the drawing's `text`), `gestureEnd` (end of
+a drag / placement, for undo grouping).
 
-// Listen for events
-manager.on('drawing:selected', (event) => {
-  console.log('Selected:', event.drawingId);
-});
+Mouse and keys (TradingView behaviour): placement by clicks, press-drag for
+brush / highlighter, double-click (or a click on the last point) finishes a
+path / polyline; anchor drags, body drag of a selected drawing, Ctrl / Cmd
+click to multi-select and group drag, Ctrl + body drag clones; Shift = 45°
+steps / square boxes and magnet off, Ctrl / Cmd inverts the magnet; Escape
+drops pending points, then the tool, then the selection; Delete removes the
+selection (locked drawings stay).
 
-// Add drawings programmatically
-const support = new HorizontalLine('support', [
-  { time: '2024-01-01' as any, price: 95 },
-], { lineColor: '#26a69a', lineWidth: 1 });
-
-manager.addDrawing(support);
-
-// Select, deselect, remove
-manager.selectDrawing('support');
-manager.deselectAll();
-manager.removeDrawing('support');
-
-// Export/import drawings as JSON
-const json = manager.exportDrawings();
-// manager.importDrawings(json, factory);
-
-// Access the tool registry for all 68 tool definitions
-const registry = getToolRegistry();
-const allTools = registry.getAllTools();
-```
-
-## Available Drawing Tools (68)
-
-### Lines
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Trend Line | `TrendLine` | 2 |
-| Ray | `Ray` | 2 |
-| Info Line | `InfoLine` | 2 |
-| Extended Line | `ExtendedLine` | 2 |
-| Trend Angle | `TrendAngle` | 2 |
-| Horizontal Line | `HorizontalLine` | 1 |
-| Horizontal Ray | `HorizontalRay` | 1 |
-| Vertical Line | `VerticalLine` | 1 |
-| Cross Line | `CrossLine` | 1 |
-
-### Channels
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Parallel Channel | `ParallelChannel` | 3 |
-| Regression Trend | `RegressionTrend` | 2 |
-| Flat Top/Bottom | `FlatTopBottom` | 3 |
-| Disjoint Channel | `DisjointChannel` | 4 |
-
-### Pitchforks
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Andrews Pitchfork | `AndrewsPitchfork` | 3 |
-| Schiff Pitchfork | `SchiffPitchfork` | 3 |
-| Modified Schiff Pitchfork | `ModifiedSchiffPitchfork` | 3 |
-| Inside Pitchfork | `InsidePitchfork` | 3 |
-
-### Fibonacci
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Fib Retracement | `FibRetracement` | 2 |
-| Fib Extension | `FibExtension` | 3 |
-| Fib Channel | `FibChannel` | 3 |
-| Fib Time Zone | `FibTimeZone` | 2 |
-| Fib Speed Fan | `FibSpeedFan` | 2 |
-| Fib Time Extension | `FibTimeExtension` | 3 |
-| Fib Circles | `FibCircles` | 2 |
-| Fib Spiral | `FibSpiral` | 2 |
-| Fib Arcs | `FibArcs` | 2 |
-| Fib Wedge | `FibWedge` | 3 |
-| Pitchfan | `Pitchfan` | 3 |
-
-### Gann
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Gann Box | `GannBox` | 2 |
-| Gann Fan | `GannFan` | 2 |
-| Gann Square Fixed | `GannSquareFixed` | 1 |
-| Gann Square | `GannSquare` | 2 |
-
-### Forecasting & Measurement
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Long Position | `LongPosition` | 3 |
-| Short Position | `ShortPosition` | 3 |
-| Forecast | `Forecast` | 2 |
-| Bars Pattern | `BarsPattern` | 3 |
-| Projection | `Projection` | 3 |
-| Price Range | `PriceRange` | 2 |
-| Date Range | `DateRange` | 2 |
-| Date & Price Range | `DatePriceRange` | 2 |
-
-### Shapes
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Rectangle | `Rectangle` | 2 |
-| Rotated Rectangle | `RotatedRectangle` | 3 |
-| Circle | `Circle` | 2 |
-| Triangle | `Triangle` | 3 |
-| Ellipse | `Ellipse` | 2 |
-| Arc | `Arc` | 3 |
-| Path | `Path` | 2+ |
-| Polyline | `Polyline` | 2+ |
-| Curve | `Curve` | 4 |
-| Double Curve | `DoubleCurve` | 3 |
-
-### Annotations
-
-| Tool | Export | Anchors |
-|------|--------|---------|
-| Text | `TextAnnotation` | 1 |
-| Callout | `Callout` | 2 |
-| Anchored Text | `AnchoredText` | 2 |
-| Note | `Note` | 1 |
-| Price Note | `PriceNote` | 1 |
-| Price Label | `PriceLabel` | 1 |
-| Flag Mark | `FlagMark` | 1 |
-| Pin | `Pin` | 1 |
-| Comment | `Comment` | 1 |
-| Signpost | `Signpost` | 1 |
-| Table | `Table` | 1 |
-| Brush | `Brush` | 2+ |
-| Highlighter | `Highlighter` | 2+ |
-| Arrow | `Arrow` | 2 |
-| Arrow Marker | `ArrowMarker` | 1 |
-| Arrow Mark Up | `ArrowMarkUp` | 1 |
-| Arrow Mark Down | `ArrowMarkDown` | 1 |
+The host keeps what is not drawing logic: undo stack, storage, settings
+dialogs, text / table editors, toolbar, context menu.
 
 ## Architecture
 
-Each drawing tool follows a two-class pattern:
+```
+src/tv/        shared drawing core, no UI and no lightweight-charts runtime:
+               tool model + TradingView factory defaults (specs), hit tests,
+               placement and drag rules (interact), saved-drawing migration
+               (serialize), renderer-neutral scenes per tool (scene)
+src/runtime/   canvas runtime: DrawingManager, scene -> canvas renderer,
+               chart <-> price / time bridge (makeCoords)
+```
 
-- **Tool class** (e.g. `TrendLine`) - extends `Drawing`, holds anchors/state, implements hit testing and geometry computation
-- **Pane view** (e.g. `TrendLinePaneView`) - implements `IPrimitivePaneView` from lightweight-charts, handles canvas rendering
+The core is shared with [OpenTrader](https://github.com/deepentropy/opentrader),
+which draws the same scenes as SVG. The package imports only types from
+lightweight-charts, so the chart library is not bundled twice.
 
-The `DrawingManager` orchestrates lifecycle, selection, drag-editing, and event emission.
+## Demo
+
+```bash
+npm run demo        # dev server, demo/
+npm run build:demo  # dist-demo/ (GitHub Pages)
+```
 
 ## License
 

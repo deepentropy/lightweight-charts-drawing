@@ -1,360 +1,43 @@
 /**
- * lightweight-charts-drawing
+ * lightweight-charts-drawing 0.2 (in progress)
  *
- * Drawing tools plugin for TradingView's lightweight-charts library.
- * Provides professional-grade drawing tools including trend lines,
- * Fibonacci retracements, channels, and more.
+ * TradingView-style drawing tools for lightweight-charts v5, built on a shared
+ * drawing core (src/tv: tool model + TradingView factory defaults, hit tests,
+ * placement / drag rules, renderer-neutral scenes) and a canvas runtime
+ * (src/runtime: DrawingManager).
  *
  * @packageDocumentation
  */
 
-// ============ Core ============
+// ============ Runtime ============
+export { DrawingManager, type DrawingManagerEvents, type DrawingManagerOptions, type MagnetMode } from "./runtime/manager";
+export { makeCoords, timeToXFallback } from "./runtime/coords";
+export { drawScene, TV_ANCHOR_COLOR, type AnchorStyle, type CanvasSceneOptions } from "./runtime/scene-canvas";
+
+// ============ Core model ============
 export {
-  // Base class
-  Drawing,
-  // Manager
-  DrawingManager,
-  // Types
-  type Anchor,
-  type Point,
+  DEFAULT_STYLE,
+  isVisibleOnInterval,
+  type DataPoint,
+  type Drawing,
+  type DrawingKind,
   type DrawingStyle,
-  type DrawingOptions,
-  type DrawingState,
-  type SerializedDrawing,
-  type Viewport,
-  type MouseEventData,
-  type PixelToChartFn,
-  type ChartToPixelFn,
-  type SnapConfig,
-  type DrawingToolDefinition,
-  type DrawingCategory,
-  type DrawingEventType,
-  type DrawingEvent,
-  type DrawingEventCallback,
-  type IDrawing,
-  type ControlPoint,
-  // Constants
-  DEFAULT_DRAWING_STYLE,
-} from './core';
+  type LevelDef,
+  type NewDrawing,
+} from "./tv/types";
+export { OVERLAY_SPECS, defaultStyleFor, findOverlaySpec, setDefaultStyleOverride, type OverlaySpec } from "./tv/specs";
+export type { Coords, OHLC } from "./tv/coords";
+export type { Pt, HitResult } from "./tv/_shared";
+export { parseDrawings, migrateDrawing } from "./tv/serialize";
 
-// ============ Geometry ============
-export {
-  // Types
-  type Geometry,
-  type LineGeometry,
-  type ArcGeometry,
-  type RectangleGeometry,
-  type PolygonGeometry,
-  type TextGeometry,
-  // Utility functions
-  distanceToLineSegment,
-  distanceToLine,
-  distanceBetweenPoints,
-  isPointNear,
-  extendLineToViewport,
-  getLineAngle,
-  getLineAngleDegrees,
-  rotatePoint,
-  midpoint,
-  lerp,
-} from './core/geometry';
+// ============ Scenes and hit tests (hosts drawing their own way) ============
+export { sceneOf, sceneLockedAnchors, type SceneContext } from "./tv/scene";
+export type { Scene, SceneItem, Paint, Shadow } from "./tv/scene/types";
+export { hitTestKind } from "./tv/kinds/hit-tests";
+export { drawingAxisLabels, type PriceAxisLabel, type TimeAxisLabel } from "./tv/kinds/axis-labels";
 
-// ============ Interaction ============
-export {
-  InteractionHandler,
-  TwoPointInteractionHandler,
-  ThreePointInteractionHandler,
-  SinglePointInteractionHandler,
-  type InteractionState,
-  type InteractionConfig,
-  type IInteractionHandler,
-} from './interaction';
+// ============ Interaction rules ============
+export { finishPlacement, buildNewDrawing } from "./tv/interact/placement";
+export { applyDrag, anchorCursor, type DragState } from "./tv/interact/drag";
 
-// ============ Rendering ============
-export {
-  // Canvas utilities
-  applyStyle,
-  drawLine,
-  drawDashedLine,
-  drawControlPoint,
-  drawControlPoints,
-  drawArrowHead,
-  drawFilledArrowHead,
-  drawCircle,
-  drawRect,
-  drawText,
-  drawLabel,
-  calculatePriceChange,
-  formatPrice,
-  formatPercentage,
-  // Preview renderers
-  PreviewRenderer,
-  LinePreviewRenderer,
-  HorizontalLinePreviewRenderer,
-  VerticalLinePreviewRenderer,
-  ThreePointPreviewRenderer,
-  type IPreviewRenderer,
-  // Pane view
-  DrawingPaneView,
-} from './rendering';
-
-// ============ Line Tools ============
-export {
-  BaseLine,
-  TrendLine,
-  TrendLinePaneView,
-  type TrendLineOptions,
-  HorizontalLine,
-  HorizontalLinePaneView,
-  type HorizontalLineOptions,
-  VerticalLine,
-  VerticalLinePaneView,
-  type VerticalLineOptions,
-  Ray,
-  RayPaneView,
-  type RayOptions,
-  Arrow,
-  ArrowPaneView,
-  type ArrowOptions,
-  ExtendedLine,
-  ExtendedLinePaneView,
-  type ExtendedLineOptions,
-  CrossLine,
-  CrossLinePaneView,
-  type CrossLineOptions,
-  InfoLine,
-  InfoLinePaneView,
-  type InfoLineOptions,
-  TrendAngle,
-  TrendAnglePaneView,
-  type TrendAngleOptions,
-  HorizontalRay,
-  HorizontalRayPaneView,
-  type HorizontalRayOptions,
-} from './tools/lines';
-
-// ============ Shape Tools ============
-export {
-  Rectangle,
-  RectanglePaneView,
-  type RectangleOptions,
-  RotatedRectangle,
-  RotatedRectanglePaneView,
-  type RotatedRectangleOptions,
-  Circle,
-  CirclePaneView,
-  type CircleOptions,
-  Triangle,
-  TrianglePaneView,
-  type TriangleOptions,
-  PriceRange,
-  PriceRangePaneView,
-  type PriceRangeOptions,
-  Ellipse,
-  EllipsePaneView,
-  type EllipseOptions,
-  Arc,
-  ArcPaneView,
-  type ArcOptions,
-  Path,
-  PathPaneView,
-  type PathOptions,
-  Polyline,
-  PolylinePaneView,
-  type PolylineOptions,
-  Curve,
-  CurvePaneView,
-  type CurveOptions,
-  DoubleCurve,
-  DoubleCurvePaneView,
-  type DoubleCurveOptions,
-} from './tools/shapes';
-
-// ============ Channel Tools ============
-export {
-  ParallelChannel,
-  ParallelChannelPaneView,
-  type ParallelChannelOptions,
-  RegressionTrend,
-  RegressionTrendPaneView,
-  type RegressionTrendOptions,
-  FlatTopBottom,
-  FlatTopBottomPaneView,
-  type FlatTopBottomOptions,
-  DisjointChannel,
-  DisjointChannelPaneView,
-  type DisjointChannelOptions,
-  FibRetracement,
-  FibRetracementPaneView,
-  type FibRetracementOptions,
-  FIBONACCI_LEVELS,
-} from './tools/channels';
-
-// ============ Fibonacci Tools ============
-export {
-  FibExtension,
-  FibExtensionPaneView,
-  type FibExtensionOptions,
-  FIB_EXTENSION_LEVELS,
-  FibChannel,
-  FibChannelPaneView,
-  type FibChannelOptions,
-  FIB_CHANNEL_LEVELS,
-  FibTimeZone,
-  FibTimeZonePaneView,
-  type FibTimeZoneOptions,
-  FIB_TIME_INTERVALS,
-  FibSpeedFan,
-  FibSpeedFanPaneView,
-  type FibSpeedFanOptions,
-  FIB_SPEED_RATIOS,
-  FibTimeExtension,
-  FibTimeExtensionPaneView,
-  type FibTimeExtensionOptions,
-  FIB_TIME_EXTENSION_LEVELS,
-  FibCircles,
-  FibCirclesPaneView,
-  type FibCirclesOptions,
-  FIB_CIRCLE_LEVELS,
-  FibSpiral,
-  FibSpiralPaneView,
-  type FibSpiralOptions,
-  GOLDEN_RATIO,
-  FibArcs,
-  FibArcsPaneView,
-  type FibArcsOptions,
-  FIB_ARC_LEVELS,
-  FibWedge,
-  FibWedgePaneView,
-  type FibWedgeOptions,
-  FIB_WEDGE_LEVELS,
-  Pitchfan,
-  PitchfanPaneView,
-  type PitchfanOptions,
-  PITCHFAN_LEVELS,
-} from './tools/fibonacci';
-
-// ============ Pitchfork Tools ============
-export {
-  AndrewsPitchfork,
-  AndrewsPitchforkPaneView,
-  type AndrewsPitchforkOptions,
-  SchiffPitchfork,
-  SchiffPitchforkPaneView,
-  type SchiffPitchforkOptions,
-  ModifiedSchiffPitchfork,
-  ModifiedSchiffPitchforkPaneView,
-  type ModifiedSchiffPitchforkOptions,
-  InsidePitchfork,
-  InsidePitchforkPaneView,
-  type InsidePitchforkOptions,
-} from './tools/pitchforks';
-
-// ============ Gann Tools ============
-export {
-  GannBox,
-  GannBoxPaneView,
-  type GannBoxOptions,
-  GANN_LEVELS,
-  GannFan,
-  GannFanPaneView,
-  type GannFanOptions,
-  GANN_FAN_ANGLES,
-  GannSquareFixed,
-  GannSquareFixedPaneView,
-  type GannSquareFixedOptions,
-  GANN_SQUARE_LEVELS,
-  GannSquare,
-  GannSquarePaneView,
-  type GannSquareOptions,
-  GANN_SQUARE_DIVISIONS,
-} from './tools/gann';
-
-// ============ Forecasting Tools ============
-export {
-  LongPosition,
-  LongPositionPaneView,
-  type LongPositionOptions,
-  ShortPosition,
-  ShortPositionPaneView,
-  type ShortPositionOptions,
-  DateRange,
-  DateRangePaneView,
-  type DateRangeOptions,
-  DatePriceRange,
-  DatePriceRangePaneView,
-  type DatePriceRangeOptions,
-  Projection,
-  ProjectionPaneView,
-  type ProjectionOptions,
-  Forecast,
-  ForecastPaneView,
-  type ForecastOptions,
-  BarsPattern,
-  BarsPatternPaneView,
-  type BarsPatternOptions,
-} from './tools/forecasting';
-
-// ============ Annotation Tools ============
-export {
-  TextAnnotation,
-  TextAnnotationPaneView,
-  type TextAnnotationOptions,
-  Callout,
-  CalloutPaneView,
-  type CalloutOptions,
-  Brush,
-  BrushPaneView,
-  type BrushOptions,
-  Highlighter,
-  HighlighterPaneView,
-  type HighlighterOptions,
-  ArrowMarker,
-  ArrowMarkerPaneView,
-  type ArrowMarkerOptions,
-  type ArrowDirection,
-  ArrowMarkUp,
-  ArrowMarkUpPaneView,
-  type ArrowMarkUpOptions,
-  ArrowMarkDown,
-  ArrowMarkDownPaneView,
-  type ArrowMarkDownOptions,
-  AnchoredText,
-  AnchoredTextPaneView,
-  type AnchoredTextOptions,
-  Note,
-  NotePaneView,
-  type NoteOptions,
-  PriceNote,
-  PriceNotePaneView,
-  type PriceNoteOptions,
-  PriceLabel,
-  PriceLabelPaneView,
-  type PriceLabelOptions,
-  FlagMark,
-  FlagMarkPaneView,
-  type FlagMarkOptions,
-  type FlagColor,
-  Pin,
-  PinPaneView,
-  type PinOptions,
-  Comment,
-  CommentPaneView,
-  type CommentOptions,
-  Signpost,
-  SignpostPaneView,
-  type SignpostOptions,
-  Table,
-  TablePaneView,
-  type TableOptions,
-} from './tools/annotations';
-
-// ============ Tool Registry ============
-export {
-  ToolRegistry,
-  getToolRegistry,
-  TOOL_DEFINITIONS,
-} from './registry';
-
-// ============ Version ============
-export const VERSION = '0.1.0';
+export const VERSION = "0.2.0-dev";

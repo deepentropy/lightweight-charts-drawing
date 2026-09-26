@@ -1,10 +1,12 @@
-# Runtime check (port phase 3.3, 25/09/2026)
+# Runtime check (port phase 3.3 - 3.5, 25-26/09/2026)
 
-Page: `demo/runtime/` (`npx vite --config demo/runtime/vite.config.ts`,
-http://localhost:3007): the `DrawingManager` on a candlestick chart of
-`demo/SPY.csv`, every tool of the core specs, magnet, keep drawing, event log;
-`window.dm` / `window.chart` / `window.series` for scripted checks,
-`window.autoText` answers the text editor request in scripted runs.
+Page: the demo (`demo/`, `npm run demo`; built: `npm run build:demo` +
+`npx vite preview --config vite.demo.config.ts`): the `DrawingManager` on a
+candlestick chart of SPY, every tool of the core specs, magnet, keep
+drawing, JSON export / import, event log; `window.dm` / `window.chart` /
+`window.series` for scripted checks, `window.autoText` answers the text
+editor request in scripted runs. (Until 26/09/2026 the same page lived in
+`demo/runtime/`.)
 
 Scripted session (Playwright, real mouse / keyboard events):
 
@@ -36,3 +38,8 @@ the chart's own labels).
 
 Not in this runtime yet: table cell editing and image placement (host
 side), a hover check of the anchors.
+
+Built demo (26/09/2026, 04-demo-build.png, served like GitHub Pages under
+/lightweight-charts-drawing/): no page errors; fib retracement, pitchfork,
+text, rectangle, Elliott impulse, sector placed by mouse; export -> clear ->
+import restores the 6 drawings.

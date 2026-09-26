@@ -84,9 +84,9 @@ dependency and OpenTrader keeps its own lightweight-charts fork.
 | text-annotation | text |
 | projection | sector |
 
-`anchored-text` (TradingView "Anchored text") exists only in the library;
-OpenTrader has no such tool. Open question for phase 3: keep the 0.1 version
-or build it the TradingView way.
+`anchored-text` (TradingView "Anchored text") existed only in the library;
+OpenTrader has no such tool. It was removed with the 0.1 runtime
+(26/09/2026); open question: build it the TradingView way (phase 4).
 
 ## Status
 
@@ -127,7 +127,7 @@ or build it the TradingView way.
     fixtures incl. table UI states; A/B render 0.62x. All tool renderers of
     OpenTrader now draw the core scenes (full A/B 504 / 516, the rest = the
     fib clip fix)
-- [ ] Phase 3 library runtime (started 25/09/2026, plan below)
+- [ ] Phase 3 library runtime (started 25/09/2026, plan below; left: table / image host hooks)
   - [x] 3.0 `scene/index.ts` `sceneOf`: the kind -> scene dispatcher moved
     from OpenTrader `renderKind` (golden / full A/B unchanged)
   - [x] 3.1 interaction core (`src/tv/interact/`: constants, project,
@@ -148,7 +148,14 @@ or build it the TradingView way.
     `docs/port-opentrader/runtime-check/` (15 checks pass); axis labels
     (`kinds/axis-labels.ts` -> primitive price / time axis views). Left:
     table / image host hooks
-  - [ ] 3.4 old runtime removed, 3.5 demo
+  - [x] 3.4 0.1 runtime removed (`src/core`, `interaction`, `registry`,
+    `rendering`, `tools`); new `src/index.ts` (runtime, core model, scenes,
+    hit tests, interaction rules); `npm run build` OK, the bundle imports
+    nothing from lightweight-charts at run time (types only)
+  - [x] 3.5 demo on the runtime (`demo/`, fixed demo config: data in
+    `demo/public`), README rewritten for the 0.2 API, `docs/TOOLS.md`
+    generated from the specs + TradingView names (`docs/tools_md.py`, 86
+    tools); rendering vs OpenTrader checked by the 3.2 pixel check
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
 

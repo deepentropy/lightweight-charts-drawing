@@ -1,329 +1,180 @@
-# Drawing Tools Implementation Status
-
-This document tracks the implementation status of all drawing tools for the lightweight-charts-drawing library.
-
-## Summary
-
-| Status | Count |
-|--------|-------|
-| Implemented | 68 |
-| Not Implemented | 7 |
-| **Total** | **75** |
-
----
-
-# Trend Line Tools
-
-## Lines
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Trend Line | ✅ | `trend-line` | 2 |
-| Ray | ✅ | `ray` | 2 |
-| Info Line | ✅ | `info-line` | 2 |
-| Extended Line | ✅ | `extended-line` | 2 |
-| Trend Angle | ✅ | `trend-angle` | 2 |
-| Horizontal Line | ✅ | `horizontal-line` | 1 |
-| Horizontal Ray | ✅ | `horizontal-ray` | 1 |
-| Vertical Line | ✅ | `vertical-line` | 1 |
-| Cross Line | ✅ | `cross-line` | 1 |
-
-**Status: 9/9 Complete** ✅
-
-## Channels
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Parallel Channel | ✅ | `parallel-channel` | 3 |
-| Regression Trend | ✅ | `regression-trend` | 2 |
-| Flat Top/Bottom | ✅ | `flat-top-bottom` | 3 |
-| Disjoint Channel | ✅ | `disjoint-channel` | 4 |
-
-**Status: 4/4 Complete** ✅
-
-## Pitchforks
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Pitchfork | ✅ | `andrews-pitchfork` | 3 |
-| Schiff Pitchfork | ✅ | `schiff-pitchfork` | 3 |
-| Modified Schiff Pitchfork | ✅ | `modified-schiff-pitchfork` | 3 |
-| Inside Pitchfork | ✅ | `inside-pitchfork` | 3 |
-
-**Status: 4/4 Complete** ✅
-
----
-
-# Gann and Fibonacci Tools
-
-## Fibonacci
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Fib Retracement | ✅ | `fib-retracement` | 2 |
-| Trend-Based Fib Extension | ✅ | `fib-extension` | 3 |
-| Fib Channel | ✅ | `fib-channel` | 3 |
-| Fib Time Zone | ✅ | `fib-time-zone` | 2 |
-| Fib Speed Resistance Fan | ✅ | `fib-speed-fan` | 2 |
-| Trend-Based Fib Time | ✅ | `fib-time-extension` | 3 |
-| Fib Circles | ✅ | `fib-circles` | 2 |
-| Fib Spiral | ✅ | `fib-spiral` | 2 |
-| Fib Speed Resistance Arcs | ✅ | `fib-arcs` | 2 |
-| Fib Wedge | ✅ | `fib-wedge` | 3 |
-| Pitchfan | ✅ | `pitchfan` | 3 |
-
-**Status: 11/11 Complete** ✅
-
-## Gann
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Gann Box | ✅ | `gann-box` | 2 |
-| Gann Fan | ✅ | `gann-fan` | 2 |
-| Gann Square Fixed | ✅ | `gann-square-fixed` | 1 |
-| Gann Square | ✅ | `gann-square` | 2 |
-
-**Status: 4/4 Complete** ✅
-
----
-
-# Forecasting and Measurement Tools
-
-## Projection
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Long Position | ✅ | `long-position` | 3 |
-| Short Position | ✅ | `short-position` | 3 |
-| Forecast | ✅ | `forecast` | 2 |
-| Bars Pattern | ✅ | `bars-pattern` | 3 |
-| Ghost Feed | ❌ | - | - |
-| Projection | ✅ | `projection` | 3 |
-
-**Status: 5/6**
-
-## Volume-Based
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Anchored VWAP | ❌ | - | - |
-| Fixed Range Volume Profile | ❌ | - | - |
-| Anchored Volume Profile | ❌ | - | - |
-
-**Status: 0/3**
-
-## Measurer
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Price Range | ✅ | `price-range` | 2 |
-| Date Range | ✅ | `date-range` | 2 |
-| Date and Price Range | ✅ | `date-price-range` | 2 |
-
-**Status: 3/3 Complete** ✅
-
----
-
-# Geometric Shapes
-
-## Brushes
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Brush | ✅ | `brush` | 2+ |
-| Highlighter | ✅ | `highlighter` | 2+ |
-
-**Status: 2/2 Complete** ✅
-
-## Arrows
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Arrow | ✅ | `arrow` | 2 |
-| Arrow Marker | ✅ | `arrow-marker` | 1 |
-| Arrow Mark Up | ✅ | `arrow-mark-up` | 1 |
-| Arrow Mark Down | ✅ | `arrow-mark-down` | 1 |
-
-**Status: 4/4 Complete** ✅
-
-## Shapes
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Rectangle | ✅ | `rectangle` | 2 |
-| Rotated Rectangle | ✅ | `rotated-rectangle` | 3 |
-| Circle | ✅ | `circle` | 2 |
-| Triangle | ✅ | `triangle` | 3 |
-| Ellipse | ✅ | `ellipse` | 2 |
-| Arc | ✅ | `arc` | 3 |
-| Path | ✅ | `path` | 2+ |
-| Polyline | ✅ | `polyline` | 2+ |
-| Curve | ✅ | `curve` | 4 |
-| Double Curve | ✅ | `double-curve` | 3 |
-
-**Status: 10/10 Complete** ✅
-
----
-
-# Annotation Tools
-
-## Text & Notes
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Text | ✅ | `text-annotation` | 1 |
-| Callout | ✅ | `callout` | 2 |
-| Anchored Text | ✅ | `anchored-text` | 2 |
-| Note | ✅ | `note` | 1 |
-| Price Note | ✅ | `price-note` | 1 |
-| Pin | ✅ | `pin` | 1 |
-| Table | ✅ | `table` | 1 |
-| Comment | ✅ | `comment` | 1 |
-| Price Label | ✅ | `price-label` | 1 |
-| Signpost | ✅ | `signpost` | 1 |
-| Flag Mark | ✅ | `flag-mark` | 1 |
-
-**Status: 11/11 Complete** ✅
-
-## Content
-
-| Tool | Status | Type | Anchors |
-|------|--------|------|---------|
-| Image | ❌ | - | - |
-| Tweet | ❌ | - | - |
-| Idea | ❌ | - | - |
-
-**Status: 0/3**
-
----
-
-# Tool Categories Summary
-
-| Category | Implemented | Total | Status |
-|----------|-------------|-------|--------|
-| Lines | 9 | 9 | ✅ Complete |
-| Channels | 4 | 4 | ✅ Complete |
-| Pitchforks | 4 | 4 | ✅ Complete |
-| Fibonacci | 11 | 11 | ✅ Complete |
-| Gann | 4 | 4 | ✅ Complete |
-| Projection | 5 | 6 | 83% |
-| Volume-Based | 0 | 3 | 0% |
-| Measurer | 3 | 3 | ✅ Complete |
-| Brushes | 2 | 2 | ✅ Complete |
-| Arrows | 4 | 4 | ✅ Complete |
-| Shapes | 10 | 10 | ✅ Complete |
-| Text & Notes | 11 | 11 | ✅ Complete |
-| Content | 0 | 3 | 0% |
-
----
-
-# Currently Implemented Tools (68 total)
-
-```typescript
-// Trend Line Tools - Lines (9) ✓ COMPLETE
-'trend-line'
-'ray'
-'info-line'
-'extended-line'
-'trend-angle'
-'horizontal-line'
-'horizontal-ray'
-'vertical-line'
-'cross-line'
-
-// Trend Line Tools - Channels (4) ✓ COMPLETE
-'parallel-channel'
-'regression-trend'
-'flat-top-bottom'
-'disjoint-channel'
-
-// Trend Line Tools - Pitchforks (4) ✓ COMPLETE
-'andrews-pitchfork'
-'schiff-pitchfork'
-'modified-schiff-pitchfork'
-'inside-pitchfork'
-
-// Gann & Fibonacci - Fibonacci (11) ✓ COMPLETE
-'fib-retracement'
-'fib-extension'
-'fib-channel'
-'fib-time-zone'
-'fib-speed-fan'
-'fib-time-extension'
-'fib-circles'
-'fib-spiral'
-'fib-arcs'
-'fib-wedge'
-'pitchfan'
-
-// Gann & Fibonacci - Gann (4) ✓ COMPLETE
-'gann-box'
-'gann-fan'
-'gann-square-fixed'
-'gann-square'
-
-// Forecasting & Measurement - Projection (5)
-'long-position'
-'short-position'
-'projection'
-'forecast'
-'bars-pattern'
-
-// Forecasting & Measurement - Measurer (3) ✓ COMPLETE
-'price-range'
-'date-range'
-'date-price-range'
-
-// Geometric Shapes - Brushes (2) ✓ COMPLETE
-'brush'
-'highlighter'
-
-// Geometric Shapes - Arrows (4) ✓ COMPLETE
-'arrow'
-'arrow-marker'
-'arrow-mark-up'
-'arrow-mark-down'
-
-// Geometric Shapes - Shapes (10) ✓ COMPLETE
-'rectangle'
-'rotated-rectangle'
-'circle'
-'triangle'
-'ellipse'
-'arc'
-'path'
-'polyline'
-'curve'
-'double-curve'
-
-// Annotation Tools - Text & Notes (11)
-'text-annotation'
-'callout'
-'anchored-text'
-'note'
-'price-note'
-'price-label'
-'flag-mark'
-'pin'
-'comment'
-'signpost'
-'table'
-```
-
----
-
-# TODO - Not Yet Implemented (7 tools)
-
-## Lower Priority (Require Additional Data/Integration)
-- [ ] Anchored VWAP - Volume-weighted average price (requires volume data)
-- [ ] Fixed Range Volume Profile - Volume distribution (requires volume data)
-- [ ] Anchored Volume Profile - Volume at price levels (requires volume data)
-- [ ] Ghost Feed - Historical pattern overlay
-
-## Content Tools (Requires External Integration)
-- [ ] Image - Embedded image annotation
-- [ ] Tweet - Embedded tweet
-- [ ] Idea - TradingView idea embed
-
----
-
+# Drawing tools
+
+Generated by `docs/tools_md.py` from the drawing core (`src/tv/specs.ts`
+`OVERLAY_SPECS`) and the TradingView toolbar names / groups (OpenTrader
+`src/data/drawing-toolbar.ts`, captured from TradingView Desktop).
+
+86 tools. `kind` is the value for `DrawingManager.setTool` and
+the `kind` of a saved drawing.
+
+
+## Trend tools / Lines
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Trendline | `trend-line` | 2 clicks | Alt + T |
+| Ray | `ray` | 2 clicks |  |
+| Info line | `info-line` | 2 clicks |  |
+| Extended line | `extended-line` | 2 clicks |  |
+| Trend angle | `trend-angle` | 2 clicks |  |
+| Horizontal line | `horizontal-line` | 1 click | Alt + H |
+| Horizontal ray | `horizontal-ray` | 1 click | Alt + J |
+| Vertical line | `vertical-line` | 1 click | Alt + V |
+| Cross line | `cross-line` | 1 click | Alt + C |
+
+## Trend tools / Channels
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Parallel channel | `parallel-channel` | 3 clicks |  |
+| Regression trend | `regression-trend` | 2 clicks |  |
+| Flat top/bottom | `flat-top-bottom` | 3 clicks |  |
+| Disjoint channel | `disjoint-channel` | 3 clicks |  |
+
+## Trend tools / Pitchforks
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Pitchfork | `pitchfork` | 3 clicks |  |
+| Schiff pitchfork | `schiff-pitchfork` | 3 clicks |  |
+| Modified Schiff pitchfork | `modified-schiff-pitchfork` | 3 clicks |  |
+| Inside pitchfork | `inside-pitchfork` | 3 clicks |  |
+
+## Gann and Fibonacci tools / Fibonacci
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Fib retracement | `fib-retracement` | 2 clicks | Alt + F |
+| Trend-based fib extension | `trend-based-fib-extension` | 3 clicks |  |
+| Fib channel | `fib-channel` | 3 clicks |  |
+| Fib time zone | `fib-time-zone` | 2 clicks |  |
+| Fib speed resistance fan | `fib-speed-resistance-fan` | 2 clicks |  |
+| Trend-based fib time | `trend-based-fib-time` | 3 clicks |  |
+| Fib circles | `fib-circles` | 2 clicks |  |
+| Fib spiral | `fib-spiral` | 2 clicks |  |
+| Fib speed resistance arcs | `fib-speed-resistance-arcs` | 2 clicks |  |
+| Fib wedge | `fib-wedge` | 3 clicks |  |
+| Pitchfan | `pitchfan` | 3 clicks |  |
+
+## Gann and Fibonacci tools / Gann
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Gann box | `gann-box` | 2 clicks |  |
+| Gann square fixed | `gann-square-fixed` | 2 clicks |  |
+| Gann square | `gann-square` | 2 clicks |  |
+| Gann fan | `gann-fan` | 2 clicks |  |
+
+## Patterns / Chart patterns
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| XABCD pattern | `xabcd-pattern` | 5 clicks |  |
+| Cypher pattern | `cypher-pattern` | 5 clicks |  |
+| Head and shoulders | `head-and-shoulders` | 7 clicks |  |
+| ABCD pattern | `abcd-pattern` | 4 clicks |  |
+| Triangle pattern | `triangle-pattern` | 4 clicks |  |
+| Three drives pattern | `three-drives-pattern` | 7 clicks |  |
+
+## Patterns / Elliott waves
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Elliott impulse wave (1·2·3·4·5) | `elliott-impulse` | 6 clicks |  |
+| Elliott correction wave (A·B·C) | `elliott-correction` | 4 clicks |  |
+| Elliott triangle wave (A·B·C·D·E) | `elliott-triangle` | 6 clicks |  |
+| Elliott double combo wave (W·X·Y) | `elliott-double-combo` | 4 clicks |  |
+| Elliott triple combo wave (W·X·Y·X·Z) | `elliott-triple-combo` | 6 clicks |  |
+
+## Patterns / Cycles
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Cyclic lines | `cyclic-lines` | 2 clicks |  |
+| Time cycles | `time-cycles` | 2 clicks |  |
+| Sine line | `sine-line` | 2 clicks |  |
+
+## Forecasting and measurement tools / Forecasting
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Long position | `long-position` | 1 click |  |
+| Short position | `short-position` | 1 click |  |
+| Position forecast | `position-forecast` | 2 clicks |  |
+| Bars pattern | `bar-pattern` | 2 clicks |  |
+| Ghost feed | `ghost-feed` | clicks (min 2), double-click or click the last point to finish |  |
+| Sector | `sector` | 3 clicks |  |
+
+## Forecasting and measurement tools / Volume-based
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Anchored VWAP | `anchored-vwap` | 1 click |  |
+| Fixed range volume profile | `fixed-range-volume-profile` | 2 clicks |  |
+| Anchored volume profile | `anchored-volume-profile` | 1 click |  |
+
+## Forecasting and measurement tools / Measurers
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Price range | `price-range` | 2 clicks |  |
+| Date range | `date-range` | 2 clicks |  |
+| Date and price range | `date-and-price-range` | 2 clicks |  |
+
+## Geometric shapes / Brushes
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Brush | `brush` | press, drag, release |  |
+| Highlighter | `highlighter` | press, drag, release |  |
+
+## Geometric shapes / Arrows
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Arrow marker | `arrow-marker` | 2 clicks |  |
+| Arrow | `arrow` | 2 clicks |  |
+| Arrow mark up | `arrow-mark-up` | 1 click |  |
+| Arrow mark down | `arrow-mark-down` | 1 click |  |
+
+## Geometric shapes / Shapes
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Rectangle | `rectangle` | 2 clicks | Alt + Shift + R |
+| Rotated rectangle | `rotated-rectangle` | 3 clicks |  |
+| Path | `path` | clicks (min 2), double-click or click the last point to finish |  |
+| Circle | `circle` | 2 clicks |  |
+| Ellipse | `ellipse` | 3 clicks |  |
+| Polyline | `polyline` | clicks (min 2), double-click or click the last point to finish |  |
+| Triangle | `triangle` | 3 clicks |  |
+| Arc | `arc` | 3 clicks |  |
+| Curve | `curve` | 2 clicks |  |
+| Double curve | `double-curve` | 2 clicks |  |
+
+## Annotation tools / Text and notes
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Text | `text` | 1 click + text |  |
+| Note | `note` | 2 clicks + text |  |
+| Price note | `price-note` | 2 clicks + text |  |
+| Pin | `pin` | 1 click + text |  |
+| Table | `table` | 1 click |  |
+| Callout | `callout` | 2 clicks + text |  |
+| Comment | `comment` | 1 click + text |  |
+| Price label | `price-label` | 1 click |  |
+| Signpost | `signpost` | 1 click + text |  |
+| Flag mark | `flag-mark` | 1 click |  |
+
+## Annotation tools / Content
+
+| Tool | kind | Placement | Hotkey |
+|---|---|---|---|
+| Image | `image` | 1 click |  |
+
+## Not in the TradingView toolbar
+
+| kind | Placement |
+|---|---|
+| `font-icon` | 1 click |

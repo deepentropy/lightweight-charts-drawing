@@ -1,12 +1,12 @@
 /*
- * Runtime test page (port phase 3.3): the DrawingManager on a candlestick
- * chart of demo/SPY.csv, every tool of the core specs, magnet, keep drawing,
- * an event log. `window.dm` / `window.chart` for scripted checks.
+ * Demo of the DrawingManager on a candlestick chart of SPY (demo/public):
+ * every tool of the core specs, magnet, keep drawing, JSON export / import
+ * (kept in localStorage), an event log. `window.dm` / `window.chart` /
+ * `window.series` for scripted checks; `window.autoText` answers the text
+ * editor request without a prompt.
  */
 import { CandlestickSeries, createChart, type Time } from "lightweight-charts";
-import { DrawingManager, type MagnetMode } from "../../src/runtime/manager";
-import { OVERLAY_SPECS } from "../../src/tv/specs";
-import type { DrawingKind } from "../../src/tv/types";
+import { DrawingManager, OVERLAY_SPECS, type DrawingKind, type MagnetMode } from "../src";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const log = (s: string) => {
@@ -15,7 +15,7 @@ const log = (s: string) => {
 };
 
 async function main() {
-  const csv = await (await fetch("/SPY.csv")).text();
+  const csv = await (await fetch(`${import.meta.env.BASE_URL}SPY.csv`)).text();
   const rows = csv.trim().split("\n").slice(1).map((l) => l.split(",").map(Number));
   const data = rows.slice(-600).map(([t, o, h, l, c]) => ({ time: t as Time, open: o, high: h, low: l, close: c }));
   const chart = createChart($("chart"), {
@@ -34,7 +34,12 @@ async function main() {
   tool.onchange = () => dm.setTool((tool.value || null) as DrawingKind | null);
   $<HTMLSelectElement>("magnet").onchange = (e) => dm.setMagnet((e.target as HTMLSelectElement).value as MagnetMode);
   $<HTMLInputElement>("stay").onchange = (e) => dm.setStayInDrawingMode((e.target as HTMLInputElement).checked);
-  $("export").onclick = () => log(dm.exportJSON());
+  const KEY = "lwcd-demo-drawings";
+  $("export").onclick = () => {
+    localStorage.setItem(KEY, dm.exportJSON());
+    log(`export ${dm.drawings().length} drawings (localStorage)`);
+  };
+  $("import").onclick = () => log(`import ${dm.importJSON(localStorage.getItem(KEY) ?? "[]")} drawings`);
   $("clear").onclick = () => dm.clear();
 
   dm.on("add", (d) => log(`add ${d.kind} ${d.id} ${JSON.stringify(d.points)}`));
