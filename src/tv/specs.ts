@@ -515,6 +515,14 @@ export function defaultStyleFor(kind: DrawingKind): DrawingStyle {
   return style;
 }
 
+/** Factory style of a tool: base + per-spec defaults, WITHOUT the user's
+ *  saved default (TV restoreFactoryDefaults / "Apply defaults"). */
+export function factoryStyleFor(kind: DrawingKind): DrawingStyle {
+  const style = { ...DEFAULT_STYLE, ...OVERLAY_SPECS[kind].defaults };
+  if (style.levels) style.levels = style.levels.map((l) => ({ ...l }));
+  return style;
+}
+
 /** Host hook: the user's saved default style of a tool (OpenTrader: its
  *  saved "Save as default" templates), merged over the factory defaults by
  *  `defaultStyleFor`. */

@@ -10,7 +10,7 @@
  * dialogs, inline text / table editors, toolbar, context menu. It listens to
  * the events and calls the methods.
  */
-import type { IChartApi, ISeriesApi, ISeriesPrimitive, ISeriesPrimitiveAxisView, IPrimitivePaneRenderer, IPrimitivePaneView, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, ISeriesPrimitive, ISeriesPrimitiveAxisView, IPrimitivePaneRenderer, IPrimitivePaneView, PrimitiveHoveredItem, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
 import type { CanvasRenderingTarget2D } from "fancy-canvas";
 import type { HitResult, Pt } from "../tv/_shared";
 import type { Coords, OHLC } from "../tv/coords";
@@ -19,6 +19,8 @@ import { defaultStyleFor, findOverlaySpec, type OverlaySpec } from "../tv/specs"
 import { hitTestKind } from "../tv/kinds/hit-tests";
 import { signpostPositionFor } from "../tv/kinds/signpost";
 import { drawingAxisLabels } from "../tv/kinds/axis-labels";
+import { tableCanRemove, tableEdgeOf, tableInsert, tableLayout, tableRemove, tableWithText, type TableCellRef, type TableUi } from "../tv/kinds/table";
+import { drawingImageFailed, imageInitialSize, onImagesChanged } from "../tv/kinds/images";
 import { sceneLockedAnchors, sceneOf } from "../tv/scene";
 import type { Scene } from "../tv/scene/types";
 import { parseDrawings } from "../tv/serialize";
@@ -62,7 +64,13 @@ export type DrawingManagerEvents = {
   textEdit: (d: Drawing, screen: Pt) => void;
   /** A drag / placement gesture ended (undo coalescing). */
   gestureEnd: () => void;
+  /** A click on a cell of a selected table (TV in-place editing): the host
+   *  opens its editor over `box` (pane coordinates) and calls
+   *  setTableCellText; endTableEdit when it closes. */
+  tableEdit: (d: Drawing, cell: TableCellRef, box: { left: number; top: number; width: number; height: number }) => void;
 };
+
+export type TableOp = "insert-column" | "insert-row" | "remove-row" | "remove-column";
 
 type Listeners = { [K in keyof DrawingManagerEvents]: Set<DrawingManagerEvents[K]> };
 
@@ -79,7 +87,7 @@ export class DrawingManager {
   private readonly coords: Coords;
   private readonly primitive: DrawingsPrimitive;
   private readonly el: HTMLElement;
-  private readonly listeners: Listeners = { change: new Set(), add: new Set(), update: new Set(), remove: new Set(), selection: new Set(), tool: new Set(), textEdit: new Set(), gestureEnd: new Set() };
+  private readonly listeners: Listeners = { change: new Set(), add: new Set(), update: new Set(), remove: new Set(), selection: new Set(), tool: new Set(), textEdit: new Set(), gestureEnd: new Set(), tableEdit: new Set() };
   private list: Drawing[] = [];
   private selected: string[] = [];
   private hovered: { id: string; anchor: number } | null = null;
@@ -88,6 +96,12 @@ export class DrawingManager {
   private pending: DataPoint[] = [];
   private cursor: Pt | null = null;
   private gesture: Gesture | null = null;
+  /** TV table UI of the selected table: active cell, open editor, hovered
+   *  resize edge. */
+  private tableUi: TableUi | null = null;
+  /** Cursor over the hovered drawing (TV: pointer, move when selected,
+   *  resize cursors on anchors and table edges), null = the chart's own. */
+  private hoverCursor: string | null = null;
   private shift = false;
   private ctrl = false;
   private savedScroll: { handleScroll: unknown; handleScale: unknown } | null = null;
@@ -104,11 +118,17 @@ export class DrawingManager {
     this.el = chart.chartElement();
     this.listen(this.el, "pointerdown", (e) => this.onPointerDown(e as PointerEvent), true);
     this.listen(this.el, "pointermove", (e) => this.onHover(e as PointerEvent));
-    this.listen(this.el, "pointerleave", () => this.setHover(null));
+    this.listen(this.el, "pointerleave", () => { this.hoverCursor = null; this.setHover(null); });
     this.listen(this.el, "dblclick", (e) => this.onDoubleClick(e as MouseEvent), true);
     this.listen(window, "keydown", (e) => this.onKey(e as KeyboardEvent));
     this.listen(window, "keyup", (e) => this.onKey(e as KeyboardEvent));
     this.listen(window, "blur", () => { this.shift = false; this.ctrl = false; });
+    // Images load asynchronously (core image cache, filled by the host's
+    // reader): redraw, and drop an image drawing whose file failed (TV).
+    this.off.push(onImagesChanged(() => {
+      for (const d of this.list) if (d.kind === "image" && drawingImageFailed(d.image?.name)) this.remove(d.id);
+      this.redraw();
+    }));
   }
 
   // ── public API ────────────────────────────────────────────────────────────
@@ -126,7 +146,6 @@ export class DrawingManager {
     this.glyph = o.glyph;
     this.pending = [];
     this.cursor = null;
-    this.el.style.cursor = spec ? "crosshair" : "";
     this.emit("tool", spec ? spec.kind : null);
     this.redraw();
   }
@@ -188,11 +207,62 @@ export class DrawingManager {
 
   select(ids: readonly string[]): void {
     this.selected = ids.filter((id) => this.get(id));
+    if (this.tableUi && !this.selected.includes(this.tableUi.id)) this.tableUi = null;
     this.emit("selection", this.selected);
     this.redraw();
   }
   selection(): readonly string[] {
     return this.selected;
+  }
+
+  /** TV image: placed at the pane centre at its initial size (a quarter of
+   *  the pane at most) and selected. The file must be known to the core
+   *  image cache (cacheImage / setImageReader) under `name`. */
+  addImage(img: { name: string; width: number; height: number; transparency?: number }): string | null {
+    const { w, h } = this.paneSize();
+    const dp = unproject(this.coords, { x: w / 2, y: h / 2 });
+    if (!dp) return null;
+    const style = defaultStyleFor("image");
+    const id = this.add({
+      kind: "image",
+      points: [dp],
+      image: { name: img.name, ...imageInitialSize(img.width, img.height, w, h) },
+      style: { ...style, transparency: img.transparency ?? style.transparency },
+    } as NewDrawing);
+    this.select([id]);
+    return id;
+  }
+
+  /** The table UI state (active cell, editor open, hovered edge) or null. */
+  tableState(): TableUi | null {
+    return this.tableUi;
+  }
+  setTableCellText(id: string, cell: TableCellRef, text: string): void {
+    const d = this.get(id);
+    if (d?.kind !== "table") return;
+    this.update({ ...d, style: { ...d.style, ...tableWithText(d.style, cell, text) } } as Drawing);
+  }
+  /** The cell editor closed (the cell stays active). */
+  endTableEdit(): void {
+    if (this.tableUi) this.tableUi = { ...this.tableUi, editing: false };
+    this.redraw();
+  }
+  /** TV table context actions on the active cell (insert after it, or at the
+   *  end without one; remove its row / column). */
+  tableOp(id: string, op: TableOp): void {
+    const d = this.get(id);
+    if (d?.kind !== "table") return;
+    const cell = this.tableUi?.id === id ? this.tableUi.cell : null;
+    if (op === "insert-column" || op === "insert-row") {
+      this.update({ ...d, style: { ...d.style, ...tableInsert(d.style, op === "insert-row" ? "row" : "column", cell) } } as Drawing);
+    } else {
+      const kind = op === "remove-row" ? "row" : "column";
+      if (!cell || !tableCanRemove(d.style, kind)) return;
+      const r = tableRemove(d.style, kind, cell);
+      this.update({ ...d, style: { ...d.style, ...r.patch } } as Drawing);
+      this.tableUi = { id, cell: r.cell, editing: this.tableUi?.editing ?? false, edge: null };
+    }
+    this.emit("gestureEnd");
   }
 
   /** The drawings as JSON (the core Drawing model). */
@@ -238,7 +308,8 @@ export class DrawingManager {
       // TV shows a drawing's anchors on hover too; locked drawings and an
       // armed tool keep hover feedback off.
       const active = sel || (hov && !this.spec);
-      const scene = sceneOf(d, pts, { w, h, coords: c, selected: active && !d.locked, hovered: hov, textSelected: sel });
+      const tableUi = d.kind === "table" && sel && this.tableUi?.id === d.id ? this.tableUi : null;
+      const scene = sceneOf(d, pts, { w, h, coords: c, selected: active && !d.locked, hovered: hov, textSelected: sel, tableUi });
       out.push({ scene, selected: sel, hoveredAnchor: hov ? this.hovered!.anchor : -1 });
       if (sel && d.locked) out.push({ scene: sceneLockedAnchors(pts, d.style.color), selected: sel, hoveredAnchor: -1 });
     }
@@ -270,6 +341,17 @@ export class DrawingManager {
       }
     }
     return { price, time };
+  }
+  /** The cursor at a pane point, for the primitive hitTest (lightweight-
+   *  charts shows it): crosshair while a tool is armed, the hovered
+   *  drawing's cursor, else null (the chart's own). */
+  hoveredId(): string | null {
+    return this.hovered?.id ?? null;
+  }
+  cursorAt(): string | null {
+    if (this.spec) return "crosshair";
+    if (this.gesture?.active) return this.gesture.mode.hit === "body" ? "move" : this.hoverCursor;
+    return this.hoverCursor;
   }
   fontFamily(): string {
     return this.opts.fontFamily ?? this.chart.options().layout.fontFamily;
@@ -415,10 +497,27 @@ export class DrawingManager {
     }
     const hit = this.hitTopmost(sp);
     this.setHover(hit ? { id: hit.drawing.id, anchor: hit.mode.hit === "handle" ? hit.mode.handleIndex : -1 } : null);
-    if (!hit) this.el.style.cursor = "";
-    else if (hit.drawing.locked) this.el.style.cursor = "default";
-    else if (hit.mode.hit === "handle") this.el.style.cursor = anchorCursor(hit.pts[hit.mode.handleIndex] ?? sp, hit.pts);
-    else this.el.style.cursor = this.selected.includes(hit.drawing.id) ? "move" : "pointer";
+    // TV table: the hovered row / column edge of the selected table.
+    const edge = hit?.drawing.kind === "table" && hit.mode.hit === "handle" ? tableEdgeOf(hit.mode.handleIndex) : null;
+    const ui = this.tableUi;
+    if (hit?.drawing.kind === "table" && this.selected.includes(hit.drawing.id)) {
+      if ((ui?.edge?.row ?? -1) !== (edge?.row ?? -1) || (ui?.edge?.col ?? -1) !== (edge?.col ?? -1) || ui?.id !== hit.drawing.id) {
+        this.tableUi = ui && ui.id === hit.drawing.id ? { ...ui, edge } : { id: hit.drawing.id, cell: null, editing: false, edge };
+        this.redraw();
+      }
+    } else if (ui?.edge) {
+      this.tableUi = { ...ui, edge: null };
+      this.redraw();
+    }
+    this.hoverCursor = !hit
+      ? null
+      : hit.drawing.locked
+        ? "default"
+        : edge
+          ? edge.col != null && edge.row != null ? "default" : edge.col != null ? "ew-resize" : "ns-resize"
+          : hit.mode.hit === "handle"
+            ? anchorCursor(hit.pts[hit.mode.handleIndex] ?? sp, hit.pts)
+            : this.selected.includes(hit.drawing.id) ? "move" : "pointer";
   }
 
   private onPointerDown(e: PointerEvent): void {
@@ -632,6 +731,15 @@ export class DrawingManager {
       if (g && !g.active) {
         if (g.pendingToggle) this.toggle(g.id);
         else if (g.pendingCollapse) this.select([g.id]);
+        // TV table: a click on a cell of the already selected table makes it
+        // the active cell and opens its editor; a corner anchor clears it.
+        if (g.start.kind === "table" && !multiKey) {
+          if (g.mode.hit === "body" && g.mode.cell && wasSelected) this.openCell(g.start, g.mode.cell);
+          else if (g.mode.hit === "handle" && g.mode.handleIndex < 4 && this.tableUi?.id === g.id) {
+            this.tableUi = { ...this.tableUi, cell: null, editing: false };
+            this.redraw();
+          }
+        }
       }
       // TV image endChanging: the centre goes back to its bar.
       if (g?.active && g.start.kind === "image") {
@@ -681,6 +789,16 @@ export class DrawingManager {
   private endGesture(): void {
     this.gesture = null;
     this.releaseChart();
+  }
+
+  private openCell(d: Drawing, cell: TableCellRef): void {
+    this.tableUi = { id: d.id, cell, editing: true, edge: null };
+    this.redraw();
+    const pts = screenPoints(this.coords, d, this.paneSize());
+    if (!pts) return;
+    const L = tableLayout(d, pts[0]);
+    const [r, c] = cell;
+    this.emit("tableEdit", d, cell, { left: L.xs[c], top: L.ys[r], width: L.xs[c + 1] - L.xs[c], height: L.ys[r + 1] - L.ys[r] });
   }
 
   private toggle(id: string): void {
@@ -793,6 +911,14 @@ class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   }
   requestUpdate(): void {
     this.request?.();
+  }
+  /** lightweight-charts sets the pane cursor from this (the manager's hover
+   *  state, updated on pointer move). */
+  hitTest(): PrimitiveHoveredItem | null {
+    const c = this.m.cursorAt();
+    // The chart re-reads the cursor only when the hovered item changes: the
+    // id carries the drawing and its cursor.
+    return c ? { cursorStyle: c, externalId: `lwcd:${this.m.hoveredId() ?? ""}:${c}`, zOrder: "top" } : null;
   }
   private draw(target: CanvasRenderingTarget2D): void {
     target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {

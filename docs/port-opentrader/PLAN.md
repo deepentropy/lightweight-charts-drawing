@@ -127,7 +127,7 @@ OpenTrader has no such tool. It was removed with the 0.1 runtime
     fixtures incl. table UI states; A/B render 0.62x. All tool renderers of
     OpenTrader now draw the core scenes (full A/B 504 / 516, the rest = the
     fib clip fix)
-- [ ] Phase 3 library runtime (started 25/09/2026, plan below; left: table / image host hooks)
+- [x] Phase 3 library runtime (25-26/09/2026, plan below)
   - [x] 3.0 `scene/index.ts` `sceneOf`: the kind -> scene dispatcher moved
     from OpenTrader `renderKind` (golden / full A/B unchanged)
   - [x] 3.1 interaction core (`src/tv/interact/`: constants, project,
@@ -139,15 +139,17 @@ OpenTrader has no such tool. It was removed with the 0.1 runtime
   - [x] 3.2 canvas scene renderer (`src/runtime/scene-canvas.ts`): vs the
     OpenTrader SVG on 774 fixtures, 0.05 % of drawn pixels differ (text
     anti-aliasing); SVG "central" text baseline reproduced from font metrics
-  - [ ] 3.3 runtime (`src/runtime/`): `coords.ts` (makeCoords, moved from
+  - [x] 3.3 runtime (`src/runtime/`): `coords.ts` (makeCoords, moved from
     OpenTrader), `manager.ts` (`DrawingManager`: one series primitive draws
     every drawing + preview; placement incl. 1-click, freehand, variable
     length, text editor request; hover, multi-select, anchor / body / group
     drag, magnet + modifiers, Shift constraints, Escape / Delete, z-order,
     JSON import / export); test page `demo/runtime/`, scripted check
     `docs/port-opentrader/runtime-check/` (15 checks pass); axis labels
-    (`kinds/axis-labels.ts` -> primitive price / time axis views). Left:
-    table / image host hooks
+    (`kinds/axis-labels.ts` -> primitive price / time axis views); table
+    (`tableEdit` event, `setTableCellText`, `tableOp`, edge resize) and image
+    (`addImage` + the core image cache) host hooks; cursor through the
+    primitive hitTest
   - [x] 3.4 0.1 runtime removed (`src/core`, `interaction`, `registry`,
     `rendering`, `tools`); new `src/index.ts` (runtime, core model, scenes,
     hit tests, interaction rules); `npm run build` OK, the bundle imports

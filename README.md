@@ -64,13 +64,16 @@ intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
 | `select(ids)`, `selection()` | selection (multi-select with Ctrl / Cmd) |
 | `bringToFront(id)`, `sendToBack(id)` | z-order |
 | `exportJSON()`, `importJSON(json)` | save / restore |
+| `addImage({ name, width, height })` | place an image (file put in the image cache by the host: `cacheImage` / `setImageReader`) |
+| `setTableCellText(id, cell, text)`, `endTableEdit()`, `tableOp(id, op)`, `tableState()` | table cell editing (after a `tableEdit` event) and row / column operations |
 | `on(event, cb)` → unsubscribe | events |
 | `redraw()`, `destroy()` | |
 
 Events: `change`, `add`, `update`, `remove`, `selection`, `tool`,
 `textEdit` (a text tool was placed or double-clicked: open your editor at
-the given pane point and `update` the drawing's `text`), `gestureEnd` (end of
-a drag / placement, for undo grouping).
+the given pane point and `update` the drawing's `text`), `tableEdit` (a click
+on a cell of the selected table: open your editor over the given cell box),
+`gestureEnd` (end of a drag / placement, for undo grouping).
 
 Mouse and keys (TradingView behaviour): placement by clicks, press-drag for
 brush / highlighter, double-click (or a click on the last point) finishes a

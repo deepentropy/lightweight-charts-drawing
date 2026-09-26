@@ -10,7 +10,7 @@
  */
 
 // ============ Runtime ============
-export { DrawingManager, type DrawingManagerEvents, type DrawingManagerOptions, type MagnetMode } from "./runtime/manager";
+export { DrawingManager, type DrawingManagerEvents, type DrawingManagerOptions, type MagnetMode, type TableOp } from "./runtime/manager";
 export { makeCoords, timeToXFallback } from "./runtime/coords";
 export { drawScene, TV_ANCHOR_COLOR, type AnchorStyle, type CanvasSceneOptions } from "./runtime/scene-canvas";
 
@@ -35,6 +35,10 @@ export { sceneOf, sceneLockedAnchors, type SceneContext } from "./tv/scene";
 export type { Scene, SceneItem, Paint, Shadow } from "./tv/scene/types";
 export { hitTestKind } from "./tv/kinds/hit-tests";
 export { drawingAxisLabels, type PriceAxisLabel, type TimeAxisLabel } from "./tv/kinds/axis-labels";
+
+// ============ Host hooks: images, tables ============
+export { cacheImage, decodeImage, setImageReader, onImagesChanged, IMAGE_MAX_BYTES, IMAGE_MAX_SIDE, IMAGE_TYPES, type LoadedImage } from "./tv/kinds/images";
+export type { TableCellRef, TableUi } from "./tv/kinds/table";
 
 // ============ Interaction rules ============
 export { finishPlacement, buildNewDrawing } from "./tv/interact/placement";

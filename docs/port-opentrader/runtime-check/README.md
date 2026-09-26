@@ -36,8 +36,22 @@ the point prices of a trend line with Price labels; prices formatted by the
 series. They are lightweight-charts axis views of the primitive (drawn like
 the chart's own labels).
 
-Not in this runtime yet: table cell editing and image placement (host
-side), a hover check of the anchors.
+Table and image host hooks (26/09/2026, 05-table-image.png): a table placed
+by 1 click is selected; a click on a cell of the selected table fires
+`tableEdit` (the demo writes "Cell A" with `setTableCellText`); hovering the
+first column edge marks it (`tableState().edge`), dragging it resizes the
+column 120 -> 180; `tableOp(id, "insert-row")` adds a row (3 -> 4); an image
+file read by the host into the core cache (`cacheImage`) and placed by
+`addImage` is drawn at 120 x 80 and selected. No page errors.
+
+Cursor (lightweight-charts sets it from the primitive hitTest; a style on the
+chart element is overwritten, and the chart re-reads it only when the
+hovered item id changes): empty pane auto, tool armed crosshair, selected
+body move, unselected body pointer, anchor nwse-resize, table edge
+ew-resize, away auto.
+
+Hover (06-hover-anchors.png): no anchors away from the line, anchors while
+the body is hovered, the hovered anchor's 20 % halo.
 
 Built demo (26/09/2026, 04-demo-build.png, served like GitHub Pages under
 /lightweight-charts-drawing/): no page errors; fib retracement, pitchfork,
