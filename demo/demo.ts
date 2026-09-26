@@ -2,10 +2,11 @@
  * Demo of the DrawingManager on a candlestick chart of SPY (demo/public):
  * every tool of the core specs, magnet, keep drawing, JSON export / import
  * (kept in localStorage), an event log. `window.dm` / `window.chart` /
- * `window.series` for scripted checks; `window.autoText` answers the text
+ * `window.series` / `window.lwcd` (the library module) for scripted checks; `window.autoText` answers the text
  * editor request without a prompt.
  */
 import { CandlestickSeries, createChart, type Time } from "lightweight-charts";
+import * as lwcd from "../src";
 import { cacheImage, decodeImage, DrawingManager, OVERLAY_SPECS, type DrawingKind, type MagnetMode } from "../src";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -27,7 +28,7 @@ async function main() {
   const series = chart.addSeries(CandlestickSeries, { upColor: "#089981", downColor: "#f23645", borderVisible: false, wickUpColor: "#089981", wickDownColor: "#f23645" });
   series.setData(data);
   const dm = new DrawingManager(chart, series, { magnet: "off" });
-  Object.assign(window, { dm, chart, series });
+  Object.assign(window, { dm, chart, series, lwcd });
 
   const tool = $<HTMLSelectElement>("tool");
   for (const kind of Object.keys(OVERLAY_SPECS).sort()) tool.add(new Option(kind, kind));

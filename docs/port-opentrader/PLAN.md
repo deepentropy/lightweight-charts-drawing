@@ -158,7 +158,14 @@ OpenTrader has no such tool. It was removed with the 0.1 runtime
     `demo/public`), README rewritten for the 0.2 API, `docs/TOOLS.md`
     generated from the specs + TradingView names (`docs/tools_md.py`, 86
     tools); rendering vs OpenTrader checked by the 3.2 pixel check
-- [ ] Phase 4 all tools
+- [ ] Phase 4 all tools (26/09/2026)
+  - [x] all 86 tools of the core in the library runtime (the core is shared
+    since phase 3): survey with real mouse events, place / select / anchor
+    drag / body drag / delete pass for 86 / 86, no page errors
+    (`docs/port-opentrader/tool-survey/`)
+  - [ ] anchored text: TradingView has `LineToolTextAbsolute` in its code but
+    not in its toolbar (the OpenTrader toolbar captured from TradingView
+    Desktop has no such entry); decision pending
 - [ ] Phase 5 release 0.2.0
 
 ## Phase 3 plan (25/09/2026)

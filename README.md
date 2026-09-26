@@ -51,7 +51,9 @@ drawings.importJSON(localStorage.getItem('drawings') ?? '[]');
 that draws every drawing, the placement preview, the anchors and the
 drawings' axis labels.
 
-Options: `bars` (bar getter; default the series data), `fontFamily`
+Options: `bars` (bar getter with volume; default the series data, which
+usually has no volume: the volume profiles then show no rows and the
+anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
 intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
