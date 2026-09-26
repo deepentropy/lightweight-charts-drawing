@@ -86,7 +86,8 @@ dependency and OpenTrader keeps its own lightweight-charts fork.
 
 `anchored-text` (TradingView "Anchored text") existed only in the library;
 OpenTrader has no such tool. It was removed with the 0.1 runtime
-(26/09/2026); open question: build it the TradingView way (phase 4).
+(26/09/2026). TradingView has retired the tool (see phase 4 status): its
+replacement is the Text tool with "Anchor drawing" on.
 
 ## Status
 
@@ -163,9 +164,14 @@ OpenTrader has no such tool. It was removed with the 0.1 runtime
     since phase 3): survey with real mouse events, place / select / anchor
     drag / body drag / delete pass for 86 / 86, no page errors
     (`docs/port-opentrader/tool-survey/`)
-  - [ ] anchored text: TradingView has `LineToolTextAbsolute` in its code but
-    not in its toolbar (the OpenTrader toolbar captured from TradingView
-    Desktop has no such entry); decision pending
+  - [x] anchored text investigated (26/09/2026, OpenTrader
+    `research/anchored-text/doc/ANCHORED-TEXT-2026-09-26.md`): TradingView
+    retired it (feature `remove_anchored_text` on in Desktop 3.4.1, notice
+    "use the text tool with the anchor option switched on"); it is the Text
+    tool with `anchored` on by default. No separate tool in the library.
+    Missing instead: the "Anchor drawing" option on Text and Pin (TV
+    anchorable tools: Text, Pin, Table; OpenTrader wires Table only, the
+    library runtime has no toggle) - proposed, not done
 - [ ] Phase 5 release 0.2.0
 
 ## Phase 3 plan (25/09/2026)
