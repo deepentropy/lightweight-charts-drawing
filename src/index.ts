@@ -25,7 +25,7 @@ export {
   type LevelDef,
   type NewDrawing,
 } from "./tv/types";
-export { OVERLAY_SPECS, defaultStyleFor, findOverlaySpec, setDefaultStyleOverride, type OverlaySpec } from "./tv/specs";
+export { OVERLAY_SPECS, defaultStyleFor, factoryStyleFor, findOverlaySpec, setDefaultStyleOverride, type OverlaySpec } from "./tv/specs";
 export type { Coords, OHLC } from "./tv/coords";
 export type { Pt, HitResult } from "./tv/_shared";
 export { parseDrawings, migrateDrawing } from "./tv/serialize";
@@ -43,5 +43,6 @@ export type { TableCellRef, TableUi } from "./tv/kinds/table";
 // ============ Interaction rules ============
 export { finishPlacement, buildNewDrawing } from "./tv/interact/placement";
 export { applyDrag, anchorCursor, type DragState } from "./tv/interact/drag";
+export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./tv/interact/anchor";
 
 export const VERSION = "0.2.0-dev";

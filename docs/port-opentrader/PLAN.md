@@ -159,7 +159,7 @@ replacement is the Text tool with "Anchor drawing" on.
     `demo/public`), README rewritten for the 0.2 API, `docs/TOOLS.md`
     generated from the specs + TradingView names (`docs/tools_md.py`, 86
     tools); rendering vs OpenTrader checked by the 3.2 pixel check
-- [ ] Phase 4 all tools (26/09/2026)
+- [x] Phase 4 all tools (26/09/2026)
   - [x] all 86 tools of the core in the library runtime (the core is shared
     since phase 3): survey with real mouse events, place / select / anchor
     drag / body drag / delete pass for 86 / 86, no page errors
@@ -169,9 +169,12 @@ replacement is the Text tool with "Anchor drawing" on.
     retired it (feature `remove_anchored_text` on in Desktop 3.4.1, notice
     "use the text tool with the anchor option switched on"); it is the Text
     tool with `anchored` on by default. No separate tool in the library.
-    Missing instead: the "Anchor drawing" option on Text and Pin (TV
-    anchorable tools: Text, Pin, Table; OpenTrader wires Table only, the
-    library runtime has no toggle) - proposed, not done
+    Instead: the "Anchor drawing" option on Text and Pin (TV anchorable
+    tools: Text, Pin, Table), done 26/09/2026: core `interact/anchor.ts`
+    (`ANCHORABLE_KINDS`, `toggleAnchored`, moved from OpenTrader's
+    table-only toggle), anchored pin anchor drag = move of the fixed
+    position; runtime `toggleAnchored(id)`; demo "Anchor drawing" button
+    (runtime-check/07)
 - [ ] Phase 5 release 0.2.0
 
 ## Phase 3 plan (25/09/2026)

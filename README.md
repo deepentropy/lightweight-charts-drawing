@@ -65,6 +65,7 @@ intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `select(ids)`, `selection()` | selection (multi-select with Ctrl / Cmd) |
 | `bringToFront(id)`, `sendToBack(id)` | z-order |
+| `toggleAnchored(id)` | TV "Anchor drawing" for Text, Pin and Table: the drawing keeps its pane position when the chart scrolls (`isAnchorable(kind)`) |
 | `exportJSON()`, `importJSON(json)` | save / restore |
 | `addImage({ name, width, height })` | place an image (file put in the image cache by the host: `cacheImage` / `setImageReader`) |
 | `setTableCellText(id, cell, text)`, `endTableEdit()`, `tableOp(id, op)`, `tableState()` | table cell editing (after a `tableEdit` event) and row / column operations |

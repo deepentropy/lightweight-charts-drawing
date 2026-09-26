@@ -557,7 +557,8 @@ type WithId<T> = T & {
    *  the url out of templates. `dx` = transient x offset of the centre
    *  during a corner drag (TV dOffsetX), dropped when the drag ends. */
   image?: { name: string; cssWidth: number; cssHeight: number; dx?: number };
-  /** TV "Anchor drawing" (property `anchored`, table): the drawing is fixed
+  /** TV "Anchor drawing" (property `anchored`; text, pin, table -
+   *  interact/anchor.ts): the drawing is fixed
    *  to the screen at these pane fractions (TV positionPercents: x / time
    *  scale width, y / pane height) and does not move with the chart. The
    *  data point is kept for when it is unanchored. */

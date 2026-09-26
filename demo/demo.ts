@@ -59,7 +59,16 @@ async function main() {
 
   dm.on("add", (d) => log(`add ${d.kind} ${d.id} ${JSON.stringify(d.points)}`));
   dm.on("remove", (d) => log(`remove ${d.kind} ${d.id}`));
-  dm.on("selection", (ids) => log(`selection [${ids.join(", ")}]`));
+  // TV "Anchor drawing" (floating toolbar toggle) for Text, Pin, Table.
+  const anchorBtn = $<HTMLButtonElement>("anchor");
+  const anchorState = () => {
+    const d = dm.selection().length === 1 ? dm.get(dm.selection()[0]) : undefined;
+    anchorBtn.disabled = !d || !lwcd.isAnchorable(d.kind);
+    anchorBtn.textContent = d?.anchored ? "Anchored ✓" : "Anchor drawing";
+  };
+  anchorBtn.onclick = () => { const id = dm.selection()[0]; if (id) dm.toggleAnchored(id); anchorState(); };
+  dm.on("selection", (ids) => { log(`selection [${ids.join(", ")}]`); anchorState(); });
+  dm.on("update", anchorState);
   dm.on("tool", (k) => { log(`tool ${k}`); tool.value = k ?? ""; });
   dm.on("textEdit", (d, p) => {
     log(`textEdit ${d.kind} at ${Math.round(p.x)},${Math.round(p.y)}`);

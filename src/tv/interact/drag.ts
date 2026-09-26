@@ -268,6 +268,12 @@ export function applyDrag(
       }
       case "image":
         return applyImageDrag(state, cursor, coords);
+      // Anchored pin (TV Anchor drawing): its one anchor moves the fixed pane
+      // position like a body move (TV refuses point changes of a fixed
+      // drawing; the pin has a single point).
+      case "pin":
+        if (state.start.anchored) return translateDrawing(coords, state.start, state.startScreen, cursor.x - state.startCursor.x, cursor.y - state.startCursor.y, state.pane);
+        break;
       case "polyline": {
         // TV LineToolPolyline.setPoint: an end point dragged within
         // minDistanceBetweenPoints of the other end closes the polyline

@@ -28,6 +28,7 @@ import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS } from 
 import { magnetSnap, projectAll, projectPoint, screenPoints, snapAngle, translateDrawing, unproject } from "../tv/interact/project";
 import { ANGLE_SNAP_3PT_KINDS, ANGLE_SNAP_KINDS, buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../tv/interact/placement";
 import { anchorCursor, applyDrag, type DragState } from "../tv/interact/drag";
+import { toggleAnchored as toggleAnchoredDrawing } from "../tv/interact/anchor";
 import { makeCoords } from "./coords";
 import { drawScene } from "./scene-canvas";
 
@@ -231,6 +232,19 @@ export class DrawingManager {
     } as NewDrawing);
     this.select([id]);
     return id;
+  }
+
+  /** TV "Anchor drawing" (text, pin, table): an anchored drawing keeps its
+   *  pane position when the chart scrolls; toggling back turns it into a
+   *  time / price point again. Returns whether the drawing changed. */
+  toggleAnchored(id: string): boolean {
+    const d = this.get(id);
+    if (!d) return false;
+    const next = toggleAnchoredDrawing(d, this.coords, this.paneSize());
+    if (!next) return false;
+    this.update(next);
+    this.emit("gestureEnd");
+    return true;
   }
 
   /** The table UI state (active cell, editor open, hovered edge) or null. */

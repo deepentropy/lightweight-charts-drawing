@@ -57,3 +57,13 @@ Built demo (26/09/2026, 04-demo-build.png, served like GitHub Pages under
 /lightweight-charts-drawing/): no page errors; fib retracement, pitchfork,
 text, rectangle, Elliott impulse, sector placed by mouse; export -> clear ->
 import restores the 6 drawings.
+
+Anchor drawing (26/09/2026, 07-anchor-drawing.png): Text and Pin anchored
+with the demo button (enabled for them, disabled for a trend line;
+`toggleAnchored` on a trend line returns false); a 200 px chart scroll
+leaves the anchored Text and Pin in place (dx 0, dy 0) while the trend line
+moves (dx 160); dragging the anchored Pin moves its fixed position by the
+drag (30, 20); export -> clear -> import keeps both anchored; unanchoring
+the Text keeps it where it was (dx 0, dy 0). In the first run the Pin drag
+left it in place (dx 0); the same sequence passed in 3 later runs, the
+cause of the first result is not found.
