@@ -130,7 +130,19 @@ export function makeCoords(
     },
     formatTime: (t) => {
       const f = chart.options().localization.timeFormatter;
-      return f ? f(t) : String(t);
+      if (f) return f(t);
+      // No host formatter: a crosshair-like label, "29 Oct '25   13:30" (the
+      // time only when the time scale shows it), in the chart locale, UTC.
+      const sec = timeAsSec(t);
+      if (sec == null) return String(t);
+      const o = chart.options();
+      const d = new Date(sec * 1000);
+      const mon = new Intl.DateTimeFormat(o.localization.locale, { month: "short", timeZone: "UTC" }).format(d);
+      const date = `${d.getUTCDate()} ${mon} '${String(d.getUTCFullYear() % 100).padStart(2, "0")}`;
+      if (!o.timeScale.timeVisible) return date;
+      const two = (n: number) => String(n).padStart(2, "0");
+      const time = `${two(d.getUTCHours())}:${two(d.getUTCMinutes())}${o.timeScale.secondsVisible ? `:${two(d.getUTCSeconds())}` : ""}`;
+      return `${date}   ${time}`;
     },
     timeInfo: () => getTimeInfo(),
     timeAxis: () => {

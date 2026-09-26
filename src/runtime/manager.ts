@@ -10,7 +10,7 @@
  * dialogs, inline text / table editors, toolbar, context menu. It listens to
  * the events and calls the methods.
  */
-import type { IChartApi, ISeriesApi, ISeriesPrimitive, IPrimitivePaneRenderer, IPrimitivePaneView, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, ISeriesPrimitive, ISeriesPrimitiveAxisView, IPrimitivePaneRenderer, IPrimitivePaneView, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
 import type { CanvasRenderingTarget2D } from "fancy-canvas";
 import type { HitResult, Pt } from "../tv/_shared";
 import type { Coords, OHLC } from "../tv/coords";
@@ -18,6 +18,7 @@ import { isVisibleOnInterval, type DataPoint, type Drawing, type DrawingKind, ty
 import { defaultStyleFor, findOverlaySpec, type OverlaySpec } from "../tv/specs";
 import { hitTestKind } from "../tv/kinds/hit-tests";
 import { signpostPositionFor } from "../tv/kinds/signpost";
+import { drawingAxisLabels } from "../tv/kinds/axis-labels";
 import { sceneLockedAnchors, sceneOf } from "../tv/scene";
 import type { Scene } from "../tv/scene/types";
 import { parseDrawings } from "../tv/serialize";
@@ -244,6 +245,31 @@ export class DrawingManager {
     const p = this.previewScene(w, h);
     if (p) out.push({ scene: p, selected: false, hoveredAnchor: -1 });
     return out;
+  }
+  /** Axis labels of the visible drawings (core drawingAxisLabels) as
+   *  lightweight-charts axis views: prices formatted by the series, times by
+   *  the chart's time formatter. */
+  axisViews(): { price: ISeriesPrimitiveAxisView[]; time: ISeriesPrimitiveAxisView[] } {
+    const price: ISeriesPrimitiveAxisView[] = [];
+    const time: ISeriesPrimitiveAxisView[] = [];
+    const c = this.coords;
+    const pane = this.paneSize();
+    const fmt = this.series.priceFormatter();
+    for (const d of this.list) {
+      if (!this.shown(d)) continue;
+      const pts = screenPoints(c, d, pane);
+      if (!pts) continue;
+      const l = drawingAxisLabels(d, pts, c);
+      for (const p of l.price) {
+        const y = c.priceToY(p.price);
+        if (y != null) price.push(axisView(y, fmt.format(p.price), p.back, p.color));
+      }
+      for (const t of l.time) {
+        const x = c.timeToX(t.time);
+        if (x != null) time.push(axisView(x, c.formatTime(t.time), t.back, t.color));
+      }
+    }
+    return { price, time };
   }
   fontFamily(): string {
     return this.opts.fontFamily ?? this.chart.options().layout.fontFamily;
@@ -729,8 +755,13 @@ function mixHex(a: string, b: string, t: number): string {
   return "#" + ((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, "0");
 }
 
+function axisView(coordinate: number, text: string, back: string, color: string): ISeriesPrimitiveAxisView {
+  return { coordinate: () => coordinate, text: () => text, backColor: () => back, textColor: () => color, visible: () => true, tickVisible: () => true };
+}
+
 /** The series primitive: one pane view drawing every scene of the manager
- *  in the pane (clipped to it), above the series. */
+ *  in the pane (clipped to it), above the series, and the drawings' axis
+ *  labels (price / time axis views, rebuilt on every chart update). */
 class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private readonly m: DrawingManager;
   private request: (() => void) | null = null;
@@ -749,6 +780,16 @@ class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   }
   paneViews(): readonly IPrimitivePaneView[] {
     return [this.view];
+  }
+  private axis: { price: ISeriesPrimitiveAxisView[]; time: ISeriesPrimitiveAxisView[] } = { price: [], time: [] };
+  updateAllViews(): void {
+    this.axis = this.m.axisViews();
+  }
+  priceAxisViews(): readonly ISeriesPrimitiveAxisView[] {
+    return this.axis.price;
+  }
+  timeAxisViews(): readonly ISeriesPrimitiveAxisView[] {
+    return this.axis.time;
   }
   requestUpdate(): void {
     this.request?.();

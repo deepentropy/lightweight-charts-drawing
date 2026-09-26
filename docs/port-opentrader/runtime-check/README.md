@@ -26,6 +26,13 @@ Scripted session (Playwright, real mouse / keyboard events):
 | Escape: first drops the pending point (tool stays), second disarms | pass |
 | Ctrl+click multi-select, body drag moves the selected group | pass (02-tools-session.png) |
 
-Not in this runtime yet: drawings' price / time axis labels, anchor hover
-halo check, table cell editing and image placement (host side), a hover
-check of the anchors.
+Axis labels (26/09/2026, 03-axis-labels.png): vertical and cross line time
+labels in the line colour (chart time formatter; without one a
+crosshair-like "d MMM 'yy   HH:mm"), the cross line price, the position
+entry / target / stop (grey / green / red), the anchored VWAP last value,
+the point prices of a trend line with Price labels; prices formatted by the
+series. They are lightweight-charts axis views of the primitive (drawn like
+the chart's own labels).
+
+Not in this runtime yet: table cell editing and image placement (host
+side), a hover check of the anchors.

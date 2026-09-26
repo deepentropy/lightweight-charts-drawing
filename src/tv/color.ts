@@ -25,3 +25,18 @@ export function applyOpacity(hex: string, opacity: number): string {
   const [r, g, b] = hexToRgb(hex);
   return `rgba(${r}, ${g}, ${b}, ${(opacity / 100).toFixed(2)})`;
 }
+
+/** TV colorFromBackground: black text on a light label (grey value
+ *  0.199·R + 0.687·G + 0.114·B ≥ 150), white otherwise. */
+export function textOnColor(bg: string): string {
+  let r = 0, g = 0, b = 0;
+  const m = bg.match(/^#([0-9a-f]{6})/i);
+  if (m) {
+    const n = parseInt(m[1], 16);
+    r = n >> 16; g = (n >> 8) & 255; b = n & 255;
+  } else {
+    const c = bg.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i);
+    if (c) { r = +c[1]; g = +c[2]; b = +c[3]; }
+  }
+  return 0.199 * r + 0.687 * g + 0.114 * b >= 150 ? "#000000" : "#ffffff";
+}

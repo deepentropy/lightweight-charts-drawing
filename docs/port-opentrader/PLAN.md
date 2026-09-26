@@ -145,8 +145,9 @@ or build it the TradingView way.
     length, text editor request; hover, multi-select, anchor / body / group
     drag, magnet + modifiers, Shift constraints, Escape / Delete, z-order,
     JSON import / export); test page `demo/runtime/`, scripted check
-    `docs/port-opentrader/runtime-check/` (15 checks pass). Left: axis
-    labels, table / image host hooks
+    `docs/port-opentrader/runtime-check/` (15 checks pass); axis labels
+    (`kinds/axis-labels.ts` -> primitive price / time axis views). Left:
+    table / image host hooks
   - [ ] 3.4 old runtime removed, 3.5 demo
 - [ ] Phase 4 all tools
 - [ ] Phase 5 release 0.2.0
