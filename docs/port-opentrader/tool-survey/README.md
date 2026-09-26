@@ -22,8 +22,10 @@ Per tool:
 - Text and font icon have no anchor (TV: the text shows its wrap anchor only
   with word wrap on; the font icon shows a dashed box), so their anchor-drag
   step does not apply.
-- Point counts after placement: 1 (13 tools), 2 (37), 3 (21), 4 (8), 5 (2),
-  6 (3), 7 (2); brush / highlighter 25 samples.
+- Point counts after placement (from the survey output, 86 tools): 1 point
+  17 tools, 2 points 34, 3 points 18, 4 points 8, 5 points 2, 6 points 3,
+  7 points 2, and brush / highlighter 25 samples each. The per-tool rows were
+  returned by the run and are not stored in a file.
 
 Screenshots of each placed tool (just after placement, selected): contact
 sheets `sheet-1.png` .. `sheet-3.png` (alphabetical order).
