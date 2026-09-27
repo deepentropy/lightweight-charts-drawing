@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Shift gestures follow TradingView Desktop 3.4.1 (new `tv/interact/shift.ts`):
+  - 45° snap = TV `snapPoint45Degree`: horizontal keeps the bar and takes
+    the reference price, vertical keeps the price and takes the reference
+    bar, a diagonal is rounded to a whole bar.
+  - New Shift rules: arrow marker, fib circles, fib speed resistance fan,
+    price note, note, rotated rectangle (45°); parallel channel, flat
+    top/bottom, disjoint channel (2nd point / anchor 1 only); ellipse (circle,
+    finished after 2 clicks); rectangle (square rounded to a bar, the preview
+    too, and the middle anchors); Gann box (fixed increments, was a square);
+    Gann square anchor drag (keeps the price-per-bar ratio).
+  - Shift + body drag moves only horizontally or vertically (past 10 px).
+  - Removed Shift rules TV does not have: pitchfork family, pitchfan,
+    triangle, trend-based fib extension (45°), bar pattern and fixed range
+    volume profile (square).
+  - Runtime magnet: Shift turns it off only after the first point or while
+    dragging an anchor.
+  - Ellipse anchor 0 / 1 drag keeps the minor radius (TV).
+
 ## 0.2.1 (26/09/2026)
 
 ### Fixed

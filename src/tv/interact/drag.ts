@@ -13,8 +13,8 @@ import { positionLevels } from "../kinds/position";
 import { signpostLayout, signpostPositionAtY } from "../kinds/signpost";
 import { distributeSizes, tableColWidths, tableEdgeOf, tableMinColWidth, tableMinRowHeight, tableRowHeights } from "../kinds/table";
 import { drawingImage, IMAGE_ANCHOR_DIRS } from "../kinds/images";
-import { projectPoint, replaceDrawingPoints, screenAngleDeg, snapAngle, translateDrawing, unproject } from "./project";
-import { ANGLE_SNAP_3PT_KINDS, ANGLE_SNAP_KINDS } from "./placement";
+import { projectPoint, replaceDrawingPoints, screenAngleDeg, translateDrawing, unproject } from "./project";
+import { ellipseAnchorDrag, lockAxisDelta, shiftAnchorDrag } from "./shift";
 import { MIN_DISTANCE_BETWEEN_POINTS } from "./constants";
 
 export type DragState = {
@@ -198,39 +198,18 @@ export function applyDrag(
   constrain = false,
 ): Drawing | null {
   const spec = findOverlaySpec(state.start.kind);
-  // Shift constraint on ANCHOR drags (TV): 2-point line kinds snap the dragged
-  // endpoint to 45° steps around the fixed one; bbox kinds constrain to a
-  // square around the opposite corner.
+  // Shift on ANCHOR drags: the TV per-tool `setPoint` rules (./shift). Most
+  // adjust the cursor the anchor path below applies; a few rewrite the drawing.
   if (constrain && state.mode.hit === "handle") {
-    if (
-      ANGLE_SNAP_KINDS.has(state.start.kind) &&
-      state.startScreen.length === 2 &&
-      state.mode.handleIndex >= 0 && state.mode.handleIndex <= 1 &&
-      // circle: only the RADIUS point (index 1) snaps around the center —
-      // TV never constrains the center drag.
-      (state.start.kind !== "circle" || state.mode.handleIndex === 1)
-    ) {
-      const other = state.startScreen[1 - state.mode.handleIndex];
-      if (other) cursor = snapAngle(other, cursor);
-    } else if (spec?.isBbox && state.startScreen.length === 2 && state.mode.handleIndex < 4) {
-      const cs = bboxCorners(state.startScreen[0], state.startScreen[1]);
-      const opp = cs[(state.mode.handleIndex + 2) % 4];
-      if (opp) {
-        const dx = cursor.x - opp.x;
-        const dy = cursor.y - opp.y;
-        const m = Math.max(Math.abs(dx), Math.abs(dy));
-        cursor = { x: opp.x + Math.sign(dx || 1) * m, y: opp.y + Math.sign(dy || 1) * m };
-      }
-    } else if (
-      ANGLE_SNAP_3PT_KINDS.has(state.start.kind) &&
-      state.mode.handleIndex >= 0 && state.mode.handleIndex < state.startScreen.length
-    ) {
-      // 3-point kinds: the dragged point snaps 45° around the PREVIOUS point
-      // (the next one for the first anchor).
-      const i = state.mode.handleIndex;
-      const ref = state.startScreen[i > 0 ? i - 1 : 1];
-      if (ref) cursor = snapAngle(ref, cursor);
-    }
+    const r = shiftAnchorDrag(state, cursor, coords);
+    if (r.drawing !== undefined) return r.drawing;
+    cursor = r.cursor;
+  }
+  // Shift on a BODY move (TV `_alignPointHorizontallyOrVertically`): keep only
+  // the larger axis of the move once it passes 10 px.
+  if (constrain && state.mode.hit === "body") {
+    const l = lockAxisDelta(cursor.x - state.startCursor.x, cursor.y - state.startCursor.y);
+    cursor = { x: state.startCursor.x + l.dx, y: state.startCursor.y + l.dy };
   }
   // Kind-specific anchor semantics (virtual anchors beyond the stored points).
   if (state.mode.hit === "handle") {
@@ -294,6 +273,11 @@ export function applyDrag(
       }
       case "disjoint-channel":
         return applyDisjointChannelDrag(state, cursor, coords, snap);
+      // TV Ellipse.setPoint: moving an end rebuilds the minor-axis point at
+      // the radius the ellipse had when the drag started (Shift: see ./shift).
+      case "ellipse":
+        if (state.mode.handleIndex <= 1) return ellipseAnchorDrag(state, cursor, coords, false, snap);
+        break;
       case "rotated-rectangle":
         if (state.start.fmt === 2) return applyRotatedRectDrag(state, cursor, coords, snap);
         break;

@@ -25,8 +25,9 @@ import { sceneLockedAnchors, sceneOf } from "../tv/scene";
 import type { Scene } from "../tv/scene/types";
 import { parseDrawings } from "../tv/serialize";
 import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS } from "../tv/interact/constants";
-import { magnetSnap, projectAll, projectPoint, screenPoints, snapAngle, translateDrawing, unproject } from "../tv/interact/project";
-import { ANGLE_SNAP_3PT_KINDS, ANGLE_SNAP_KINDS, buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../tv/interact/placement";
+import { magnetSnap, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../tv/interact/project";
+import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../tv/interact/placement";
+import { lockAxisDelta, shiftPlacementPoint } from "../tv/interact/shift";
 import { anchorCursor, applyDrag, type DragState } from "../tv/interact/drag";
 import { toggleAnchored as toggleAnchoredDrawing } from "../tv/interact/anchor";
 import { makeCoords } from "./coords";
@@ -431,8 +432,11 @@ export class DrawingManager {
   private magnet(): { enabled: boolean; mode: "weak" | "strong" } {
     const m = this.opts.magnet ?? "off";
     const mode = m === "strong" ? "strong" : "weak";
-    // TV: Shift forces the magnet off; Ctrl / Cmd inverts it (off -> strong).
-    if (this.shift) return { enabled: false, mode };
+    // TV (magnet module 32742): Shift turns it off once a tool is being
+    // created (after the first point) or an anchor is dragged; Ctrl / Cmd
+    // inverts it (off -> strong).
+    const busy = this.pending.length > 0 || (!!this.gesture?.active && this.gesture.mode.hit === "handle");
+    if (this.shift && busy) return { enabled: false, mode };
     if (this.ctrl) return { enabled: m === "off", mode: "strong" };
     return { enabled: m !== "off", mode };
   }
@@ -585,28 +589,9 @@ export class DrawingManager {
     const spec = this.spec!;
     // TV image: placed by the host (file dialog), not by a click.
     if (spec.kind === "image") return;
-    let sp = spRaw;
+    const sp = spRaw;
     const pend = this.pending;
     const c = this.coords;
-    // Shift: 45-degree steps from the first anchor (2-point line tools), from
-    // the previous anchor (3-point tools), a square for bbox tools (TV).
-    if (this.shift && pend.length === 1 && spec.pointCount === 2 && ANGLE_SNAP_KINDS.has(spec.kind)) {
-      const o = projectPoint(c, pend[0]);
-      if (o) sp = snapAngle(o, sp);
-    }
-    if (this.shift && pend.length >= 1 && ANGLE_SNAP_3PT_KINDS.has(spec.kind)) {
-      const o = projectPoint(c, pend[pend.length - 1]);
-      if (o) sp = snapAngle(o, sp);
-    }
-    if (this.shift && pend.length === 1 && spec.isBbox) {
-      const o = projectPoint(c, pend[0]);
-      if (o) {
-        const dx = sp.x - o.x;
-        const dy = sp.y - o.y;
-        const m = Math.max(Math.abs(dx), Math.abs(dy));
-        sp = { x: o.x + Math.sign(dx || 1) * m, y: o.y + Math.sign(dy || 1) * m };
-      }
-    }
     // Variable length (TV addPoint): a click on the last vertex finishes, on
     // the first vertex of a polyline closes it.
     if (spec.variableLength && pend.length >= 1) {
@@ -623,9 +608,13 @@ export class DrawingManager {
         return;
       }
     }
-    const dp = this.dataAt(sp);
-    if (!dp) return;
-    const next = [...pend, dp];
+    const dp0 = this.dataAt(sp);
+    if (!dp0) return;
+    // Shift: the TV per-tool placement rule (45° against the previous point,
+    // square, Gann fixed increments; the ellipse ends as a circle).
+    const sh = this.shift ? shiftPlacementPoint(spec.kind, pend, dp0, c) : { point: dp0 };
+    const dp = sh.point;
+    const next = sh.extra ? [...pend, dp, sh.extra] : [...pend, dp];
     if (spec.variableLength || next.length < spec.pointCount) {
       this.pending = next;
       this.cursor = sp;
@@ -801,8 +790,9 @@ export class DrawingManager {
       g.pendingCollapse = false;
     }
     if (g.group) {
-      const dx = cur.x - g.startCursor.x;
-      const dy = cur.y - g.startCursor.y;
+      // Shift: TV H/V lock of the move (./shift lockAxisDelta).
+      const l0 = { dx: cur.x - g.startCursor.x, dy: cur.y - g.startCursor.y };
+      const { dx, dy } = this.shift ? lockAxisDelta(l0.dx, l0.dy) : l0;
       for (const m of g.group) {
         const nd = translateDrawing(this.coords, m.start, m.startScreen, dx, dy, this.paneSize());
         if (nd) this.update(nd);
@@ -847,13 +837,12 @@ export class DrawingManager {
     const cur = this.aimAt(raw);
     const dots: Scene = placed.map((pt) => ({ t: "circle", cx: pt.x, cy: pt.y, r: 3, fill: style.color }));
     if (!spec.variableLength && !spec.freehand && !SEGMENT_PREVIEW_KINDS.has(spec.kind) && placed.length === p.length && placed.length < spec.pointCount) {
-      let end = cur;
-      if (this.shift && ((placed.length === 1 && spec.pointCount === 2 && ANGLE_SNAP_KINDS.has(spec.kind)) || ANGLE_SNAP_3PT_KINDS.has(spec.kind))) {
-        end = snapAngle(placed[placed.length - 1], cur);
-      }
-      const curData = this.dataAt(end);
+      const cur0 = this.dataAt(cur);
+      const sh = cur0 && this.shift ? shiftPlacementPoint(spec.kind, p, cur0, c) : null;
+      const curData = sh ? sh.point : cur0;
       if (curData) {
-        const full = [...p];
+        const full = [...p, curData];
+        if (sh?.extra) full.push(sh.extra);
         while (full.length < spec.pointCount) full.push(curData);
         const nd0 = buildNewDrawing(spec.kind, full);
         const nd = nd0 && spec.kind === "gann-square" ? snapGannSquare(nd0, c) : nd0;

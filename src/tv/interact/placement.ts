@@ -12,22 +12,6 @@ import { defaultStyleFor } from "../specs";
 import { barsBetween } from "../kinds/data-series";
 import { projectPoint, screenAngleDeg, unproject } from "./project";
 
-/** Straight single-segment 2-point line tools whose second point honours TV's
- *  Shift-to-snap-angle constraint (the line locks to 0/45/90/… while drawing). */
-export const ANGLE_SNAP_KINDS = new Set<DrawingKind>([
-  "trend-line", "ray", "extended-line", "info-line", "trend-angle", "arrow",
-  // circle: the radius point snaps 45° around the center (TV's
-  // snapTo45DegreesAvailable on LineToolCircle).
-  "circle",
-]);
-
-/** 3-point kinds whose in-flight point honours the Shift 45°-step constraint
- *  around the PREVIOUS point (placement and anchor drags — TV parity). */
-export const ANGLE_SNAP_3PT_KINDS = new Set<DrawingKind>([
-  "pitchfork", "schiff-pitchfork", "modified-schiff-pitchfork", "inside-pitchfork",
-  "pitchfan", "triangle", "trend-based-fib-extension",
-]);
-
 /** Pattern / Elliott polylines keep the plain-segment rubber-band while
  *  placing (TV also shows connected segments for these, not the finished
  *  labeled shape); every other fixed-arity kind previews the REAL tool. */
