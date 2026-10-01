@@ -27,3 +27,6 @@ coverage/
 
 # Misc
 *.local
+
+# Port notes (local only)
+docs/port-opentrader/
