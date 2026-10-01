@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Long / short position: the stop and target handles are hit where they are
+  drawn (entry x). The hit test used the middle of the box, so dragging a
+  drawn stop or target square moved the whole drawing.
+
 ## 0.2.2 (28/09/2026)
 
 ### Changed

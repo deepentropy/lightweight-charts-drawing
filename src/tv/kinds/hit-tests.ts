@@ -24,7 +24,7 @@ import type { Drawing } from "../types";
 import { TREND_FIB_TIME_LEVEL_DEFAULTS } from "../specs";
 import { FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_WEDGE_LEVEL_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, PARALLEL_CHANNEL_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_LEVEL_DEFAULTS } from "../specs";
 import type { Coords } from "../coords";
-import { positionLevels } from "./position";
+import { positionAnchors } from "./position";
 import { gannBox, gannFrame } from "./gann-square";
 import { gannFanDir } from "./gann-fan";
 import { pitchforkExtendRight, pitchforkGeom } from "./pitchfork";
@@ -163,21 +163,14 @@ function lineHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
 
 /** Position tool (TV model): 4 virtual anchors — 0 = entry (free), 1 = close
  *  point (time-only), 2 = stop (price-only), 3 = target (price-only) — plus
- *  the risk/reward box body. Mirrors DrawingsOverlay positionAnchors. */
+ *  the risk/reward box body. Anchors come from positionAnchors, the same
+ *  source as the renderer, so a drawn handle is always the grabbed one. */
 function positionHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null | undefined): HitResult | null {
-  const a = pts[0];
-  const b = pts[1];
-  const dp0 = drawing.points[0];
-  const dp1 = drawing.points[1];
-  if (!dp0 || !dp1) return null;
-  const entry = dp0.price;
-  const { stop, profit } = positionLevels(drawing, coords?.pipSize() ?? 0.01);
-  const sign = drawing.kind === "long-position" ? 1 : -1;
-  const yTarget = coords?.priceToY(entry + sign * profit) ?? a.y - 40;
-  const yStop = coords?.priceToY(entry - sign * stop) ?? a.y + 40;
-  if (yTarget == null || yStop == null) return null;
-  const midX = (a.x + b.x) / 2;
-  const anchors: Pt[] = [a, { x: b.x, y: a.y }, { x: midX, y: yStop }, { x: midX, y: yTarget }];
+  if (!drawing.points[0] || !drawing.points[1]) return null;
+  const geo = positionAnchors(drawing, pts, coords);
+  if (!geo) return null;
+  const { anchors, yStop, yTarget } = geo;
+  const [a, b] = pts;
   const ah = endpointHit(anchors, cursor);
   if (ah) return ah;
   const left = Math.min(a.x, b.x);
