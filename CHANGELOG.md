@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.5 (01/10/2026)
+
+### Added
+
+- Volume profiles (fixed range, anchored): `DrawingStyle.vp`
+  (`VolumeProfileStyle`) with the study settings: rows layout (number of
+  rows / ticks per row) and row size, volume (Up/Down, Total, Delta), value
+  area volume, extend right (fixed range), histogram visibility, row values,
+  width (% of the box), placement, up / down and value area colours, VAH /
+  VAL / POC lines, developing POC and VA lines, histogram box colour.
+  Defaults: `volumeProfileDefaults(kind)`, merged settings:
+  `volumeProfileStyle(kind, style)`.
+
+### Changed
+
+- Pitchfan: each level is drawn with its own width and line style.
+- Info line: `extendLeft` / `extendRight` continue the line to the pane edges.
+- Highlighter: drawn at its width (no 12 px minimum).
+
 ## 0.2.4 (01/10/2026)
 
 ### Added

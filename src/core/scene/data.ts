@@ -8,7 +8,7 @@
 import { dashFor, HANDLE_RADIUS, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle, RegressionLine } from "../types";
-import { REGRESSION_LINE_DEFAULTS } from "../specs";
+import { REGRESSION_LINE_DEFAULTS, volumeProfileStyle } from "../specs";
 import { anchoredVpBox, fixedVpBox, regressionScreenLines, vwapBandLine, vwapScreenSeries } from "../kinds/data-series";
 import type { Scene, SceneItem } from "./types";
 import { levelFillOpacity } from "./levels";
@@ -103,62 +103,114 @@ export function sceneAnchoredVwap(d: Drawing, pts: Pt[], selected: boolean, w: n
   return out;
 }
 
-/** Volume profile histogram: box background rgba(38,198,218,0.05); rows of
- *  up volume (cyan) at the base and down volume (pink) beyond it, 0.75 alpha
- *  in the value area and 0.5 outside, 30% of the box width, from the left
- *  or the right edge; POC line #DBDBDB width 2 across the box. */
-function volumeProfileScene(box: NonNullable<ReturnType<typeof fixedVpBox>>, coords: Coords, fromRight: boolean): SceneItem[] {
+/** Line dash of a volume profile line style. */
+const vpDash = (s: RegressionLine["style"]) => (s === "dashed" ? "6 4" : s === "dotted" ? "2 3" : undefined);
+
+/** Compact volume text ("1.25M", "830K") for the histogram values. */
+function vpVolumeText(v: number): string {
+  const a = Math.abs(v);
+  const f = (x: number, u: string) => `${(v < 0 ? -x : x).toFixed(x >= 100 ? 0 : x >= 10 ? 1 : 2)}${u}`;
+  if (a >= 1e9) return f(a / 1e9, "B");
+  if (a >= 1e6) return f(a / 1e6, "M");
+  if (a >= 1e3) return f(a / 1e3, "K");
+  return String(Math.round(v));
+}
+
+/** Volume profile (reference VbP study graphics, settings `vp`): the
+ *  histogram box, the rows (Up/Down: up then down volume; Total: one bar in
+ *  the up colours; Delta: |up − down| in the up or down colour; value area
+ *  rows in the value area colours) at `percentWidth` % of the box from the
+ *  placement edge, the row values, the VAH / VAL / POC lines across the box
+ *  and the developing POC / VA step lines. */
+function volumeProfileScene(box: NonNullable<ReturnType<typeof fixedVpBox>>, coords: Coords, d: Drawing): SceneItem[] {
+  const s = volumeProfileStyle(d.kind, d.style);
   const { left, right, top, bottom, vp } = box;
   const width = Math.max(1, right - left);
-  const histW = 0.3 * width;
-  const n = vp.rows.length;
-  const step = (vp.hi - vp.lo) / n;
+  const histW = (Math.max(0, Math.min(100, s.percentWidth)) / 100) * width;
+  const fromRight = s.placement === "right";
   const rowY = (i: number) => {
-    const y0 = coords.priceToY(vp.lo + (i + 1) * step) ?? top;
-    const y1 = coords.priceToY(vp.lo + i * step) ?? bottom;
+    const y0 = coords.priceToY(vp.lo + (i + 1) * vp.step) ?? top;
+    const y1 = coords.priceToY(vp.lo + i * vp.step) ?? bottom;
     return { y: Math.min(y0, y1), h: Math.abs(y1 - y0) };
   };
-  const poc = rowY(vp.poc);
-  const pocY = poc.y + poc.h / 2;
   const items: SceneItem[] = [];
-  vp.rows.forEach((row, i) => {
-    const r = rowY(i);
-    const inVa = i >= vp.vaFrom && i <= vp.vaTo;
-    const upW = vp.maxTotal > 0 ? (row.up / vp.maxTotal) * histW : 0;
-    const downW = vp.maxTotal > 0 ? (row.down / vp.maxTotal) * histW : 0;
-    const h = Math.max(1, r.h - 1);
-    const upX = fromRight ? right - upW : left;
-    const downX = fromRight ? right - upW - downW : left + upW;
-    items.push(
-      { t: "rect", x: upX, y: r.y, w: upW, h, fill: inVa ? "rgba(38,198,218,0.75)" : "rgba(38,198,218,0.5)" },
-      { t: "rect", x: downX, y: r.y, w: downW, h, fill: inVa ? "rgba(236,64,122,0.75)" : "rgba(236,64,122,0.5)" },
-    );
-  });
-  items.push({ t: "line", a: { x: left, y: pocY }, b: { x: right, y: pocY }, stroke: "#DBDBDB", strokeWidth: 2 });
+  if (s.visible) {
+    const max = s.volume === "delta" ? vp.maxDelta : vp.maxTotal;
+    const valueSize = 11;
+    vp.rows.forEach((row, i) => {
+      const r = rowY(i);
+      const inVa = i >= vp.vaFrom && i <= vp.vaTo;
+      const upColor = inVa ? s.vaUpColor : s.upColor;
+      const downColor = inVa ? s.vaDownColor : s.downColor;
+      const h = Math.max(1, r.h - 1);
+      const scale = (v: number) => (max > 0 ? (v / max) * histW : 0);
+      const bars: { w: number; color: string }[] =
+        s.volume === "total" ? [{ w: scale(row.up + row.down), color: upColor }]
+        : s.volume === "delta" ? [{ w: scale(Math.abs(row.up - row.down)), color: row.up >= row.down ? upColor : downColor }]
+        : [{ w: scale(row.up), color: upColor }, { w: scale(row.down), color: downColor }];
+      let offset = 0;
+      for (const b of bars) {
+        const x = fromRight ? right - offset - b.w : left + offset;
+        items.push({ t: "rect", x, y: r.y, w: b.w, h, fill: b.color });
+        offset += b.w;
+      }
+      if (s.showValues && r.h >= valueSize - 2) {
+        const v = s.volume === "delta" ? row.up - row.down : row.up + row.down;
+        items.push({
+          t: "text", x: fromRight ? right - offset - 4 : left + offset + 4, y: r.y + r.h / 2, text: vpVolumeText(v),
+          size: valueSize, fill: s.valuesColor, anchor: fromRight ? "end" : "start", baseline: "central",
+        });
+      }
+    });
+  }
+  const priceLine = (price: number, l: RegressionLine) => {
+    const y = coords.priceToY(price);
+    if (y == null) return;
+    items.push({ t: "line", a: { x: left, y }, b: { x: right, y }, stroke: l.color, strokeWidth: l.width, dash: vpDash(l.style) });
+  };
+  if (s.vah.visible) priceLine(vp.lo + (vp.vaTo + 1) * vp.step, s.vah);
+  if (s.val.visible) priceLine(vp.lo + vp.vaFrom * vp.step, s.val);
+  if (s.poc.visible) priceLine(vp.lo + (vp.poc + 0.5) * vp.step, s.poc);
+  // Developing lines: one step per bar of the range (value up to that bar).
+  if (vp.developing) {
+    const step = (pick: (p: { poc: number; vah: number; val: number }) => number, l: RegressionLine) => {
+      if (!l.visible) return;
+      const pts: Pt[] = [];
+      for (const p of vp.developing!) {
+        const x = coords.timeToX(p.time);
+        const y = coords.priceToY(pick(p));
+        if (x == null || y == null) continue;
+        if (pts.length) pts.push({ x, y: pts[pts.length - 1].y });
+        pts.push({ x, y });
+      }
+      if (pts.length > 1) items.push({ t: "polyline", pts, fill: "none", stroke: l.color, strokeWidth: l.width, dash: vpDash(l.style) });
+    };
+    step((p) => p.poc, s.developingPoc);
+    step((p) => p.vah, s.developingVah);
+    step((p) => p.val, s.developingVal);
+  }
   return [
-    { t: "rect", x: left, y: top, w: width, h: Math.max(1, bottom - top), fill: "rgba(38,198,218,0.05)" },
+    { t: "rect", x: left, y: top, w: width, h: Math.max(1, bottom - top), fill: s.boxColor },
     { t: "group", inert: true, items },
   ];
 }
 
-/** Fixed range volume profile (TV LineToolFixedRangeVolumeProfile factory
- *  graphics): profile over the bars between P0 and P1 (24 rows over their
- *  low-high, Up/Down, 70% value area); box = the P0-P1 time span × the bars'
- *  price range; histogram drawn from the LEFT edge (left_to_right). Anchors
- *  at P0 / P1. */
+/** Fixed range volume profile (reference LineToolFixedRangeVolumeProfile):
+ *  profile over the bars between P0 and P1 (or P0 to the last bar with
+ *  Extend Right); box = that time span × the bars' price range. Anchors at
+ *  P0 / P1. */
 export function sceneFixedRangeVolumeProfile(d: Drawing, pts: Pt[], selected: boolean, coords: Coords | null): Scene {
   const box = fixedVpBox(d, pts, coords);
-  const out: Scene = box && coords ? volumeProfileScene(box, coords, false) : [];
+  const out: Scene = box && coords ? volumeProfileScene(box, coords, d) : [];
   if (selected) out.push({ t: "anchors", pts });
   return out;
 }
 
-/** Anchored volume profile (TV LineToolAnchoredVolumeProfile, factory
- *  graphics): 1 anchor; profile over the bars from the anchor to the last
- *  bar; histogram drawn from the right edge (right_to_left). */
+/** Anchored volume profile (reference LineToolAnchoredVolumeProfile): 1
+ *  anchor; profile over the bars from the anchor to the last bar. */
 export function sceneAnchoredVolumeProfile(d: Drawing, pts: Pt[], selected: boolean, coords: Coords | null): Scene {
   const box = anchoredVpBox(d, pts, coords);
-  const out: Scene = box && coords ? volumeProfileScene(box, coords, true) : [];
+  const out: Scene = box && coords ? volumeProfileScene(box, coords, d) : [];
   if (selected) out.push({ t: "anchors", pts: [pts[0]] });
   return out;
 }

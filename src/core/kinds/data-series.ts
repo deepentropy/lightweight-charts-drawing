@@ -11,7 +11,7 @@ import type { OHLC } from "../coords";
 import type { Drawing, DrawingStyle, LevelDef, RegressionLine } from "../types";
 import type { Time } from "lightweight-charts";
 import { timeToSec, type Pt } from "../_shared";
-import { VWAP_BAND_DEFAULTS, VWAP_BAND_LINE_DEFAULTS } from "../specs";
+import { VWAP_BAND_DEFAULTS, VWAP_BAND_LINE_DEFAULTS, volumeProfileStyle } from "../specs";
 
 /** Bars whose time falls within [aSec, bSec] (order-insensitive). */
 export function barsBetween(bars: OHLC[], aSec: number, bSec: number): OHLC[] {
@@ -338,26 +338,60 @@ export function forecastStatus(d: Drawing, coords: Coords | null): ForecastStatu
   return isLast ? "waiting" : "failure";
 }
 
-/** Volume profile over a bar range (TV anchored / fixed range VP defaults:
- *  24 rows over the bars' low…high, Up/Down volume, 70% value area).
- *  Each bar's volume is spread over the rows its low–high range covers, in
- *  proportion to the overlap (a zero-range bar goes to its row); a bar with
- *  close ≥ open counts as up volume. Value area: start at the POC row and
- *  add the neighbouring row (above or below) with more volume until 70% of
- *  the total is reached. Returns null when the range holds no bars. */
+/** Volume profile over a bar range (reference VbP study). Rows over the
+ *  bars' low…high: `rows` rows ("Number Of Rows"), or rows of `rows` ticks
+ *  ("Ticks Per Row", grid from the low). Each bar's volume is spread over
+ *  the rows its low–high range covers, in proportion to the overlap (a
+ *  zero-range bar goes to its row); a bar with close ≥ open counts as up
+ *  volume. Value area: start at the POC row and add the neighbouring row
+ *  (above or below) with more volume until `vaShare` of the total is
+ *  reached. `developing`: the POC / VA high / VA low of the profile up to
+ *  each bar (same row grid). Returns null when the range holds no bars. */
 export type VolumeProfile = {
   lo: number;
   hi: number;
+  step: number;
   rows: { up: number; down: number }[];
   poc: number;
   vaFrom: number;
   vaTo: number;
   maxTotal: number;
+  maxDelta: number;
   lastTime: Time;
+  developing: { time: Time; poc: number; vah: number; val: number }[] | null;
 };
-export function volumeProfile(bars: OHLC[], fromSec: number, toSec: number, rowCount = 24, vaShare = 0.7): VolumeProfile | null {
+export type VolumeProfileOptions = {
+  rowsLayout?: "rows" | "ticks";
+  rows?: number;
+  /** Price tick (ticks layout). */
+  tick?: number;
+  vaShare?: number;
+  developing?: boolean;
+};
+/** Largest row count (a tiny tick over a wide range). */
+const VP_MAX_ROWS = 5000;
+function valueArea(tot: number[], poc: number, share: number): [number, number] {
+  const total = tot.reduce((s, x) => s + x, 0);
+  let vaFrom = poc;
+  let vaTo = poc;
+  let acc = tot[poc];
+  while (acc < total * share && (vaFrom > 0 || vaTo < tot.length - 1)) {
+    const below = vaFrom > 0 ? tot[vaFrom - 1] : -1;
+    const above = vaTo < tot.length - 1 ? tot[vaTo + 1] : -1;
+    if (above >= below) acc += tot[++vaTo];
+    else acc += tot[--vaFrom];
+  }
+  return [vaFrom, vaTo];
+}
+function pocOf(tot: number[]): number {
+  let poc = 0;
+  for (let i = 1; i < tot.length; i++) if (tot[i] > tot[poc]) poc = i;
+  return poc;
+}
+export function volumeProfile(bars: OHLC[], fromSec: number, toSec: number, opts: VolumeProfileOptions = {}): VolumeProfile | null {
   const inRange = barsBetween(bars, fromSec, toSec);
   if (inRange.length === 0) return null;
+  const vaShare = Math.min(1, Math.max(0, opts.vaShare ?? 0.7));
   let lo = Infinity;
   let hi = -Infinity;
   for (const b of inRange) {
@@ -365,43 +399,70 @@ export function volumeProfile(bars: OHLC[], fromSec: number, toSec: number, rowC
     hi = Math.max(hi, b.high);
   }
   if (!(hi > lo)) hi = lo + 1e-9;
-  const step = (hi - lo) / rowCount;
+  let rowCount: number;
+  let step: number;
+  if (opts.rowsLayout === "ticks" && (opts.tick ?? 0) > 0) {
+    step = Math.max(1, Math.round(opts.rows ?? 1)) * (opts.tick as number);
+    rowCount = Math.min(VP_MAX_ROWS, Math.max(1, Math.ceil((hi - lo) / step)));
+    if (rowCount === VP_MAX_ROWS) step = (hi - lo) / rowCount;
+    hi = lo + rowCount * step;
+  } else {
+    rowCount = Math.min(VP_MAX_ROWS, Math.max(1, Math.round(opts.rows ?? 24)));
+    step = (hi - lo) / rowCount;
+  }
   const rows = Array.from({ length: rowCount }, () => ({ up: 0, down: 0 }));
+  const tot = new Array<number>(rowCount).fill(0);
+  const developing: VolumeProfile["developing"] = opts.developing ? [] : null;
   for (const b of inRange) {
     const v = b.volume ?? 0;
-    if (v <= 0) continue;
-    const up = b.close >= b.open;
-    const span = b.high - b.low;
-    if (span <= 0) {
-      const r = Math.min(rowCount - 1, Math.max(0, Math.floor((b.close - lo) / step)));
-      if (up) rows[r].up += v;
-      else rows[r].down += v;
-      continue;
+    if (v > 0) {
+      const up = b.close >= b.open;
+      const span = b.high - b.low;
+      if (span <= 0) {
+        const r = Math.min(rowCount - 1, Math.max(0, Math.floor((b.close - lo) / step)));
+        if (up) rows[r].up += v;
+        else rows[r].down += v;
+        tot[r] += v;
+      } else {
+        const r0 = Math.max(0, Math.floor((b.low - lo) / step));
+        const r1 = Math.min(rowCount - 1, Math.floor((b.high - lo) / step));
+        for (let r = r0; r <= r1; r++) {
+          const a = Math.max(b.low, lo + r * step);
+          const c = Math.min(b.high, lo + (r + 1) * step);
+          const share = c > a ? ((c - a) / span) * v : 0;
+          if (up) rows[r].up += share;
+          else rows[r].down += share;
+          tot[r] += share;
+        }
+      }
     }
-    const r0 = Math.max(0, Math.floor((b.low - lo) / step));
-    const r1 = Math.min(rowCount - 1, Math.floor((b.high - lo) / step));
-    for (let r = r0; r <= r1; r++) {
-      const a = Math.max(b.low, lo + r * step);
-      const c = Math.min(b.high, lo + (r + 1) * step);
-      const share = c > a ? ((c - a) / span) * v : 0;
-      if (up) rows[r].up += share;
-      else rows[r].down += share;
+    if (developing) {
+      const p = pocOf(tot);
+      const [f, t] = valueArea(tot, p, vaShare);
+      developing.push({ time: b.time, poc: lo + (p + 0.5) * step, vah: lo + (t + 1) * step, val: lo + f * step });
     }
   }
-  const tot = rows.map((r) => r.up + r.down);
-  let poc = 0;
-  for (let i = 1; i < rowCount; i++) if (tot[i] > tot[poc]) poc = i;
-  const total = tot.reduce((s, x) => s + x, 0);
-  let vaFrom = poc;
-  let vaTo = poc;
-  let acc = tot[poc];
-  while (acc < total * vaShare && (vaFrom > 0 || vaTo < rowCount - 1)) {
-    const below = vaFrom > 0 ? tot[vaFrom - 1] : -1;
-    const above = vaTo < rowCount - 1 ? tot[vaTo + 1] : -1;
-    if (above >= below) acc += tot[++vaTo];
-    else acc += tot[--vaFrom];
-  }
-  return { lo, hi, rows, poc, vaFrom, vaTo, maxTotal: Math.max(...tot), lastTime: inRange[inRange.length - 1].time };
+  const poc = pocOf(tot);
+  const [vaFrom, vaTo] = valueArea(tot, poc, vaShare);
+  return {
+    lo, hi, step, rows, poc, vaFrom, vaTo,
+    maxTotal: Math.max(...tot),
+    maxDelta: Math.max(...rows.map((r) => Math.abs(r.up - r.down))),
+    lastTime: inRange[inRange.length - 1].time,
+    developing,
+  };
+}
+
+/** Profile options of a volume profile drawing (its settings + the tick). */
+function vpOptions(d: Drawing, coords: Coords): VolumeProfileOptions {
+  const s = volumeProfileStyle(d.kind, d.style);
+  return {
+    rowsLayout: s.rowsLayout,
+    rows: s.rows,
+    tick: coords.pipSize(),
+    vaShare: s.vaVolume / 100,
+    developing: s.developingPoc.visible || s.developingVah.visible || s.developingVal.visible,
+  };
 }
 
 /** Anchored volume profile screen box: anchor x → last bar x, profile low →
@@ -413,7 +474,7 @@ export function anchoredVpBox(d: Drawing, pts: Pt[], coords: Coords | null): { l
   const t0 = timeToSec(d.points[0].time);
   const tLast = timeToSec(bars[bars.length - 1].time);
   if (t0 == null || tLast == null) return null;
-  const vp = volumeProfile(bars, t0, tLast);
+  const vp = volumeProfile(bars, t0, tLast, vpOptions(d, coords));
   if (!vp) return null;
   const xr = coords.timeToX(vp.lastTime);
   const yt = coords.priceToY(vp.hi);
@@ -423,16 +484,25 @@ export function anchoredVpBox(d: Drawing, pts: Pt[], coords: Coords | null): { l
 }
 
 /** Fixed range volume profile screen box: the P0-P1 time span × the bars'
- *  price range over that span. Null without data. */
+ *  price range over that span. "Extend Right": the range runs from P0 to
+ *  the last bar (the right edge follows it). Null without data. */
 export function fixedVpBox(d: Drawing, pts: Pt[], coords: Coords | null): { left: number; right: number; top: number; bottom: number; vp: VolumeProfile } | null {
   if (!coords || d.points.length < 2 || pts.length < 2) return null;
   const t0 = timeToSec(d.points[0].time);
   const t1 = timeToSec(d.points[1]!.time);
   if (t0 == null || t1 == null) return null;
-  const vp = volumeProfile(coords.bars(), Math.min(t0, t1), Math.max(t0, t1));
+  const bars = coords.bars();
+  const extend = volumeProfileStyle(d.kind, d.style).extendRight;
+  const lastSec = bars.length ? timeToSec(bars[bars.length - 1].time) : null;
+  const from = Math.min(t0, t1);
+  const to = extend && lastSec != null ? Math.max(lastSec, from) : Math.max(t0, t1);
+  const vp = volumeProfile(bars, from, to, vpOptions(d, coords));
   if (!vp) return null;
   const yt = coords.priceToY(vp.hi);
   const yb = coords.priceToY(vp.lo);
   if (yt == null || yb == null) return null;
-  return { left: Math.min(pts[0].x, pts[1].x), right: Math.max(pts[0].x, pts[1].x), top: Math.min(yt, yb), bottom: Math.max(yt, yb), vp };
+  const left = Math.min(pts[0].x, pts[1].x);
+  const xr = extend ? coords.timeToX(vp.lastTime) : null;
+  const right = xr != null ? Math.max(left, xr) : Math.max(pts[0].x, pts[1].x);
+  return { left, right, top: Math.min(yt, yb), bottom: Math.max(yt, yb), vp };
 }

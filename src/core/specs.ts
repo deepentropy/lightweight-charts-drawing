@@ -6,7 +6,7 @@
  * Full DrawingSpec (defaults/floatingToolbar/settingsTabs) lands later
  * when the SelectedToolbar + SettingsDialog ports happen.
  */
-import { DEFAULT_STYLE, type DrawingKind, type DrawingStyle, type GhostCandleStyle, type LevelDef, type RegressionLine, type GannLine, type GannRatioLine } from "./types";
+import { DEFAULT_STYLE, type DrawingKind, type DrawingStyle, type GhostCandleStyle, type LevelDef, type RegressionLine, type GannLine, type GannRatioLine, type VolumeProfileStyle } from "./types";
 
 // ── Factory level sets (decompiled from TV's line-tool bundles, 10/07/2026;
 //    colours re-checked live on TV 3.4.1 with properties().factoryDefaults(),
@@ -260,6 +260,45 @@ export const REGRESSION_LINE_DEFAULTS: { base: RegressionLine; up: RegressionLin
   up: { visible: true, color: BLUE, width: 2, style: "solid" },
   down: { visible: true, color: BLUE, width: 2, style: "solid" },
 };
+
+/** Volume profile tools: the reference VbPFixed / VbPAnchored study
+ *  defaults (24 rows, Up/Down, 70% value area, histogram 30% of the box,
+ *  POC 2 px on, VAH / VAL 2 px off, developing plots 1 px off) with the
+ *  dark-theme colours of its themed colour list (cold gray 200 lines and
+ *  values, sky blue 400 at 50 / 75 % up, berry pink 400 at 50 / 75 % down,
+ *  sky blue 500 developing VA, sky blue 400 at 5 % box). Fixed range draws
+ *  from the left edge, anchored from the right. */
+export function volumeProfileDefaults(kind: DrawingKind): VolumeProfileStyle {
+  const line = (visible: boolean, color: string, width: number): RegressionLine => ({ visible, color, width, style: "solid" });
+  return {
+    rowsLayout: "rows",
+    rows: 24,
+    volume: "upDown",
+    vaVolume: 70,
+    extendRight: false,
+    visible: true,
+    showValues: false,
+    valuesColor: "#DBDBDB",
+    percentWidth: 30,
+    placement: kind === "anchored-volume-profile" ? "right" : "left",
+    upColor: "rgba(38, 198, 218, 0.5)",
+    downColor: "rgba(236, 64, 122, 0.5)",
+    vaUpColor: "rgba(38, 198, 218, 0.75)",
+    vaDownColor: "rgba(236, 64, 122, 0.75)",
+    vah: line(false, "#DBDBDB", 2),
+    val: line(false, "#DBDBDB", 2),
+    poc: line(true, "#DBDBDB", 2),
+    developingPoc: line(false, "#DBDBDB", 1),
+    developingVah: line(false, "#00BCD4", 1),
+    developingVal: line(false, "#00BCD4", 1),
+    boxColor: "rgba(38, 198, 218, 0.05)",
+  };
+}
+
+/** The drawing's volume profile settings over the factory ones. */
+export function volumeProfileStyle(kind: DrawingKind, s: DrawingStyle): VolumeProfileStyle {
+  return { ...volumeProfileDefaults(kind), ...(s.vp ?? {}) };
+}
 
 /** Parallel channel (TV line-tool-parallel-channel v2): 7 levels, coeff =
  *  share of the p0 -> p2 offset; 0 / 0.5 / 1 visible, 0 and 1 solid 2px,

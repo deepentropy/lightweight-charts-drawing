@@ -301,6 +301,42 @@ export type DrawingStyle = {
   vwapUpper?: RegressionLine[];
   vwapLower?: RegressionLine[];
   vwapPriceLabel?: boolean;
+
+  /** Fixed range / anchored volume profile settings (the reference VbP
+   *  study: Inputs + Style tab). Unset = the kind's factory settings
+   *  (`volumeProfileDefaults` in specs). */
+  vp?: VolumeProfileStyle;
+};
+
+/** Volume profile tool settings (reference VbPFixed / VbPAnchored study).
+ *  Inputs: rows layout (number of rows or ticks per row) and row size,
+ *  volume (Up/Down, Total, Delta), value area volume (%), extend right
+ *  (fixed range only). Style: the histogram (visible, values, width % of
+ *  the box, placement, up / down and value area up / down colours), the
+ *  VAH / VAL / POC lines, the developing POC and VA plots and the
+ *  histogram box colour. */
+export type VolumeProfileStyle = {
+  rowsLayout: "rows" | "ticks";
+  rows: number;
+  volume: "upDown" | "total" | "delta";
+  vaVolume: number;
+  extendRight: boolean;
+  visible: boolean;
+  showValues: boolean;
+  valuesColor: string;
+  percentWidth: number;
+  placement: "left" | "right";
+  upColor: string;
+  downColor: string;
+  vaUpColor: string;
+  vaDownColor: string;
+  vah: RegressionLine;
+  val: RegressionLine;
+  poc: RegressionLine;
+  developingPoc: RegressionLine;
+  developingVah: RegressionLine;
+  developingVal: RegressionLine;
+  boxColor: string;
 };
 
 /** One configurable level of a levels-based tool. `label` overrides the
