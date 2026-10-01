@@ -144,7 +144,7 @@ runtime (`src/runtime`). Breaking: the 0.1 API is removed.
 
 - The volume-based tools need bars with a volume: pass them with the
   `bars` option (series data usually has none).
-- Checks behind this release (in `docs/port-opentrader/`): the renderers
+- Checks behind this release: the renderers
   match OpenTrader's on 430 golden fixtures, the canvas renderer matches the
   SVG output on 774 fixtures (0.05 % of drawn pixels differ, text
   anti-aliasing), and all 86 tools pass a real-mouse survey (place, select,
