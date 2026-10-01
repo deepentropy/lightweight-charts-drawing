@@ -315,7 +315,7 @@ export const OVERLAY_SPECS: Record<DrawingKind, OverlaySpec> = {
   // 1-point
   "horizontal-line": { kind: "horizontal-line", pointCount: 1, preview: "none", isBbox: false, hotkey: "Alt + H", defaults: { width: 2, textColor: "#2962ff", showPriceLabels: true } },
   "horizontal-ray": { kind: "horizontal-ray", pointCount: 1, preview: "none", isBbox: false, hotkey: "Alt + J", defaults: { width: 2, showPriceLabels: true } },
-  "vertical-line": { kind: "vertical-line", pointCount: 1, preview: "none", isBbox: false, hotkey: "Alt + V", defaults: { width: 2, textColor: "#2962ff", showTime: true } },
+  "vertical-line": { kind: "vertical-line", pointCount: 1, preview: "none", isBbox: false, hotkey: "Alt + V", defaults: { width: 2, textColor: "#2962ff", showTime: true, extendLine: true } },
   "cross-line": { kind: "cross-line", pointCount: 1, preview: "none", isBbox: false, hotkey: "Alt + C", defaults: { width: 2, textColor: "#ffffff", showPriceLabels: true, showTime: true } },
   // TV factory (line-tool-arrow-marker): tv-blue-600 body + text, 16px bold.
   "arrow-marker": { kind: "arrow-marker", pointCount: 2, preview: "line", isBbox: false, defaults: { color: "#1e53e5", width: 2, textColor: "#1e53e5", fontSize: 16, bold: true } },

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.4 (01/10/2026)
+
+### Added
+
+- `Drawing.owner` / `NewDrawing.owner`: id of the study whose pane the drawing
+  lives in (absent = the main series pane). For hosts with several panes.
+- `magnetSnap(dp, coords, mode, snapToIndicators, ohlc = true)`: `ohlc = false`
+  snaps only to the indicator values (a pane without the main series).
+
+### Changed
+
+- Vertical line: factory `extendLine: true` (the line runs through every pane).
+
 ## 0.2.3 (01/10/2026)
 
 ### Changed

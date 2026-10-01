@@ -89,8 +89,8 @@ export type DrawingStyle = {
   showImage?: boolean;
   plateColor?: string;
   signpostPosition?: number;
-  /** TV vertical line "Extend" (extendLine, factory on): the line runs
-   *  through every pane of the chart (OpenTrader draws in the main pane). */
+  /** Vertical line "Extend" (extendLine, factory on): the line runs
+   *  through every pane of the chart; off = its own pane only. */
   extendLine?: boolean;
   /** TV vertical line text orientation (factory vertical). */
   textOrientation?: "vertical" | "horizontal";
@@ -584,6 +584,10 @@ type WithId<T> = T & {
   /** ObjectTree group tag — drawings sharing a tag render under one group
    *  header in the panel (set/cleared by its Manage mode). */
   group?: string;
+  /** Owner of the drawing's pane: the id of the study whose pane it was
+   *  drawn in (its price scale maps the points). Absent = the main series
+   *  pane. A drawing is drawn and clipped in its owner's pane. */
+  owner?: string;
 };
 
 type OnePoint =
@@ -690,4 +694,5 @@ export type NewDrawing = (OnePoint | TwoPoint | ThreePoint | FourPoint | PolyPoi
   ghost?: { seed: number; amplitude: number };
   closed?: boolean;
   fmt?: number;
+  owner?: string;
 };

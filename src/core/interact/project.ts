@@ -86,17 +86,21 @@ export function magnetSnap(
   coords: Coords,
   mode: "weak" | "strong",
   snapToIndicators: boolean,
+  /** Snap to the bar's OHLC. False in a pane without the main series (an
+   *  indicator pane): only the indicator values, when snapToIndicators. */
+  ohlc = true,
 ): DataPoint | null {
   const bar = coords.barAt(dp.time);
   if (!bar) return null;
-  const candidates = [bar.open, bar.high, bar.low, bar.close];
+  const candidates = ohlc ? [bar.open, bar.high, bar.low, bar.close] : [];
   if (snapToIndicators) {
     for (const v of coords.indicatorValuesAt(bar.time)) candidates.push(v);
   }
+  if (candidates.length === 0) return null;
   // Prefer screen-distance ranking; fall back to price distance if the cursor
   // price can't be projected (pre-layout).
   const cursorY = coords.priceToY(dp.price);
-  let best = bar.close;
+  let best = candidates[0];
   let bestDy = Infinity;
   for (const v of candidates) {
     const vy = coords.priceToY(v);
