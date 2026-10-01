@@ -403,7 +403,8 @@ export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s
   // Freehand strokes (brush/highlighter) are densely sampled, so they show only
   // endpoint handles when selected (not one per vertex) and always paint solid.
   const isFreehand = d.kind === "brush" || isHighlighter;
-  const strokeW = isHighlighter ? Math.max(s.width, 12) : s.width;
+  // TV highlighter: the stroke is its width as set (toolbar 8-96 px).
+  const strokeW = s.width;
   // TV smooths brush / highlighter strokes on every render (smooth = 5).
   const drawPts = isFreehand ? smoothBrush(pts) : pts;
   const dash = isFreehand ? undefined : dashFor(s);

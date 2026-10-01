@@ -388,11 +388,19 @@ export function sceneInfoLine(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   if (d.kind !== "info-line") return [];
   const [a, b] = pts;
   const cut = cutOf("cut", trendLabelCutPoly(a, b, s));
-  // Info line = a plain segment whose identity is the stats badge.
+  // Info line = the trend line (TV LineToolInfoLine extends LineToolTrendLine)
+  // whose identity is the stats badge; extendLeft / extendRight continue the
+  // segment past the pane edges.
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const big = (w + h) * 2;
+  const ux = (b.x - a.x) / len;
+  const uy = (b.y - a.y) / len;
+  const start = s.extendLeft ? { x: a.x - ux * big, y: a.y - uy * big } : a;
+  const end = s.extendRight ? { x: b.x + ux * big, y: b.y + uy * big } : b;
   return [
     hit(a, b),
     ...cut.items,
-    { t: "line", a, b, stroke: s.color, strokeWidth: s.width, dash: dashFor(s), cap: "round", clip: cut.clip },
+    { t: "line", a: start, b: end, stroke: s.color, strokeWidth: s.width, dash: dashFor(s), cap: "round", clip: cut.clip },
     ...lineDecorationItems(d, a, b, s, w, h, coords, active, cut.clip),
     ...(selected ? [{ t: "anchors" as const, pts }] : []),
   ];

@@ -465,7 +465,9 @@ export function sceneFibWedge(pts: Pt[], selected: boolean, s: DrawingStyle): Sc
 }
 
 /** Pitchfan (TV): rays from p0 through the median point and mid ± half·coeff
- *  for each visible level, fills between neighbouring rays. */
+ *  for each visible level, fills between neighbouring rays. The median and
+ *  the p1-p2 side use the median line (drawing colour / width / style), each
+ *  level ray its own colour / width / style. */
 export function scenePitchfan(pts: Pt[], selected: boolean, w: number, s: DrawingStyle): Scene {
   const [p0, p1, p2] = pts;
   const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
@@ -481,17 +483,19 @@ export function scenePitchfan(pts: Pt[], selected: boolean, w: number, s: Drawin
     return { x: p0.x + (dx / len) * big, y: p0.y + (dy / len) * big };
   };
   // Ordered ray targets: −levels … median … +levels (for the fills).
-  const ordered: { t: Pt; color: string; median?: boolean }[] = [
-    ...levels.slice().reverse().map((l) => ({ t: { x: mid.x - half.x * l.coeff, y: mid.y - half.y * l.coeff }, color: l.color })),
-    { t: mid, color: s.color, median: true },
-    ...levels.map((l) => ({ t: { x: mid.x + half.x * l.coeff, y: mid.y + half.y * l.coeff }, color: l.color })),
+  const ordered: { t: Pt; color: string; lvl?: LevelDef }[] = [
+    ...levels.slice().reverse().map((l) => ({ t: { x: mid.x - half.x * l.coeff, y: mid.y - half.y * l.coeff }, color: l.color, lvl: l })),
+    { t: mid, color: s.color },
+    ...levels.map((l) => ({ t: { x: mid.x + half.x * l.coeff, y: mid.y + half.y * l.coeff }, color: l.color, lvl: l })),
   ];
   const items: SceneItem[] = [{ t: "line", a: p1, b: p2, stroke: s.color, strokeWidth: s.width, dash }];
   for (const o of ordered) items.push({ t: "hit", a: p0, b: rayEnd(o.t), width: HIT_TOLERANCE * 2 });
   if (fillO > 0) {
     ordered.slice(1).forEach((hi, i) => items.push({ t: "polygon", pts: [p0, rayEnd(ordered[i].t), rayEnd(hi.t)], fill: hi.color, fillOpacity: fillO, stroke: "none", inert: true }));
   }
-  for (const o of ordered) items.push({ t: "line", a: p0, b: rayEnd(o.t), stroke: o.color, strokeWidth: o.median ? s.width : 1, dash });
+  for (const o of ordered) {
+    items.push({ t: "line", a: p0, b: rayEnd(o.t), stroke: o.color, strokeWidth: o.lvl ? levelWidth(o.lvl, s) : s.width, dash: o.lvl ? levelDash(o.lvl, s) : dash });
+  }
   items.push(...anchorsIf(selected, pts));
   return items;
 }
