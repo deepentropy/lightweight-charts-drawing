@@ -90,7 +90,7 @@ dialogs, text / table editors, toolbar, context menu.
 ## Architecture
 
 ```
-src/tv/        shared drawing core, no UI and no lightweight-charts runtime:
+src/core/      shared drawing core, no UI and no lightweight-charts runtime:
                tool model + TradingView factory defaults (specs), hit tests,
                placement and drag rules (interact), saved-drawing migration
                (serialize), renderer-neutral scenes per tool (scene)

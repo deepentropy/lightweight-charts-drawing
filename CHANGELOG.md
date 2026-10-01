@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.3 (01/10/2026)
+
+### Changed
+
+- The drawing core folder is `src/core` (was `src/tv`). Internal only: the
+  package entry and its exports are unchanged.
 
 ### Fixed
 

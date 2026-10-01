@@ -1,7 +1,7 @@
 /*
  * DrawingManager — the library runtime (port phase 3.3): TradingView-style
  * drawing tools on a lightweight-charts chart, built on the shared core
- * (src/tv). One series primitive draws every drawing, the placement preview
+ * (src/core). One series primitive draws every drawing, the placement preview
  * and the anchors in one canvas pass (scene -> canvas); the pointer / key
  * gestures reproduce OpenTrader's overlay with the core interaction functions
  * (placement, magnet, Shift constraints, anchor / body drags, hit tests).
@@ -12,24 +12,24 @@
  */
 import type { IChartApi, ISeriesApi, ISeriesPrimitive, ISeriesPrimitiveAxisView, IPrimitivePaneRenderer, IPrimitivePaneView, PrimitiveHoveredItem, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
 import type { CanvasRenderingTarget2D } from "fancy-canvas";
-import type { HitResult, Pt } from "../tv/_shared";
-import type { Coords, OHLC } from "../tv/coords";
-import { isVisibleOnInterval, type DataPoint, type Drawing, type DrawingKind, type NewDrawing } from "../tv/types";
-import { defaultStyleFor, findOverlaySpec, type OverlaySpec } from "../tv/specs";
-import { hitTestKind } from "../tv/kinds/hit-tests";
-import { signpostPositionFor } from "../tv/kinds/signpost";
-import { drawingAxisLabels } from "../tv/kinds/axis-labels";
-import { tableCanRemove, tableEdgeOf, tableInsert, tableLayout, tableRemove, tableWithText, type TableCellRef, type TableUi } from "../tv/kinds/table";
-import { drawingImageFailed, imageInitialSize, onImagesChanged } from "../tv/kinds/images";
-import { sceneLockedAnchors, sceneOf } from "../tv/scene";
-import type { Scene } from "../tv/scene/types";
-import { parseDrawings } from "../tv/serialize";
-import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS } from "../tv/interact/constants";
-import { magnetSnap, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../tv/interact/project";
-import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../tv/interact/placement";
-import { lockAxisDelta, shiftPlacementPoint } from "../tv/interact/shift";
-import { anchorCursor, applyDrag, type DragState } from "../tv/interact/drag";
-import { toggleAnchored as toggleAnchoredDrawing } from "../tv/interact/anchor";
+import type { HitResult, Pt } from "../core/_shared";
+import type { Coords, OHLC } from "../core/coords";
+import { isVisibleOnInterval, type DataPoint, type Drawing, type DrawingKind, type NewDrawing } from "../core/types";
+import { defaultStyleFor, findOverlaySpec, type OverlaySpec } from "../core/specs";
+import { hitTestKind } from "../core/kinds/hit-tests";
+import { signpostPositionFor } from "../core/kinds/signpost";
+import { drawingAxisLabels } from "../core/kinds/axis-labels";
+import { tableCanRemove, tableEdgeOf, tableInsert, tableLayout, tableRemove, tableWithText, type TableCellRef, type TableUi } from "../core/kinds/table";
+import { drawingImageFailed, imageInitialSize, onImagesChanged } from "../core/kinds/images";
+import { sceneLockedAnchors, sceneOf } from "../core/scene";
+import type { Scene } from "../core/scene/types";
+import { parseDrawings } from "../core/serialize";
+import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS } from "../core/interact/constants";
+import { magnetSnap, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../core/interact/project";
+import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../core/interact/placement";
+import { lockAxisDelta, shiftPlacementPoint } from "../core/interact/shift";
+import { anchorCursor, applyDrag, type DragState } from "../core/interact/drag";
+import { toggleAnchored as toggleAnchoredDrawing } from "../core/interact/anchor";
 import { makeCoords } from "./coords";
 import { drawScene } from "./scene-canvas";
 

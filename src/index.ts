@@ -2,7 +2,7 @@
  * lightweight-charts-drawing 0.2
  *
  * TradingView-style drawing tools for lightweight-charts v5, built on a shared
- * drawing core (src/tv: tool model + TradingView factory defaults, hit tests,
+ * drawing core (src/core: tool model + TradingView factory defaults, hit tests,
  * placement / drag rules, renderer-neutral scenes) and a canvas runtime
  * (src/runtime: DrawingManager).
  *
@@ -24,25 +24,25 @@ export {
   type DrawingStyle,
   type LevelDef,
   type NewDrawing,
-} from "./tv/types";
-export { OVERLAY_SPECS, defaultStyleFor, factoryStyleFor, findOverlaySpec, setDefaultStyleOverride, type OverlaySpec } from "./tv/specs";
-export type { Coords, OHLC } from "./tv/coords";
-export type { Pt, HitResult } from "./tv/_shared";
-export { parseDrawings, migrateDrawing } from "./tv/serialize";
+} from "./core/types";
+export { OVERLAY_SPECS, defaultStyleFor, factoryStyleFor, findOverlaySpec, setDefaultStyleOverride, type OverlaySpec } from "./core/specs";
+export type { Coords, OHLC } from "./core/coords";
+export type { Pt, HitResult } from "./core/_shared";
+export { parseDrawings, migrateDrawing } from "./core/serialize";
 
 // ============ Scenes and hit tests (hosts drawing their own way) ============
-export { sceneOf, sceneLockedAnchors, type SceneContext } from "./tv/scene";
-export type { Scene, SceneItem, Paint, Shadow } from "./tv/scene/types";
-export { hitTestKind } from "./tv/kinds/hit-tests";
-export { drawingAxisLabels, type PriceAxisLabel, type TimeAxisLabel } from "./tv/kinds/axis-labels";
+export { sceneOf, sceneLockedAnchors, type SceneContext } from "./core/scene";
+export type { Scene, SceneItem, Paint, Shadow } from "./core/scene/types";
+export { hitTestKind } from "./core/kinds/hit-tests";
+export { drawingAxisLabels, type PriceAxisLabel, type TimeAxisLabel } from "./core/kinds/axis-labels";
 
 // ============ Host hooks: images, tables ============
-export { cacheImage, decodeImage, setImageReader, onImagesChanged, IMAGE_MAX_BYTES, IMAGE_MAX_SIDE, IMAGE_TYPES, type LoadedImage } from "./tv/kinds/images";
-export type { TableCellRef, TableUi } from "./tv/kinds/table";
+export { cacheImage, decodeImage, setImageReader, onImagesChanged, IMAGE_MAX_BYTES, IMAGE_MAX_SIDE, IMAGE_TYPES, type LoadedImage } from "./core/kinds/images";
+export type { TableCellRef, TableUi } from "./core/kinds/table";
 
 // ============ Interaction rules ============
-export { finishPlacement, buildNewDrawing } from "./tv/interact/placement";
-export { applyDrag, anchorCursor, type DragState } from "./tv/interact/drag";
-export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./tv/interact/anchor";
+export { finishPlacement, buildNewDrawing } from "./core/interact/placement";
+export { applyDrag, anchorCursor, type DragState } from "./core/interact/drag";
+export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./core/interact/anchor";
 
-export const VERSION = "0.2.2";
+export const VERSION = "0.2.3";

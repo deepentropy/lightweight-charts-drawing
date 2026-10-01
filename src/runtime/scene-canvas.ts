@@ -1,5 +1,5 @@
 /*
- * Canvas renderer of the drawing scenes (src/tv/scene): every scene item to
+ * Canvas renderer of the drawing scenes (src/core/scene): every scene item to
  * CanvasRenderingContext2D calls, in CSS pixels (the caller scales the
  * context for the device pixel ratio). The semantics follow SVG, so a scene
  * drawn here matches the same scene drawn as SVG by a host (OpenTrader
@@ -8,9 +8,9 @@
  * collapsed white space unless `pre`, images kept in aspect unless
  * `stretch`.
  */
-import type { Pt } from "../tv/_shared";
-import { HANDLE_RADIUS } from "../tv/_shared";
-import type { Paint, SceneItem, Shadow } from "../tv/scene/types";
+import type { Pt } from "../core/_shared";
+import { HANDLE_RADIUS } from "../core/_shared";
+import type { Paint, SceneItem, Shadow } from "../core/scene/types";
 
 /** TV anchor ring colour (colorsPalette "color-tv-blue-600"), the same for
  *  every drawing. */

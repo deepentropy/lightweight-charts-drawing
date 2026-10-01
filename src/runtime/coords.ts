@@ -10,7 +10,7 @@
  * changes.
  */
 import type { IChartApi, ISeriesApi, Logical, SeriesType, Time } from "lightweight-charts";
-import type { Coords, OHLC } from "../tv/coords";
+import type { Coords, OHLC } from "../core/coords";
 
 /** lightweight-charts PriceScaleMode.Logarithmic (a const enum value; not
  *  imported so no lightweight-charts runtime is pulled in). */

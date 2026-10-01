@@ -1,4 +1,4 @@
-# src/tv: shared drawing core
+# src/core: shared drawing core
 
 UI-free TradingView drawing logic shared with OpenTrader (moved from
 OpenTrader `src/window/drawings`, 25/09/2026): drawing model, TradingView
