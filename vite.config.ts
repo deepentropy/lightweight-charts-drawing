@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
 
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
+
 export default defineConfig({
+  define: { __VERSION__: JSON.stringify(version) },
   plugins: [
     dts({
       insertTypesEntry: true,

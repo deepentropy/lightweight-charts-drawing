@@ -33,6 +33,7 @@ export { parseDrawings, migrateDrawing } from "./core/serialize";
 
 // ============ Scenes and hit tests (hosts drawing their own way) ============
 export { sceneOf, sceneLockedAnchors, type SceneContext } from "./core/scene";
+export { fibLevelAt } from "./core/scene/fib";
 export type { Scene, SceneItem, Paint, Shadow } from "./core/scene/types";
 export { hitTestKind } from "./core/kinds/hit-tests";
 export { drawingAxisLabels, type PriceAxisLabel, type TimeAxisLabel } from "./core/kinds/axis-labels";
@@ -46,4 +47,5 @@ export { finishPlacement, buildNewDrawing } from "./core/interact/placement";
 export { applyDrag, anchorCursor, type DragState } from "./core/interact/drag";
 export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./core/interact/anchor";
 
-export const VERSION = "0.3.0";
+// package.json version, set at build time (vite define).
+export const VERSION: string = __VERSION__;

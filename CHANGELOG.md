@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `fibLevelAt` is exported from the package entry.
+
+### Changed
+
+- `VERSION` is read from `package.json` at build time (vite `define`), so it
+  cannot stay behind the package version again.
+
 ## 0.3.0 (02/10/2026)
 
 ### Added
