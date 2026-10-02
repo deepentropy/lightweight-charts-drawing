@@ -74,6 +74,71 @@ function hBands(levels: LevelDef[], yOf: (c: number) => number, left: number, ri
   });
 }
 
+/** The fib retracement / trend-based extension level line under `cursor`
+ *  (within 6 px, inside the levels' x-range): its index in the drawing's
+ *  level list (`style.levels` or the factory list), y, x-range and the
+ *  position of its level text (the Text alignment). Null elsewhere. Used by
+ *  hosts to edit a level's text on the chart. */
+export function fibLevelAt(
+  d: Drawing,
+  pts: Pt[],
+  cursor: Pt,
+  w: number,
+  coords: Coords | null,
+): { index: number; y: number; left: number; right: number; textX: number } | null {
+  const s = d.style;
+  let yOf: ((c: number) => number) | null = null;
+  let left = 0;
+  let right = 0;
+  if (d.kind === "fib-retracement" && pts.length >= 2) {
+    const [a, b] = pts;
+    const priceA = d.points[0].price;
+    const priceB = d.points[1].price;
+    left = s.extendLeft ? 0 : Math.min(a.x, b.x);
+    right = s.extendRight ? w : Math.max(a.x, b.x);
+    const useLog = !!s.fibLevelsBasedOnLogScale && !!coords?.isLog() && priceA > 0 && priceB > 0;
+    const priceOf = (c: number) => {
+      const pEnd = s.reverse ? priceA : priceB;
+      const pStart = s.reverse ? priceB : priceA;
+      return useLog ? Math.exp(Math.log(pEnd) + c * (Math.log(pStart) - Math.log(pEnd))) : pEnd + c * (pStart - pEnd);
+    };
+    const yLin = (c: number) => (s.reverse ? a.y + (b.y - a.y) * c : b.y + (a.y - b.y) * c);
+    yOf = (c) => (useLog ? yLin(c) : coords?.priceToY(priceOf(c)) ?? yLin(c));
+  } else if (d.kind === "trend-based-fib-extension" && pts.length >= 3 && d.points.length >= 3) {
+    const [, b, c] = pts;
+    const p0 = d.points[0].price;
+    const p1 = d.points[1].price;
+    const pc = d.points[2].price;
+    const move = s.reverse ? p0 - p1 : p1 - p0;
+    const moveY = s.reverse ? pts[0].y - pts[1].y : pts[1].y - pts[0].y;
+    left = s.extendLeft ? 0 : Math.min(b.x, c.x);
+    right = s.extendRight ? w : Math.max(b.x, c.x);
+    const useLog = !!s.fibLevelsBasedOnLogScale && !!coords?.isLog() && p0 > 0 && p1 > 0 && pc > 0;
+    const priceOf = (lvl: number) => {
+      if (!useLog) return pc + move * lvl;
+      const lnMove = s.reverse ? Math.log(p0) - Math.log(p1) : Math.log(p1) - Math.log(p0);
+      return Math.exp(Math.log(pc) + lvl * lnMove);
+    };
+    const yLin = (lvl: number) => c.y + moveY * lvl;
+    yOf = (lvl) => (useLog ? yLin(lvl) : coords?.priceToY(priceOf(lvl)) ?? yLin(lvl));
+  }
+  if (!yOf) return null;
+  if (cursor.x < left - HIT_TOLERANCE || cursor.x > right + HIT_TOLERANCE) return null;
+  const levels = s.levels ?? FIB_LEVEL_DEFAULTS;
+  let best: { index: number; y: number; dist: number } | null = null;
+  levels.forEach((lvl, index) => {
+    if (!lvl.visible) return;
+    const y = yOf!(lvl.coeff);
+    const dist = Math.abs(cursor.y - y);
+    if (dist <= 6 && (!best || dist < best.dist)) best = { index, y, dist };
+  });
+  if (!best) return null;
+  const { index, y } = best;
+  const align = s.horzTextAlign ?? "center";
+  const textX = align === "left" ? left : align === "right" ? right : (left + right) / 2;
+  return { index, y, left, right, textX };
+}
+
 export function sceneFib(d: Drawing, pts: Pt[], selected: boolean, w: number, s: DrawingStyle, coords: Coords | null): Scene {
   if (d.kind !== "fib-retracement") return [];
   const [a, b] = pts;

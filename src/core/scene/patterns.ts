@@ -292,7 +292,7 @@ export function sceneTrianglePattern(pts: Pt[], selected: boolean, s: DrawingSty
   const out: Scene = [hitPolyline(pts)];
   if (tri) {
     out.push({
-      t: "polygon", pts: tri, fill: s.fillBackground === false ? "none" : (s.backgroundColor ?? s.color), fillOpacity: levelFillOpacity(s) || 0.15,
+      t: "polygon", pts: tri, fill: s.fillBackground === false ? "none" : (s.backgroundColor ?? s.color), fillOpacity: levelFillOpacity({ ...s, transparency: s.transparency ?? 85 }),
       stroke: s.color, strokeWidth: s.width, dash: dashFor({ ...s, lineStyle: "dotted" }), inert: true,
     });
   }
@@ -326,7 +326,8 @@ function lineSegmentHit(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
  *  "Left Shoulder" / "Head" / "Right Shoulder" 5px above the peak (below for
  *  an inverted one). */
 export function sceneHeadAndShoulders(pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
-  const fillO = levelFillOpacity(s) || 0.15;
+  // Factory transparency 85 when unset; 100 % (opacity 0) draws no fill.
+  const fillO = levelFillOpacity({ ...s, transparency: s.transparency ?? 85 });
   const fill = s.backgroundColor ?? s.color;
   const [p0, p1, p2, p3, p4, p5, p6] = pts;
   const i1 = lineSegmentHit(p2, p4, p0, p1);

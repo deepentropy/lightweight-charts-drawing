@@ -91,8 +91,9 @@ export function sceneAnchoredVwap(d: Drawing, pts: Pt[], selected: boolean, w: n
     if (band.upper.length < 2 || band.lower.length < 2) continue;
     // TV areaBackground ("Background #1") fills between UpperBand and
     // LowerBand only (band #1), in one colour (factory #4caf50, transparency 95).
-    if (s.fillBackground === true && band.index === 0) {
-      out.push({ t: "polygon", pts: [...band.upper, ...band.lower.slice().reverse()], fill: s.backgroundColor ?? "#4caf50", fillOpacity: levelFillOpacity(s), stroke: "none", inert: true });
+    // Unset = the factory (on, transparency 95), as the dialog shows it.
+    if (s.fillBackground !== false && band.index === 0) {
+      out.push({ t: "polygon", pts: [...band.upper, ...band.lower.slice().reverse()], fill: s.backgroundColor ?? "#4caf50", fillOpacity: levelFillOpacity({ ...s, transparency: s.transparency ?? 95 }), stroke: "none", inert: true });
     }
     for (const [side, line] of [["upper", band.upper], ["lower", band.lower]] as const) {
       const st = vwapBandLine(s, band.index, side);
