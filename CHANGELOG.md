@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0 (02/10/2026)
+
+### Added
+
+- `fibLevelAt(d, pts, cursor, w, coords)` (`src/core/scene/fib.ts`): the fib
+  retracement / trend-based extension level line under the cursor (within
+  6 px): its index in the level list, y, x-range and level text x. For hosts
+  that edit a level's text on the chart. Not exported from the package entry.
+
+### Changed
+
+- Anchored VWAP: an unset `fillBackground` draws the band #1 fill (TradingView
+  factory: on, transparency 95). Before, only `fillBackground: true` drew it.
+- Triangle pattern, head and shoulders: an unset `transparency` is the factory
+  85 (was 80), and transparency 100 draws no fill (was a 0.15 opacity
+  fallback).
+
+### Fixed
+
+- `VERSION` matches the package version (it stayed at 0.2.4 in 0.2.5).
+
 ## 0.2.5 (01/10/2026)
 
 ### Added

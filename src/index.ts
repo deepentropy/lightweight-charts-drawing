@@ -46,4 +46,4 @@ export { finishPlacement, buildNewDrawing } from "./core/interact/placement";
 export { applyDrag, anchorCursor, type DragState } from "./core/interact/drag";
 export { ANCHORABLE_KINDS, isAnchorable, toggleAnchored } from "./core/interact/anchor";
 
-export const VERSION = "0.2.4";
+export const VERSION = "0.3.0";
