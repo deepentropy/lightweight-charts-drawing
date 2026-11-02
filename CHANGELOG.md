@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.3 (02/11/2026)
+
+### Added
+
+- Agent guide for coding agents: `skills/lightweight-charts-drawing/` (SKILL.md,
+  references, examples tested in CI) and `AGENTS.md`, shipped in the package (#7).
+
 ## 0.6.2 (15/10/2026)
 
 ### Changed
