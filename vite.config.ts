@@ -7,6 +7,8 @@ const { version } = JSON.parse(readFileSync(new URL('./package.json', import.met
 
 export default defineConfig({
   define: { __VERSION__: JSON.stringify(version) },
+  // The skill examples import the package by name; the tests run them on the sources.
+  resolve: { alias: [{ find: /^lightweight-charts-drawing$/, replacement: resolve(__dirname, 'src/index.ts') }] },
   plugins: [
     dts({
       insertTypesEntry: true,

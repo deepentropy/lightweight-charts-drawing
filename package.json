@@ -15,13 +15,15 @@
   },
   "files": [
     "dist",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "skills",
+    "AGENTS.md"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && tsc -p tsconfig.skill.json && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.skill.json",
     "demo": "vite --config vite.demo.config.ts",
     "build:demo": "vite build --config vite.demo.config.ts",
     "test": "vitest run"
