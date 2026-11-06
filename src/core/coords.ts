@@ -4,6 +4,7 @@
  * it. Bar data type included (OHLC).
  */
 import type { CreatePriceLineOptions, IPriceLine, Time } from "lightweight-charts";
+import type { LabelFormatter } from "./labels";
 
 export type OHLC = {
   time: Time;
@@ -81,4 +82,7 @@ export type Coords = {
   timeInfo: () => { timeZone: string; intraday: boolean };
   /** Lower-timeframe bars of the chart symbol (volume profile drawings); optional. */
   lowerTimeframe?: LowerTimeframe;
+  /** Label text hook: called for every label with its default text and raw
+   *  numbers; return the text to draw (undefined / null = the default, "" = empty). */
+  formatLabel?: LabelFormatter;
 };
