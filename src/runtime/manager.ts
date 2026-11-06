@@ -112,6 +112,8 @@ export class DrawingManager {
   private shift = false;
   private ctrl = false;
   private savedScroll: { handleScroll: unknown; handleScale: unknown } | null = null;
+  /** Removers of the active gesture's window / document listeners (destroy() runs them). */
+  private readonly gestureOff: (() => void)[] = [];
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -537,6 +539,28 @@ export class DrawingManager {
     this.chart.applyOptions(this.savedScroll as never);
     this.savedScroll = null;
   }
+  /** Listen for a gesture's pointer events; the returned remover also leaves `gestureOff`. */
+  private gestureListen(t: EventTarget, type: string, f: (e: Event) => void): () => void {
+    t.addEventListener(type, f);
+    const rm = () => {
+      t.removeEventListener(type, f);
+      const i = this.gestureOff.indexOf(rm);
+      if (i >= 0) this.gestureOff.splice(i, 1);
+    };
+    this.gestureOff.push(rm);
+    return rm;
+  }
+  /** A held gesture ends on pointerup AND pointercancel (the browser takes a touch gesture away with the
+   *  latter): `done` runs once, both listeners are gone by then. */
+  private onRelease(t: EventTarget, done: (e: Event) => void): void {
+    const end = (e: Event) => {
+      rmUp();
+      rmCancel();
+      done(e);
+    };
+    const rmUp = this.gestureListen(t, "pointerup", end);
+    const rmCancel = this.gestureListen(t, "pointercancel", end);
+  }
 
   private onKey(e: KeyboardEvent): void {
     const down = e.type === "keydown";
@@ -784,9 +808,9 @@ export class DrawingManager {
       canDrag: hit.mode.hit === "handle" || wasSelected,
     };
     const move = (ev: PointerEvent) => this.dragMove(this.panePoint(ev));
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => move(ev as PointerEvent));
     const up = () => {
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", up);
+      rmMove();
       const g = this.gesture;
       if (g && !g.active) {
         if (g.pendingToggle) this.toggle(g.id);
@@ -812,8 +836,7 @@ export class DrawingManager {
       this.endGesture();
       this.emit("gestureEnd");
     };
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", up);
+    this.onRelease(document, up);
   }
 
   private dragMove(cur: Pt): void {
