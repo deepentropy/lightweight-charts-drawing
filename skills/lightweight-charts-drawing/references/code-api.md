@@ -13,8 +13,29 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  formatLabel: (label) => string | undefined,  // host text for every on-canvas label; see DrawingLabel
 });
 ```
+
+`DrawingLabel` (`src/core/labels.ts`) is a discriminated union on `id`. Each
+variant carries the default `text` plus raw fields the host can reformat:
+
+| `id` | Raw fields |
+|---|---|
+| `price-range` | `change`, `percent`, `pips`, `digits`, `price0`, `price1` |
+| `bars-range` | `bars` |
+| `time-span` | `seconds` |
+| `distance` | `distancePx` |
+| `angle` | `degrees` |
+| `volume` | `volume` |
+| `position-target` / `position-stop` | `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| `position-middle` | `pnl`, `closed`, `qty`, `ratio` |
+| `forecast` | `change`, `percent`, `seconds`, `digits` |
+| `forecast-date` | `time`, `timeZone`, `intraday` |
+| `price` | `price`, `digits` |
+| `fib-level` | `coeff`, `price`, `digits` |
+| `pearson` | `r` |
+| `gann-ratio` | `ratio` |
 
 One manager per series. It attaches one series primitive and listens to pointer and key events on
 the chart element. Call `dm.destroy()` before removing the chart or the series.

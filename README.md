@@ -54,7 +54,34 @@ usually has no volume: the volume profiles then show no rows and the
 anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
-intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
+`formatLabel` (optional host formatter for every on-canvas label).
+
+### Labels and number format
+
+`formatLabel?: (label: DrawingLabel) => string | null | undefined` is called
+once per on-canvas label with the library's default `text` and the raw
+inputs (prices, volumes, dates, …). Return the string to draw; `undefined`
+or `null` keeps the default; `""` draws empty. Strings are measured after
+the hook, so translated labels size their boxes. Axis labels stay on the
+chart's own `priceFormatter` / `localization.timeFormatter`.
+
+| `id` | Raw fields |
+|---|---|
+| `price-range` | `change`, `percent`, `pips`, `digits`, `price0`, `price1` |
+| `bars-range` | `bars` |
+| `time-span` | `seconds` |
+| `distance` | `distancePx` |
+| `angle` | `degrees` |
+| `volume` | `volume` |
+| `position-target` / `position-stop` | `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| `position-middle` | `pnl`, `closed`, `qty`, `ratio` |
+| `forecast` | `change`, `percent`, `seconds`, `digits` |
+| `forecast-date` | `time`, `timeZone`, `intraday` |
+| `price` | `price`, `digits` |
+| `fib-level` | `coeff`, `price`, `digits` |
+| `pearson` | `r` |
+| `gann-ratio` | `ratio` |
 
 | Method | |
 |---|---|

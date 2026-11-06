@@ -13,6 +13,7 @@ import { CandlestickSeries, createChart, type Time } from "lightweight-charts";
 import * as lwcd from "../src";
 import { cacheImage, decodeImage, DrawingManager, isAnchorable, VERSION, type Drawing, type DrawingKind, type MagnetMode } from "../src";
 import { ICONS } from "./icons";
+import { ukLabel } from "./labels-uk";
 import { TOOL_COUNT, TOOL_GROUPS, type ToolEntry } from "./tool-groups";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -47,7 +48,21 @@ async function main() {
   const series = chart.addSeries(CandlestickSeries, { upColor: "#089981", downColor: "#f23645", borderVisible: false, wickUpColor: "#089981", wickDownColor: "#f23645" });
   series.setData(data);
   chart.timeScale().setVisibleLogicalRange({ from: data.length - 160, to: data.length + 12 });
-  const dm = new DrawingManager(chart, series, { magnet: "off" });
+  let lang: "en" | "uk" = new URLSearchParams(location.search).get("lang") === "uk" ? "uk" : "en";
+  const langSel = $("label-lang") as HTMLSelectElement;
+  langSel.value = lang;
+  const dm = new DrawingManager(chart, series, {
+    magnet: "off",
+    formatLabel: (l) => (lang === "uk" ? ukLabel(l) : undefined),
+  });
+  langSel.addEventListener("change", () => {
+    lang = langSel.value === "uk" ? "uk" : "en";
+    const url = new URL(location.href);
+    if (lang === "uk") url.searchParams.set("lang", "uk");
+    else url.searchParams.delete("lang");
+    history.replaceState(null, "", url);
+    dm.redraw();
+  });
   Object.assign(window, { dm, chart, series, lwcd });
 
   $("version").textContent = `v${VERSION}`;
