@@ -276,6 +276,104 @@ describe("formatLabel hook (range tools)", () => {
   });
 });
 
+const POS_PTS = [pt(10, 120), pt(25, 120)] as Drawing["points"];
+const POS_LEVELS = { showStats: true, stopLevel: 15, profitLevel: 30 } as const;
+
+const POS_FULL_LONG = [
+  "Target: 30.00 (25.000%) 3,000, Amount: 1500",
+  "Open PnL: 0.50, Qty: 16",
+  "Risk/reward ratio: 2",
+  "Stop: 15.00 (12.500%) 1,500, Amount: 750",
+];
+
+describe("formatLabel hook (positions)", () => {
+  it("long/short full and compact: one label per field with raw numbers; §id replacement", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+
+    for (const kind of ["long-position", "short-position"] as const) {
+      for (const compact of [false, true]) {
+        seen.length = 0;
+        const texts = textsOf(drawing(kind, POS_PTS, { ...POS_LEVELS, compactStats: compact }), c);
+        expect(texts.every((t) => t.startsWith("\u00A7"))).toBe(true);
+        expect(texts.some((t) => t === "\u00A7position-target")).toBe(true);
+        expect(texts.some((t) => t === "\u00A7position-stop")).toBe(true);
+        expect(texts.some((t) => t === "\u00A7position-middle")).toBe(true);
+
+        const target = seen.find((l) => l.id === "position-target");
+        const stop = seen.find((l) => l.id === "position-stop");
+        const mid = seen.find((l) => l.id === "position-middle");
+        expect(target && "distance" in target ? target.distance : undefined).toBe(30);
+        expect(target && "percent" in target ? target.percent : undefined).toBe(25);
+        expect(target && "ticks" in target ? target.ticks : undefined).toBe(3000);
+        expect(target && "amount" in target ? target.amount : undefined).toBe(1500);
+        expect(stop && "distance" in stop ? stop.distance : undefined).toBe(15);
+        expect(stop && "percent" in stop ? stop.percent : undefined).toBe(12.5);
+        expect(stop && "ticks" in stop ? stop.ticks : undefined).toBe(1500);
+        expect(stop && "amount" in stop ? stop.amount : undefined).toBe(750);
+        expect(mid && "qty" in mid ? mid.qty : undefined).toBe(16);
+        expect(mid && "ratio" in mid ? mid.ratio : undefined).toBe(2);
+        expect(mid && "pnl" in mid ? typeof mid.pnl : undefined).toBe("number");
+        expect(mid && "closed" in mid ? mid.closed : undefined).toBe(false);
+
+        // Default English text matches characterization (full long as reference).
+        if (kind === "long-position" && !compact) {
+          expect(target?.text).toBe(POS_FULL_LONG[0]);
+          expect(stop?.text).toBe(POS_FULL_LONG[3]);
+          expect(mid?.text).toBe(`${POS_FULL_LONG[1]}\n${POS_FULL_LONG[2]}`);
+        }
+      }
+    }
+  });
+
+  it("no formatter keeps 0.6.3 position strings", () => {
+    const c = baseCoords();
+    expect(textsOf(drawing("long-position", POS_PTS, { ...POS_LEVELS, compactStats: false }), c)).toEqual(
+      POS_FULL_LONG,
+    );
+  });
+});
+
+describe("formatLabel hook (position-forecast)", () => {
+  it("passes raw seconds, prices and forecast-date with timeZone/intraday", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+    const texts = textsOf(drawing("position-forecast", [pt(10, 110), pt(30, 140)]), c);
+
+    expect(texts.filter((t) => t === "\u00A7price")).toHaveLength(2);
+    expect(texts.some((t) => t === "\u00A7forecast")).toBe(true);
+    expect(texts.filter((t) => t === "\u00A7forecast-date")).toHaveLength(2);
+    // Status banner stays library English.
+    expect(texts).toContain("FAILURE");
+
+    const prices = seen.filter((l) => l.id === "price");
+    expect(prices.map((l) => ("price" in l ? l.price : null))).toEqual([110, 140]);
+    expect(prices.every((l) => "digits" in l && l.digits === 2)).toBe(true);
+
+    const fc = seen.find((l) => l.id === "forecast");
+    expect(fc && "seconds" in fc ? fc.seconds : undefined).toBe(20 * DAY);
+    expect(fc && "change" in fc ? fc.change : undefined).toBe(30);
+    expect(fc?.text).toBe("30.00 (27.27%) in 20d");
+
+    const dates = seen.filter((l) => l.id === "forecast-date");
+    expect(dates).toHaveLength(2);
+    expect(dates[0] && "time" in dates[0] ? dates[0].time : undefined).toBe(T0 + 10 * DAY);
+    expect(dates[1] && "time" in dates[1] ? dates[1].time : undefined).toBe(T0 + 30 * DAY);
+    expect(dates.every((l) => "timeZone" in l && l.timeZone === "UTC")).toBe(true);
+    expect(dates.every((l) => "intraday" in l && l.intraday === false)).toBe(true);
+    expect(dates[0]?.text).toBe("2026-01-15");
+    expect(dates[1]?.text).toBe("2026-02-04");
+  });
+});
+
 describe("formatLabel empty-string edge", () => {
   function recordingCtx(): CanvasRenderingContext2D {
     const handler: ProxyHandler<object> = {

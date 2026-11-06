@@ -21,7 +21,41 @@ export type DrawingLabel =
   | { id: "time-span"; text: string; seconds: number }
   | { id: "distance"; text: string; distancePx: number }
   | { id: "angle"; text: string; degrees: number }
-  | { id: "volume"; text: string; volume: number };
+  | { id: "volume"; text: string; volume: number }
+  | {
+      id: "position-target" | "position-stop";
+      text: string;
+      distance: number;
+      percent: number;
+      ticks: number;
+      amount: number;
+      pnl: number;
+      digits: number;
+    }
+  | {
+      id: "position-middle";
+      text: string;
+      pnl: number | null;
+      closed: boolean;
+      qty: number;
+      ratio: number;
+    }
+  | {
+      id: "forecast";
+      text: string;
+      change: number;
+      percent: number;
+      seconds: number | null;
+      digits: number;
+    }
+  | {
+      id: "forecast-date";
+      text: string;
+      time: number;
+      timeZone: string;
+      intraday: boolean;
+    }
+  | { id: "price"; text: string; price: number; digits: number };
 
 /** Return the label to draw; undefined / null = the default text. "" draws empty. */
 export type LabelFormatter = (label: DrawingLabel) => string | null | undefined;
