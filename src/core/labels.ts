@@ -55,7 +55,14 @@ export type DrawingLabel =
       timeZone: string;
       intraday: boolean;
     }
-  | { id: "price"; text: string; price: number; digits: number };
+  | { id: "price"; text: string; price: number; digits: number }
+  | {
+      id: "fib-level";
+      text: string;
+      coeff: number;
+      price: number | null;
+      digits: number;
+    };
 
 /** Return the label to draw; undefined / null = the default text. "" draws empty. */
 export type LabelFormatter = (label: DrawingLabel) => string | null | undefined;

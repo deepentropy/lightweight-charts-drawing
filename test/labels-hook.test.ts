@@ -374,6 +374,63 @@ describe("formatLabel hook (position-forecast)", () => {
   });
 });
 
+describe("formatLabel hook (fib levels)", () => {
+  it("fib-retracement and trend-based-fib-extension pass raw coeff/price/digits", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+
+    seen.length = 0;
+    const retrace = textsOf(
+      drawing("fib-retracement", [pt(15, 103), pt(45, 152)], { showPrices: true, showCoeffs: true }),
+      c,
+    );
+    expect(retrace.length).toBeGreaterThan(0);
+    expect(retrace.every((t) => t === "\u00A7fib-level")).toBe(true);
+    const zero = seen.find((l) => l.id === "fib-level" && "coeff" in l && l.coeff === 0);
+    expect(zero && "price" in zero ? zero.price : undefined).toBe(152);
+    expect(zero && "digits" in zero ? zero.digits : undefined).toBe(2);
+    expect(zero?.text).toBe("0 (152.00)");
+    const mid = seen.find((l) => l.id === "fib-level" && "coeff" in l && l.coeff === 0.5);
+    expect(mid && "price" in mid ? mid.price : undefined).toBe(127.5);
+    expect(mid?.text).toBe("0.5 (127.50)");
+
+    seen.length = 0;
+    const extPts = [pt(10, 100), pt(20, 120), pt(30, 110)] as Drawing["points"];
+    const extTexts = textsOf(
+      drawing("trend-based-fib-extension", extPts, { showPrices: true, showCoeffs: true }),
+      c,
+    );
+    expect(extTexts.length).toBeGreaterThan(0);
+    expect(extTexts.every((t) => t === "\u00A7fib-level")).toBe(true);
+    expect(seen.every((l) => l.id === "fib-level" && "coeff" in l && typeof l.coeff === "number")).toBe(true);
+    expect(seen.every((l) => "price" in l && l.price != null)).toBe(true);
+  });
+});
+
+describe("formatLabel hook (channel prices)", () => {
+  it("disjoint-channel prices reach the formatter with raw price and digits", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+    const texts = textsOf(
+      drawing("disjoint-channel", [pt(5, 100), pt(30, 130), pt(5, 110)], { showPrices: true }),
+      c,
+    );
+    expect(texts).toEqual(["\u00A7price", "\u00A7price", "\u00A7price", "\u00A7price"]);
+    const prices = seen.filter((l) => l.id === "price").map((l) => ("price" in l ? l.price : null));
+    expect(prices).toEqual([100, 130, 110, 140]);
+    expect(seen.filter((l) => l.id === "price").every((l) => "digits" in l && l.digits === 2)).toBe(true);
+    expect(seen.find((l) => l.id === "price")?.text).toBe("100.00");
+  });
+});
+
 describe("formatLabel empty-string edge", () => {
   function recordingCtx(): CanvasRenderingContext2D {
     const handler: ProxyHandler<object> = {
