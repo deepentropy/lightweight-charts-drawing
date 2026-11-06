@@ -483,6 +483,125 @@ describe("formatLabel hook (price label paint + hit)", () => {
   });
 });
 
+describe("formatLabel hook (regression / volume profile / gann)", () => {
+  it("regression-trend: Pearson's R reaches the formatter as raw r", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+    const texts = textsOf(drawing("regression-trend", [pt(5, 100), pt(40, 140)], { showPearsons: true }), c);
+    expect(texts).toEqual(["\u00A7pearson"]);
+    const p = seen.find((l) => l.id === "pearson");
+    expect(p && "r" in p ? p.r : undefined).toBe(0.9028568950984005);
+    expect(p?.text).toBe("0.9028568950984005");
+  });
+
+  it("fixed-range-volume-profile: raw volume reaches the formatter", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+    const texts = textsOf(
+      drawing("fixed-range-volume-profile", [pt(5, 90), pt(40, 160)], {
+        vp: { showValues: true, rows: 8 },
+      } as Partial<DrawingStyle>),
+      c,
+    );
+    expect(texts.every((t) => t === "\u00A7volume")).toBe(true);
+    expect(texts).toHaveLength(8);
+    const vols = seen.filter((l) => l.id === "volume").map((l) => ("volume" in l ? l.volume : null));
+    expect(vols.every((v) => typeof v === "number")).toBe(true);
+    expect(seen[0]?.text).toBe("1.22M");
+  });
+
+  it("gann-square: ratio reaches the formatter as a raw number", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+    const texts = textsOf(drawing("gann-square", [pt(5, 100), pt(25, 140)], { showLabels: true }), c);
+    expect(texts.every((t) => t.startsWith("\u00A7"))).toBe(true);
+    const ratio = seen.find((l) => l.id === "gann-ratio");
+    expect(ratio && "ratio" in ratio ? ratio.ratio : undefined).toBe(2);
+    expect(ratio?.text).toBe("2");
+  });
+});
+
+describe("formatLabel coverage: every characterized kind is hookable", () => {
+  /** Same drawings as test/labels.test.ts (copied, not imported). */
+  const CASES: { kind: string; d: Drawing }[] = [
+    {
+      kind: "trend-line",
+      d: drawing("trend-line", [pt(5, 1500), pt(20, 1000)], ALL_STATS),
+    },
+    { kind: "price-range", d: drawing("price-range", [pt(5, 1500), pt(20, 1000)]) },
+    { kind: "date-range", d: drawing("date-range", [pt(5, 1500), pt(20, 1000)]) },
+    { kind: "date-and-price-range", d: drawing("date-and-price-range", [pt(5, 1500), pt(20, 1000)]) },
+    {
+      kind: "long-position-full",
+      d: drawing("long-position", POS_PTS, { ...POS_LEVELS, compactStats: false }),
+    },
+    {
+      kind: "long-position-compact",
+      d: drawing("long-position", POS_PTS, { ...POS_LEVELS, compactStats: true }),
+    },
+    {
+      kind: "short-position-full",
+      d: drawing("short-position", POS_PTS, { ...POS_LEVELS, compactStats: false }),
+    },
+    {
+      kind: "short-position-compact",
+      d: drawing("short-position", POS_PTS, { ...POS_LEVELS, compactStats: true }),
+    },
+    { kind: "position-forecast", d: drawing("position-forecast", [pt(10, 110), pt(30, 140)]) },
+    {
+      kind: "fib-retracement",
+      d: drawing("fib-retracement", [pt(15, 103), pt(45, 152)], { showPrices: true, showCoeffs: true }),
+    },
+    {
+      kind: "regression-trend",
+      d: drawing("regression-trend", [pt(5, 100), pt(40, 140)], { showPearsons: true }),
+    },
+    {
+      kind: "fixed-range-volume-profile",
+      d: drawing("fixed-range-volume-profile", [pt(5, 90), pt(40, 160)], {
+        vp: { showValues: true, rows: 8 },
+      } as Partial<DrawingStyle>),
+    },
+    { kind: "price-note", d: drawing("price-note", [pt(20, 1234.56), pt(25, 1300)], { text: "" }) },
+    { kind: "price-label", d: drawing("price-label", [pt(20, 1234.56)]) },
+    {
+      kind: "disjoint-channel",
+      d: drawing("disjoint-channel", [pt(5, 100), pt(30, 130), pt(5, 110)], { showPrices: true }),
+    },
+    {
+      kind: "gann-square",
+      d: drawing("gann-square", [pt(5, 100), pt(25, 140)], { showLabels: true }),
+    },
+  ];
+
+  it("formatter §id rewrites every library-built text of characterized kinds", () => {
+    const formatLabel: LabelFormatter = (label) => `\u00A7${label.id}`;
+    const c = baseCoords({ formatLabel });
+    // SUCCESS / FAILURE stay library English (54-04); not in the label inventory.
+    const allow = new Set(["SUCCESS", "FAILURE"]);
+    const leaks: string[] = [];
+    for (const { kind, d } of CASES) {
+      for (const t of textsOf(d, c)) {
+        if (allow.has(t)) continue;
+        if (!t.startsWith("\u00A7")) leaks.push(`${kind}: ${JSON.stringify(t)}`);
+      }
+    }
+    expect(leaks, leaks.join("; ")).toEqual([]);
+  });
+});
+
 describe("formatLabel empty-string edge", () => {
   function recordingCtx(): CanvasRenderingContext2D {
     const handler: ProxyHandler<object> = {

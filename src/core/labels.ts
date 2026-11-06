@@ -62,7 +62,9 @@ export type DrawingLabel =
       coeff: number;
       price: number | null;
       digits: number;
-    };
+    }
+  | { id: "pearson"; text: string; r: number }
+  | { id: "gann-ratio"; text: string; ratio: number };
 
 /** Return the label to draw; undefined / null = the default text. "" draws empty. */
 export type LabelFormatter = (label: DrawingLabel) => string | null | undefined;
