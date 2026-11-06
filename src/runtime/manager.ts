@@ -83,6 +83,9 @@ type Listeners = { [K in keyof DrawingManagerEvents]: Set<DrawingManagerEvents[K
  *  gesture's selection bookkeeping). */
 type Gesture = DragState & { canDrag: boolean };
 
+/** A touch or pen pointer (a mouse and pointers of unknown type are not). */
+const isTouchLike = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
+
 const newId = () => `dw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
 export class DrawingManager {
@@ -114,6 +117,8 @@ export class DrawingManager {
   private savedScroll: { handleScroll: unknown; handleScale: unknown } | null = null;
   /** Removers of the active gesture's window / document listeners (destroy() runs them). */
   private readonly gestureOff: (() => void)[] = [];
+  /** Remover of the touchmove guard of a touch / pen hold. */
+  private touchGuardOff: (() => void) | null = null;
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -350,6 +355,7 @@ export class DrawingManager {
 
   destroy(): void {
     this.endGesture();
+    for (const f of [...this.gestureOff]) f();
     for (const f of this.off) f();
     this.series.detachPrimitive(this.primitive as ISeriesPrimitive<Time>);
   }
@@ -527,14 +533,23 @@ export class DrawingManager {
   }
 
   /** Take the pointer gesture from the chart: no pan / zoom until release. */
-  private holdChart(): void {
+  private holdChart(e: PointerEvent): void {
     if (this.savedScroll) return;
     // options() returns live objects: copy them before switching off.
     const o = this.chart.options() as unknown as { handleScroll: unknown; handleScale: unknown };
     this.savedScroll = { handleScroll: structuredClone(o.handleScroll), handleScale: structuredClone(o.handleScale) };
     this.chart.applyOptions({ handleScroll: false, handleScale: false });
+    // With the chart's own touch handling off it stops preventing touchmove, and the browser would take the
+    // gesture (pointercancel): keep it for the drag. A mouse never reaches this.
+    if (isTouchLike(e)) {
+      const stop = (ev: Event) => ev.preventDefault();
+      this.el.addEventListener("touchmove", stop, { passive: false });
+      this.touchGuardOff = () => this.el.removeEventListener("touchmove", stop);
+    }
   }
   private releaseChart(): void {
+    this.touchGuardOff?.();
+    this.touchGuardOff = null;
     if (!this.savedScroll) return;
     this.chart.applyOptions(this.savedScroll as never);
     this.savedScroll = null;
@@ -621,16 +636,19 @@ export class DrawingManager {
 
   private onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
+    // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
+    // isPrimary false or missing and stays on the old path.
+    if (isTouchLike(e) && e.isPrimary === false) return;
     const sp = this.panePoint(e);
     const { w, h } = this.paneSize();
     if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) return;
     if (this.spec) {
       e.stopPropagation();
-      this.holdChart();
+      this.holdChart(e);
       if (this.spec.freehand) this.startFreehand(sp);
       else {
         this.placementClick(sp);
-        window.addEventListener("pointerup", () => this.releaseChart(), { once: true });
+        this.onRelease(window, () => this.releaseChart());
       }
       return;
     }
@@ -746,19 +764,18 @@ export class DrawingManager {
       this.pending = [...this.pending, dp];
       this.redraw();
     };
-    const up = () => {
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", up);
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => move(ev as PointerEvent));
+    this.onRelease(document, (ev) => {
+      rmMove();
       this.releaseChart();
-      const pts = this.pending;
+      // A cancelled stroke (the browser took the pointer) is discarded, not committed.
+      const pts = ev.type === "pointercancel" ? [] : this.pending;
       this.pending = [];
       this.cursor = null;
       const placed = pts.length >= 2 ? buildNewDrawing(spec.kind, pts) : null;
       if (placed) this.placeNew(placed, null);
       else this.afterPlacement();
-    };
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", up);
+    });
   }
 
   private selectionDown(e: PointerEvent, sp: Pt): void {
@@ -771,7 +788,7 @@ export class DrawingManager {
       return;
     }
     e.stopPropagation();
-    this.holdChart();
+    this.holdChart(e);
     const ids = this.selected;
     const wasSelected = ids.includes(hit.drawing.id);
     const inGroup = wasSelected && ids.length > 1;
@@ -780,7 +797,7 @@ export class DrawingManager {
     if (hit.drawing.locked) {
       if (multiKey) this.toggle(hit.drawing.id);
       else if (inGroup) this.select([hit.drawing.id]);
-      window.addEventListener("pointerup", () => this.releaseChart(), { once: true });
+      this.onRelease(window, () => this.releaseChart());
       return;
     }
     const pane = this.paneSize();
