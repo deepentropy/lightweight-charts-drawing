@@ -13,6 +13,7 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  keyboard: true,                      // false: no window key listener
 });
 ```
 
@@ -57,6 +58,8 @@ draw while the button is held. Drag anchors or the body of a selected drawing; C
 adds to the selection, Ctrl + body drag clones. Shift constrains (45 degree steps, squares, axis
 lock) and turns the magnet off; Ctrl / Cmd inverts the magnet. Escape drops pending points, then
 the tool, then the selection; Delete / Backspace removes the selected unlocked drawings.
+With `keyboard: false` the manager adds no key listener: no Escape cascade, no Delete / Backspace
+removal, no Shift / Ctrl modifiers; Ctrl / Cmd on pointer events still multi-selects and clones.
 
 ## Creating from clicks
 

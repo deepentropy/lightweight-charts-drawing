@@ -54,7 +54,8 @@ usually has no volume: the volume profiles then show no rows and the
 anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
-intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
+`keyboard` (default true; false adds no window key listener).
 
 | Method | |
 |---|---|
@@ -86,6 +87,9 @@ click to multi-select and group drag, Ctrl + body drag clones; Shift = 45°
 steps / square boxes and magnet off, Ctrl / Cmd inverts the magnet; Escape
 drops pending points, then the tool, then the selection; Delete removes the
 selection (locked drawings stay).
+With `keyboard: false` the manager adds no key listener: no Escape cascade,
+no Delete / Backspace removal, no Shift / Ctrl modifiers; Ctrl / Cmd on
+pointer events still multi-selects and clones.
 
 Drawing flags: `locked` (selectable, but no drag and no Delete) and `hidden`
 (not drawn, hit or selected). A drawing that gets hidden leaves the

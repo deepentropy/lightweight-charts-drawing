@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `keyboard` option (`DrawingManagerOptions`): `false` adds no window key listener, so Delete / Backspace / Escape never change drawings or the selection (hosts with their own key policy).
+
 ## 0.6.3 (02/11/2026)
 
 ### Added
