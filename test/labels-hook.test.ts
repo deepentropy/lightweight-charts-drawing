@@ -8,6 +8,7 @@ import {
   DrawingManager,
   defaultStyleFor,
   drawScene,
+  hitTestKind,
   sceneOf,
   type Coords,
   type Drawing,
@@ -428,6 +429,57 @@ describe("formatLabel hook (channel prices)", () => {
     expect(prices).toEqual([100, 130, 110, 140]);
     expect(seen.filter((l) => l.id === "price").every((l) => "digits" in l && l.digits === 2)).toBe(true);
     expect(seen.find((l) => l.id === "price")?.text).toBe("100.00");
+  });
+});
+
+describe("formatLabel hook (price label paint + hit)", () => {
+  it("wide formatted price-label hits beyond the default box width", () => {
+    const price = 0.00001234;
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      // Three times the default string → painted/hit box grows with measureText.
+      return label.text + label.text + label.text;
+    };
+    const c = baseCoords({
+      formatLabel,
+      pipSize: () => 1e-8,
+      priceToY: (p) => H - p * 1e8,
+      yToPrice: (y) => (H - y) / 1e8,
+    });
+    const d = drawing("price-label", [pt(20, price)]);
+    const pts = project(d, c);
+    const fs = d.style.fontSize ?? 14;
+    const defaultText = price.toFixed(8);
+    // measureTextStyled falls back to length * fs * 0.6 when canvas ctx is null.
+    const defaultW = defaultText.length * fs * 0.6 + 20;
+    const boxX = pts[0].x + 9;
+    const boxH = fs + 10;
+    const boxY = pts[0].y - (boxH + 15);
+    // Just past the default box's right edge, still inside a 3×-wide box.
+    const cursor = { x: boxX + defaultW + 5, y: boxY + boxH / 2 };
+
+    expect(hitTestKind(d, pts, cursor, W, H, c)).toEqual({ hit: "body" });
+
+    const pl = seen.find((l) => l.id === "price");
+    expect(pl && "price" in pl ? pl.price : undefined).toBe(price);
+    expect(pl && "digits" in pl ? pl.digits : undefined).toBe(8);
+    expect(pl?.text).toBe(defaultText);
+  });
+
+  it("price-note: raw price + digits; default text matches characterization", () => {
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `\u00A7${label.id}`;
+    };
+    const c = baseCoords({ formatLabel });
+    const texts = textsOf(drawing("price-note", [pt(20, 1234.56), pt(25, 1300)], { text: "" }), c);
+    expect(texts).toEqual(["\u00A7price"]);
+    const pl = seen.find((l) => l.id === "price");
+    expect(pl && "price" in pl ? pl.price : undefined).toBe(1234.56);
+    expect(pl && "digits" in pl ? pl.digits : undefined).toBe(2);
+    expect(pl?.text).toBe("1234.56");
   });
 });
 

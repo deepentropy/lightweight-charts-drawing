@@ -38,7 +38,7 @@ import { arrowMarkTextBox } from "./arrow-mark";
 import { tableAnchors, tableEdgeIndex, tableHitCell, tableLayout } from "./table";
 import { imageAnchors, imageBox } from "./images";
 import { signpostLayout } from "./signpost";
-import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, textToolLayout } from "./text-tools";
+import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, priceLabelText, textToolLayout } from "./text-tools";
 
 const HANDLE_R = HANDLE_RADIUS + HIT_TOLERANCE;
 
@@ -936,7 +936,7 @@ function priceNoteHit(d: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null |
   if (h) return h;
   if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= HIT_TOLERANCE) return { hit: "body" };
   const pip = coords?.pipSize() ?? 0.01;
-  const box = priceNoteLabel(d, pts, Math.max(0, Math.min(8, Math.round(-Math.log10(pip)))))?.box;
+  const box = priceNoteLabel(d, pts, Math.max(0, Math.min(8, Math.round(-Math.log10(pip)))), coords)?.box;
   if (box && cursor.x >= box.left && cursor.x <= box.left + box.width && cursor.y >= box.top && cursor.y <= box.top + box.height) return { hit: "body" };
   return null;
 }
@@ -1072,7 +1072,7 @@ export function hitTestKind(
     case "price-label": {
       const h = endpointHit(pts, cursor);
       if (h) return h;
-      const b = priceLabelLayout(drawing.points[0].price.toFixed(Math.max(0, Math.min(8, Math.round(-Math.log10(coords?.pipSize() ?? 0.01))))), pts[0], drawing.style.fontSize ?? 14);
+      const b = priceLabelLayout(priceLabelText(drawing.points[0].price, coords), pts[0], drawing.style.fontSize ?? 14);
       return inBox(cursor, { left: b.x, top: b.y, width: b.w, height: b.h }) ? { hit: "body" } : null;
     }
     case "flag-mark":
