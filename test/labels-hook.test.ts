@@ -7,6 +7,7 @@ import type { IChartApi, ISeriesApi, SeriesType, Time } from "lightweight-charts
 import {
   DrawingManager,
   defaultStyleFor,
+  drawScene,
   sceneOf,
   type Coords,
   type Drawing,
@@ -231,5 +232,99 @@ describe("formatLabel hook (trend-line stats)", () => {
     managers.push(dm);
     const coords = (dm as unknown as { coords: Coords }).coords;
     expect(coords.formatLabel).toBe(formatLabel);
+  });
+});
+
+describe("formatLabel hook (range tools)", () => {
+  it("price-range / date-range / date-and-price-range pass raw values through the formatter", () => {
+    const lo = 0.00001234;
+    const hi = 0.00002468;
+    const seen: DrawingLabel[] = [];
+    const formatLabel: LabelFormatter = (label) => {
+      seen.push(label);
+      return `R:${label.id}`;
+    };
+    const c = baseCoords({
+      formatLabel,
+      pipSize: () => 1e-8,
+      priceToY: (p) => H - p * 1e8,
+      yToPrice: (y) => (H - y) / 1e8,
+    });
+
+    for (const kind of ["price-range", "date-range", "date-and-price-range"] as const) {
+      seen.length = 0;
+      const texts = textsOf(drawing(kind, [pt(5, lo), pt(20, hi)]), c);
+      expect(texts.every((t) => t.startsWith("R:") || t.includes("R:"))).toBe(true);
+
+      if (kind !== "date-range") {
+        const pr = seen.find((l) => l.id === "price-range");
+        expect(pr && "change" in pr ? pr.change : undefined).toBe(0.00001234);
+        expect(pr && "price0" in pr ? pr.price0 : undefined).toBe(lo);
+        expect(pr && "price1" in pr ? pr.price1 : undefined).toBe(hi);
+      }
+      if (kind !== "price-range") {
+        expect(seen.some((l) => l.id === "bars-range" && "bars" in l && l.bars === 15)).toBe(true);
+        expect(seen.some((l) => l.id === "time-span" && "seconds" in l && l.seconds === 15 * DAY)).toBe(true);
+        expect(seen.some((l) => l.id === "volume" && "volume" in l && typeof l.volume === "number")).toBe(true);
+      }
+    }
+
+    seen.length = 0;
+    textsOf(drawing("price-range", [pt(5, hi), pt(20, lo)]), c);
+    const down = seen.find((l) => l.id === "price-range");
+    expect(down && "change" in down ? down.change : undefined).toBe(-0.00001234);
+  });
+});
+
+describe("formatLabel empty-string edge", () => {
+  function recordingCtx(): CanvasRenderingContext2D {
+    const handler: ProxyHandler<object> = {
+      get(_t, prop) {
+        if (prop === "canvas") return { width: W, height: H };
+        if (prop === "getTransform") return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
+        return (..._args: unknown[]) => {
+          if (String(prop).toLowerCase().includes("gradient")) return new Proxy({}, handler);
+          return undefined;
+        };
+      },
+      set: () => true,
+    };
+    return new Proxy({}, handler) as CanvasRenderingContext2D;
+  }
+
+  it("formatter returning \"\" does not throw; labels draw empty; drawScene survives", () => {
+    // Node has no Path2D; drawScene constructs one for clips / fills.
+    (globalThis as { Path2D?: unknown }).Path2D ??= class {
+      rect() {}
+      moveTo() {}
+      lineTo() {}
+      closePath() {}
+      arc() {}
+      ellipse() {}
+      addPath() {}
+    };
+    const c = baseCoords({ formatLabel: () => "" });
+    const kinds: Drawing["kind"][] = ["trend-line", "price-range", "date-range", "date-and-price-range"];
+    for (const kind of kinds) {
+      const d =
+        kind === "trend-line"
+          ? drawing(kind, [pt(5, 1500), pt(20, 1000)], ALL_STATS)
+          : drawing(kind, [pt(5, 1500), pt(20, 1000)]);
+      let scene!: Scene;
+      expect(() => {
+        scene = sceneOf(d, project(d, c), { w: W, h: H, coords: c, selected: true });
+      }).not.toThrow();
+      const labelTexts = flat(scene)
+        .filter((it): it is Extract<SceneItem, { t: "text" }> => it.t === "text")
+        .map((it) => it.text);
+      // Hooked labels are empty; custom/user text (if any) is out of scope.
+      expect(labelTexts.every((t) => t === "")).toBe(true);
+      expect(() =>
+        drawScene(recordingCtx(), scene, {
+          fontFamily: "sans-serif",
+          anchors: { fillAt: () => "#000", selected: true },
+        }),
+      ).not.toThrow();
+    }
   });
 });

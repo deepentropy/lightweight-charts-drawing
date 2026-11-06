@@ -13,6 +13,7 @@
  */
 import { timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import type { Drawing, DrawingStyle } from "../types";
 import { barsBetween } from "../kinds/data-series";
 import type { Scene, SceneItem, Shadow } from "./types";
@@ -51,7 +52,8 @@ function rangeLabelY(a: Pt, b: Pt, lh: number, paneH: number): number {
 
 /** TV range label text (line-range-tools): the price part (change, " (x%)",
  *  pips, each by its Stats flag) on the first line, then "N bars, span" and
- *  "Vol x"; factory all on. */
+ *  "Vol x"; factory all on. Each default string passes through formatLabel
+ *  before the box is measured. */
 export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | null, withPrice: boolean, withDate: boolean): string[] {
   const on = (v: boolean | undefined) => v !== false;
   const out: string[] = [];
@@ -65,33 +67,64 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
     const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
     const v = on(s.showPriceRange), pc = on(s.showPercentPriceRange), pp = on(s.showPipsPriceRange);
     let c = "";
+    const percent = p0 !== 0 ? (100 * change) / Math.abs(p0) : null;
     if (v) c += signedFixed(change, digits);
     if (pc) {
-      const pct = p0 !== 0 ? (100 * change) / Math.abs(p0) : 0;
+      const pct = percent ?? 0;
       if (v) c += " (";
       c += `${signedFixed(Math.round(pct * 100) / 100, 2)}%`;
       if (v) c += ")";
     }
+    const pips = Math.round(change / pip);
     if (pp) {
       if (v) c += pc ? " " : ", ";
       else if (pc) c += ", ";
-      c += signedFixed(Math.round(change / pip), 0);
+      c += signedFixed(pips, 0);
     }
-    if (c) out.push(c);
+    if (c) {
+      out.push(
+        labelOrDefault(coords, {
+          id: "price-range",
+          text: c,
+          change,
+          percent,
+          pips,
+          digits,
+          price0: p0,
+          price1: p1,
+        }),
+      );
+    }
   }
   if (withDate) {
     const g = on(s.showBarsRange), f = on(s.showDateTimeRange), x = on(s.showVolume);
-    let k = "";
     const t0 = timeToSec(q0.time);
     const t1 = timeToSec(q1.time);
     const i0 = coords?.timeToBarIndex(q0.time) ?? null;
     const i1 = coords?.timeToBarIndex(q1.time) ?? null;
-    if (g && i0 != null && i1 != null) k += `${i1 - i0} bars`;
-    if (f && t0 != null && t1 != null) {
-      if (g) k += ", ";
-      k += tvTimeSpan(t1 - t0);
+    const bits: { kind: "bars" | "span"; text: string }[] = [];
+    if (g && i0 != null && i1 != null) {
+      const nBars = i1 - i0;
+      const barsText = `${nBars} bars`;
+      bits.push({ kind: "bars", text: labelOrDefault(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
-    if (k) out.push(k);
+    if (f && t0 != null && t1 != null) {
+      const seconds = t1 - t0;
+      const span = tvTimeSpan(seconds);
+      bits.push({ kind: "span", text: labelOrDefault(coords, { id: "time-span", text: span, seconds }) });
+    }
+    if (bits.length) {
+      if (bits.every((b) => b.text === "")) out.push("");
+      else {
+        let k = "";
+        for (const b of bits) {
+          if (!b.text) continue;
+          if (b.kind === "bars") k += b.text;
+          else k += (k ? ", " : "") + b.text;
+        }
+        if (k) out.push(k);
+      }
+    }
     if (x && coords && t0 != null && t1 != null) {
       const rows = barsBetween(coords.bars(), Math.min(t0, t1), Math.max(t0, t1));
       let vol = 0;
@@ -102,7 +135,10 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
           any = true;
         }
       }
-      if (any) out.push(`Vol ${tvVolume(vol)}`);
+      if (any) {
+        const volText = `Vol ${tvVolume(vol)}`;
+        out.push(labelOrDefault(coords, { id: "volume", text: volText, volume: vol }));
+      }
     }
   }
   return out;
@@ -115,8 +151,9 @@ function rangeLabelItems(cx: number, a: Pt, b: Pt, paneH: number, lines: string[
   const fs = s.fontSize ?? 12;
   const padH = fs * 0.4 + fs / 3;
   const padV = fs * 0.2 + fs / 3;
-  const boxW = Math.max(...lines.map((l) => measureText(l, fs))) + padH * 2;
-  const boxH = fs * lines.length + 8 * (lines.length - 1) + padV * 2;
+  const widths = lines.map((l) => measureText(l, fs));
+  const boxW = (widths.length ? Math.max(...widths) : 0) + padH * 2;
+  const boxH = fs * lines.length + 8 * Math.max(0, lines.length - 1) + padV * 2;
   const cy = rangeLabelY(a, b, boxH, paneH);
   const items: SceneItem[] = [];
   if (s.fillLabelBackground !== false) {

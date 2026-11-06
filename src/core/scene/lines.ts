@@ -78,30 +78,43 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
   const showDate = withExtras && !!s.showDateTimeRange;
   const showDist = withExtras && !!s.showDistance;
   if (s.showBarsRange || showDate || showDist) {
-    let t = "";
+    const bits: { kind: "bars" | "span" | "dist"; text: string }[] = [];
     if (s.showBarsRange) {
       const i0 = coords ? coords.timeToBarIndex(p0.time) : null;
       const i1 = coords ? coords.timeToBarIndex(p1.time) : null;
       const nBars = i0 != null && i1 != null ? i1 - i0 : 0;
       const barsText = `${nBars} bars`;
-      t += labelOrDefault(coords, { id: "bars-range", text: barsText, bars: nBars });
+      bits.push({ kind: "bars", text: labelOrDefault(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (showDate) {
       const aSec = timeToSec(p0.time);
       const bSec = timeToSec(p1.time);
       const seconds = aSec != null && bSec != null ? bSec - aSec : null;
-      const span = seconds != null ? tvTimeSpan(seconds) : "";
-      if (span) {
-        const formatted = labelOrDefault(coords, { id: "time-span", text: span, seconds: seconds! });
-        t += s.showBarsRange ? ` (${formatted})` : formatted;
+      if (seconds != null) {
+        const span = tvTimeSpan(seconds);
+        if (span || coords?.formatLabel) {
+          bits.push({ kind: "span", text: labelOrDefault(coords, { id: "time-span", text: span, seconds }) });
+        }
       }
     }
     if (showDist) {
       const distancePx = Math.round(Math.hypot(b.x - a.x, b.y - a.y));
       const distText = `distance: ${distancePx} px`;
-      t += (t ? ", " : "") + labelOrDefault(coords, { id: "distance", text: distText, distancePx });
+      bits.push({ kind: "dist", text: labelOrDefault(coords, { id: "distance", text: distText, distancePx }) });
     }
-    if (t) rows.push({ icon: "bars", text: t });
+    if (bits.length) {
+      if (bits.every((b) => b.text === "")) rows.push({ icon: "bars", text: "" });
+      else {
+        let t = "";
+        for (const b of bits) {
+          if (!b.text) continue;
+          if (b.kind === "bars") t += b.text;
+          else if (b.kind === "span") t += bits.some((x) => x.kind === "bars") ? ` (${b.text})` : b.text;
+          else t += (t ? ", " : "") + b.text;
+        }
+        if (t) rows.push({ icon: "bars", text: t });
+      }
+    }
   }
   if (withExtras && s.showAngle && Math.hypot(b.x - a.x, b.y - a.y) > 0) {
     const deg = (Math.atan2(-(b.y - a.y), b.x - a.x) * 180) / Math.PI;
@@ -152,7 +165,8 @@ export function statsBoxItems(a: Pt, b: Pt, rows: StatRow[], position: 0 | 1 | 2
   const rowH = 18;
   const gap = 8;
   const pad = 12;
-  const textW = Math.max(...rows.map((r) => measureText(r.text, fs)));
+  const textWidths = rows.map((r) => measureText(r.text, fs));
+  const textW = textWidths.length ? Math.max(...textWidths) : 0;
   let bw = textW + pad * 2 + rowH + pad;
   if (Math.round(bw) % 2 !== 0) bw = Math.round(bw) + 1;
   const bh = rowH * rows.length + gap * (rows.length - 1) + pad * 2;
