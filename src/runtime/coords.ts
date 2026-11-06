@@ -97,6 +97,8 @@ export function makeCoords(
       }
       const iv = barIntervalSec(raw);
       if (iv <= 0) return null;
+      // Right of the last bar: the open time of the nearest whole future bar, so the point lands where it was placed.
+      if (logical > raw.length - 1) return (lastSec + Math.max(1, Math.round(logical - (raw.length - 1))) * iv) as Time;
       return Math.round(lastSec + (logical - (raw.length - 1)) * iv) as Time;
     },
     barAt: (t) => nearestBar(getRaw(), t),
@@ -222,7 +224,8 @@ function barIntervalSec(raw: OHLC[]): number {
  *  or before it (compared with the host's `timeKey`). The stored time is kept,
  *  so the point comes back to its own bar on its own interval. Off the loaded
  *  bars the host's calendar counts the bars; without it, calendar time with the
- *  median bar interval (fractional). */
+ *  median bar interval: whole bars after the last one (a time in the open last
+ *  bar stays on it), fractional before the first. */
 function logicalForSec(raw: OHLC[], sec: number, future?: FutureAxis | null): number | null {
   const n = raw.length;
   const firstSec = timeAsSec(raw[0].time);
@@ -234,7 +237,8 @@ function logicalForSec(raw: OHLC[], sec: number, future?: FutureAxis | null): nu
     if (future) return n - 1 + future.slots(sec, lastSec);
     if (sec <= lastSec) return n - 1;
     const iv = barIntervalSec(raw);
-    return iv > 0 ? n - 1 + (sec - lastSec) / iv : null;
+    // A time in the still-open last bar stays on it; later times sit on the whole future bar that holds them.
+    return iv > 0 ? n - 1 + Math.floor((sec - lastSec) / iv) : null;
   }
   if (k < key(firstSec)) {
     if (future?.pastSlots) return -future.pastSlots(sec, firstSec);

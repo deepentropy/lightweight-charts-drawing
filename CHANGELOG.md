@@ -7,6 +7,10 @@
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`
   left the chart's pan / zoom off and stopped the drag; it now releases on cancel,
   keeps `touchmove` for the drag, and a second finger no longer places points.
+- A time inside the still-open last bar (e.g. a 1 minute point seen on the daily chart
+  of the same day) was drawn part-way into the future instead of on that bar. Without
+  a host calendar, times after the last bar now sit on whole future bars, and an x in
+  the future gives the open time of its nearest future bar.
 
 ## 0.6.3 (02/11/2026)
 
