@@ -50,6 +50,8 @@ export type DrawingManagerOptions = {
   timeInfo?: () => { timeZone: string; intraday: boolean };
   /** Keep the tool armed after a placement (TV "Keep drawing"). */
   stayInDrawingMode?: boolean;
+  /** Window key handling: Escape cascade, Delete / Backspace removal, Shift / Ctrl modifiers. Default true. false: no key listener is added. */
+  keyboard?: boolean;
 };
 
 export type DrawingManagerEvents = {
@@ -127,8 +129,10 @@ export class DrawingManager {
     this.listen(this.el, "pointermove", (e) => this.onHover(e as PointerEvent));
     this.listen(this.el, "pointerleave", () => { this.hoverCursor = null; this.setHover(null); });
     this.listen(this.el, "dblclick", (e) => this.onDoubleClick(e as MouseEvent), true);
-    this.listen(window, "keydown", (e) => this.onKey(e as KeyboardEvent));
-    this.listen(window, "keyup", (e) => this.onKey(e as KeyboardEvent));
+    if (opts.keyboard !== false) {
+      this.listen(window, "keydown", (e) => this.onKey(e as KeyboardEvent));
+      this.listen(window, "keyup", (e) => this.onKey(e as KeyboardEvent));
+    }
     this.listen(window, "blur", () => { this.shift = false; this.ctrl = false; });
     // Images load asynchronously (core image cache, filled by the host's
     // reader): redraw, and drop an image drawing whose file failed (TV).
