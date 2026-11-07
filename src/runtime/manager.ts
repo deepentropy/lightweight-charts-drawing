@@ -214,6 +214,12 @@ export class DrawingManager {
   setStayInDrawingMode(on: boolean): void {
     this.opts.stayInDrawingMode = on;
   }
+  /** Replace the label hook after construction (e.g. a live language switch) and
+   *  repaint; `undefined` restores the library defaults. */
+  setFormatLabel(fn: LabelFormatter | undefined): void {
+    this.coords.formatLabel = fn;
+    this.redraw();
+  }
 
   drawings(): readonly Drawing[] {
     return this.list;

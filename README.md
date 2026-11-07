@@ -65,6 +65,9 @@ inputs (prices, volumes, dates, …). Return the string to draw; `undefined`
 or `null` keeps the default; `""` draws empty. Strings are measured after
 the hook, so translated labels size their boxes. Axis labels stay on the
 chart's own `priceFormatter` / `localization.timeFormatter`.
+`setFormatLabel(fn)` replaces the hook on a live manager and repaints (switch
+the language without rebuilding); `setFormatLabel(undefined)` restores the
+library defaults.
 
 | `id` | Raw fields |
 |---|---|
@@ -86,7 +89,7 @@ chart's own `priceFormatter` / `localization.timeFormatter`.
 | Method | |
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
-| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)` | settings |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
 | `setDrawingsVisible(visible)`, `drawingsVisible()` | hide / show every drawing at once (TV "Hide all drawings"; not saved, the drawings are untouched) |
