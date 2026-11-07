@@ -13,6 +13,7 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  clampToPane: false,                  // pending placement + drags stop at the pane edge (else outside presses are ignored)
 });
 ```
 

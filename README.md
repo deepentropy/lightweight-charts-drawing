@@ -54,7 +54,9 @@ usually has no volume: the volume profiles then show no rows and the
 anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
-intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing), `clampToPane`
+(a pending placement accepts a press outside the pane and clamps it to the pane edge; handle and
+body drags stop at the edge; default `false`).
 
 | Method | |
 |---|---|

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- `clampToPane` option: with a point pending, a press outside the pane is accepted and lands
+  on the nearest pane edge (as in TradingView); handle and body drags stop at the edge.
+  Default `false` keeps the current behaviour (outside presses are ignored).
+
 ### Fixed
 
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`
