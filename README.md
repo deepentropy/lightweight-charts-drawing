@@ -114,6 +114,10 @@ steps / square boxes and magnet off, Ctrl / Cmd inverts the magnet; Escape
 drops pending points, then the tool, then the selection; Delete removes the
 selection (locked drawings stay).
 
+Touch and pen: a press on a drawing or with an armed tool holds the chart until
+the finger lifts or the browser cancels the pointer; elsewhere the chart pans
+and pinches as without the library.
+
 Drawing flags: `locked` (selectable, but no drag and no Delete) and `hidden`
 (not drawn, hit or selected). A drawing that gets hidden leaves the
 selection. Arming a tool while every drawing is hidden shows them again.
