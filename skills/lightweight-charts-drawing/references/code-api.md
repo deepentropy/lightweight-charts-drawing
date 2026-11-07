@@ -67,6 +67,25 @@ Rewriting a piece changes the join; rewriting `stats-row` replaces the join. A h
 text for every `id` will also replace the rows, so return `undefined` for `stats-row` unless you
 mean to.
 
+`time-span` can arrive with an empty `text` when a hook is set (the span is zero or suppressed).
+Return `undefined` to keep it empty; do not assume a non-empty default.
+
+`dm.setFormatLabel(fn)` replaces the hook on a live manager and repaints once (for example to switch
+the language); `dm.setFormatLabel(undefined)` restores the library defaults.
+
+### Strings the hook does not reach
+
+Text drawn on the canvas outside `formatLabel` (the hook does not reach these strings):
+
+| String | Where | Why |
+|---|---|---|
+| `SUCCESS` / `FAILURE` banner | position forecast | intentional: status text, not a label |
+| axis labels (price scale, time scale) | the chart | the chart's own `priceFormatter` / `localization.timeFormatter` |
+| pattern vertex letters / numbers (`A B C D`, `X A B C D`, `1 2 3 …`) and ratio pills | ABCD, XABCD, Cypher, three drives, head and shoulders, triangle, Elliott, polyline / path | intentional: fixed pattern notation |
+| angle arc text (`-59.04º`) | trend angle | the stats-box `angle` row is hooked, the text beside the arc is not |
+| level coefficients (`0.618`, `1.618`, level numbers) | fib time zone, trend-based fib time, fib circles, fib speed fan / arcs, fib wedge, Gann fan, Gann box side labels | numbers only; `fib-level` covers fib retracement / extension / channel, and Gann square goes through `price`, `bars-range`, `gann-ratio` |
+| user-typed text and the default `font-icon` glyph | text, note, callout, table, shape text, markers | author content, not generated text |
+
 One manager per series. It attaches one series primitive and listens to pointer and key events on
 the chart element. Call `dm.destroy()` before removing the chart or the series.
 
@@ -83,6 +102,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
 | `setMagnet`, `setInterval`, `setStayInDrawingMode` | settings |
+| `setFormatLabel(fn \| undefined)` | swap the `formatLabel` hook and repaint; `undefined` = library defaults |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |
 | `setTableCellText`, `endTableEdit`, `tableOp`, `tableState` | table editing after `tableEdit` |
