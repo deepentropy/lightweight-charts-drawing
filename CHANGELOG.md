@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- `magnetSource` option: the host supplies the magnet candidates (`{ time, values }` or
+  `null`) for the cursor's time instead of the series OHLC. A host with several panes
+  feeds one time grid through `bars` but needs per-pane candidates (for example an
+  indicator line value). The point takes the returned bar time and the exact price;
+  `null`, an empty list or a throwing source means no snap.
+
 ### Fixed
 
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`

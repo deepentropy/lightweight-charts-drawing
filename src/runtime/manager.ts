@@ -25,7 +25,7 @@ import { sceneLockedAnchors, sceneOf } from "../core/scene";
 import type { Scene } from "../core/scene/types";
 import { parseDrawings } from "../core/serialize";
 import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS } from "../core/interact/constants";
-import { magnetSnap, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../core/interact/project";
+import { magnetSnap, magnetSnapSource, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../core/interact/project";
 import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../core/interact/placement";
 import { lockAxisDelta, shiftPlacementPoint } from "../core/interact/shift";
 import { anchorCursor, applyDrag, type DragState } from "../core/interact/drag";
@@ -43,6 +43,9 @@ export type DrawingManagerOptions = {
   fontFamily?: string;
   /** Magnet (TV weak / strong OHLC snap). Default "off". */
   magnet?: MagnetMode;
+  /** Magnet candidates from the host: for the cursor's time, the bar `time` to place the point on and the prices
+   *  to snap to (replaces the series OHLC). null or an empty list = no snap. Needs `magnet` weak / strong. */
+  magnetSource?: (time: Time) => { time: Time; values: readonly number[] } | null;
   /** Chart interval for the per-interval visibility of drawings (TV
    *  Visibility tab), e.g. "30", "1D". Unset = every drawing shown. */
   interval?: string;
@@ -494,8 +497,12 @@ export class DrawingManager {
   }
   private snapFn(): (p: DataPoint) => DataPoint {
     const m = this.magnet();
-    const c = this.coords;
-    return m.enabled ? (p) => magnetSnap(p, c, m.mode, false) ?? p : (p) => p;
+    return m.enabled ? (p) => this.magnetOf(p, m.mode) ?? p : (p) => p;
+  }
+  /** The magnet snap of a point: the host's `magnetSource` candidates when set, else the bar OHLC. */
+  private magnetOf(dp: DataPoint, mode: "weak" | "strong"): DataPoint | null {
+    const src = this.opts.magnetSource;
+    return src ? magnetSnapSource(dp, this.coords, mode, src) : magnetSnap(dp, this.coords, mode, false);
   }
   private dataAt(p: Pt): DataPoint | null {
     const dp = unproject(this.coords, p);
@@ -507,7 +514,7 @@ export class DrawingManager {
     const m = this.magnet();
     if (!m.enabled) return cur;
     const dp = unproject(this.coords, cur);
-    const snapped = dp ? magnetSnap(dp, this.coords, m.mode, false) : null;
+    const snapped = dp ? this.magnetOf(dp, m.mode) : null;
     return (snapped && projectPoint(this.coords, snapped)) || cur;
   }
 

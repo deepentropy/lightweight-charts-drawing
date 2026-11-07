@@ -8,6 +8,7 @@ Everything below is exported from `lightweight-charts-drawing` (`src/index.ts`).
 ```ts
 const dm = new DrawingManager(chart, series, {
   magnet: "off" | "weak" | "strong",   // OHLC snap while placing / dragging anchors
+  magnetSource: (time) => ({ time, values: [/* prices to snap to on that bar */] }),  // host candidates instead of OHLC; null / [] = no snap
   bars: () => OHLC[],                  // bars with volume (volume profiles, VWAP); default: series data
   interval: "1D",                      // per-interval visibility of drawings; unset = all shown
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels

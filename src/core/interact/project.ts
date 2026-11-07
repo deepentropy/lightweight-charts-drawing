@@ -135,6 +135,37 @@ export function magnetSnap(
   return { time: dp.time, price: best };
 }
 
+/** Host candidates for a time: the bar `time` to place the point on and the prices on it (null = none). */
+export type MagnetSource = (time: DataPoint["time"]) => { time: DataPoint["time"]; values: readonly number[] } | null;
+
+/** magnetSnap with the candidates supplied by the host for the cursor's time (a pane whose values are not the
+ *  series OHLC). Same rules: nearest by screen distance, weak mode within MAGNET_WEAK_RADIUS_PX, strong always.
+ *  The point takes the returned bar time and the exact candidate price. null / empty / throwing source or
+ *  non-finite values: no snap (null). */
+export function magnetSnapSource(dp: DataPoint, coords: Coords, mode: "weak" | "strong", source: MagnetSource): DataPoint | null {
+  let src: ReturnType<MagnetSource>;
+  try {
+    src = source(dp.time);
+  } catch {
+    return null; // a host bug must not break placement
+  }
+  const values = src?.values.filter(Number.isFinite);
+  if (!src || !values?.length) return null;
+  const cursorY = coords.priceToY(dp.price);
+  let best = values[0];
+  let bestDy = Infinity;
+  for (const v of values) {
+    const vy = coords.priceToY(v);
+    const dy = cursorY != null && vy != null ? Math.abs(vy - cursorY) : Math.abs(dp.price - v);
+    if (dy < bestDy) {
+      bestDy = dy;
+      best = v;
+    }
+  }
+  if (mode === "weak" && cursorY != null && bestDy >= MAGNET_WEAK_RADIUS_PX) return null;
+  return { time: src.time, price: best };
+}
+
 /** Replace points[index] in a drawing while preserving the discriminated-
  *  union tuple type. Re-creates the array as a same-arity tuple. */
 export function replaceDrawingPoints(d: Drawing, points: DataPoint[]): Drawing {
