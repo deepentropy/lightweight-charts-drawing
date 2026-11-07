@@ -115,7 +115,7 @@ export class DrawingManager {
   /** Cursor over the hovered drawing (TV: pointer, move when selected,
    *  resize cursors on anchors and table edges), null = the chart's own. */
   private hoverCursor: string | null = null;
-  /** Modifiers held on the keyboard (`keyboard !== false` only) and on the latest pointer event. */
+  /** Modifiers held on the keyboard (used when `keyboard !== false`) and on the latest pointer event (used when `keyboard: false`). */
   private keyShift = false;
   private keyCtrl = false;
   private ptrShift = false;
@@ -592,11 +592,12 @@ export class DrawingManager {
     const rmCancel = this.gestureListen(t, "pointercancel", end);
   }
 
+  // keyboard on (default): the keys alone, exactly as 0.6.3; keyboard: false: the pointer events.
   private get shift(): boolean {
-    return this.keyShift || this.ptrShift;
+    return this.opts.keyboard === false ? this.ptrShift : this.keyShift;
   }
   private get ctrl(): boolean {
-    return this.keyCtrl || this.ptrCtrl;
+    return this.opts.keyboard === false ? this.ptrCtrl : this.keyCtrl;
   }
   /** Shift / Ctrl / Cmd of a pointer gesture: read from the event, so they work with `keyboard: false`. */
   private pointerMods(e: PointerEvent): void {

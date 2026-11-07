@@ -251,6 +251,9 @@ describe("default keyboard behaviour is unchanged from 0.6.3", () => {
     const m = setup({ ...opts, bars: () => BAR });
     m.win.dispatchEvent(keyEv("keydown", "Control"));
     expect(placedPrice(m)).toBe(200);
+    // As in 0.6.3: a modifier seen only on the pointer event (no keydown) changes nothing.
+    expect(dragHandle(setup(opts), { shiftKey: true })).toBe(280);
+    expect(placedPrice(setup({ ...opts, bars: () => BAR }), { ctrlKey: true })).toBe(270);
   });
 
   it.each(cases)("$label: Escape cascade pending -> armed tool -> selection", ({ opts }) => {
