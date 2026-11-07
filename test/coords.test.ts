@@ -183,3 +183,35 @@ describe("before the first loaded bar with the host's calendar", () => {
     expect(keyed.timeToBarIndex(((h[3].time as number) + 1800) as Time)).toBe(3);
   });
 });
+
+describe("the open last bar and the future without a host calendar", () => {
+  const D = 86400;
+  const T0 = Date.UTC(2026, 10, 1) / 1000;
+  const days: OHLC[] = Array.from({ length: 6 }, (_, i) => ({ time: (T0 + i * D) as Time, open: 1, high: 2, low: 0.5, close: 1.5 }));
+  const c = mockChart(days);
+  const L = days.length - 1;
+  const last = T0 + L * D;
+
+  it("draws a time inside the last (still open) bar on that bar", () => {
+    for (const h of [0.5, 10 + 7 / 60, 12.5, 23.9]) {
+      const sec = Math.round(last + h * 3600);
+      expect(c.timeToBarIndex(sec as Time)).toBe(L);
+      expect(c.timeToX(sec as Time)).toBe(L * SP);
+    }
+  });
+
+  it("draws a future time on the whole future bar that holds it", () => {
+    expect(c.timeToBarIndex((last + D) as Time)).toBe(L + 1);
+    expect(c.timeToX((last + D) as Time)).toBe((L + 1) * SP);
+    expect(c.timeToBarIndex((last + 2 * D + 5 * 3600) as Time)).toBe(L + 2);
+    expect(c.timeToX((last + 2 * D + 5 * 3600) as Time)).toBe((L + 2) * SP);
+  });
+
+  it("an x in the future gives the open time of its nearest future bar", () => {
+    expect(c.xToTime((L + 0.6) * SP)).toBe(last + D);
+    expect(c.xToTime((L + 2.4) * SP)).toBe(last + 2 * D);
+    // and it comes back to the same bar
+    const t = c.xToTime((L + 3.3) * SP) as Time;
+    expect(c.timeToX(t)).toBe((L + 3) * SP);
+  });
+});
