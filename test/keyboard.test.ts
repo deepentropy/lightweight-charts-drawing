@@ -3,10 +3,13 @@
  * keydown / keyup listener, so Delete / Backspace / Escape leave drawings
  * and the selection alone (SPEC R2 (a)). Default / `keyboard: true` keep
  * 0.6.3 behaviour (b). Destroying managers drops their listeners (c).
+ * Shift / Ctrl are read from pointer events, so gestures keep their modifiers
+ * with the keyboard off; cancelPending() drops a half-placed drawing.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { IChartApi, ISeriesApi, SeriesType, Time } from "lightweight-charts";
 import { DrawingManager, type DrawingManagerOptions } from "../src";
+import { ev, ptr, setup, withSelectedLine } from "./pointer-harness";
 
 type Counts = { keydown: number; keyup: number };
 
@@ -161,5 +164,73 @@ describe("keyboard option", () => {
     dm2.destroy();
     expect(live.keydown).toBe(0);
     expect(live.keyup).toBe(0);
+  });
+});
+
+// ── modifiers from pointer events (D-11), default behaviour pin, cancelPending (D-12) ──
+
+type S = ReturnType<typeof setup>;
+const keyEv = (type: "keydown" | "keyup", k: string) => ev(type, { key: k });
+const preview = (s: S): string => JSON.stringify((s.dm as unknown as { previewScene(w: number, h: number): unknown }).previewScene(800, 500));
+const place = (s: S, x: number, y: number, mods: Record<string, unknown> = {}) => {
+  s.el.dispatchEvent(ptr("pointerdown", "mouse", x, y, mods));
+  s.win.dispatchEvent(ptr("pointerup", "mouse", x, y, mods));
+};
+const hover = (s: S, x: number, y: number, mods: Record<string, unknown> = {}) => s.el.dispatchEvent(ptr("pointermove", "mouse", x, y, mods));
+
+/** Drags the second handle of the selected line to (400, 220); `mods` ride on the pointer events. Returns its price. */
+function dragHandle(s: S, mods: Record<string, unknown> = {}): number {
+  const id = withSelectedLine(s);
+  s.el.dispatchEvent(ptr("pointerdown", "mouse", 300, 300, mods));
+  s.doc.dispatchEvent(ptr("pointermove", "mouse", 400, 220, mods));
+  s.doc.dispatchEvent(ptr("pointerup", "mouse", 400, 220, mods));
+  return (s.dm.get(id)!.points as { price: number }[])[1].price;
+}
+
+/** One horizontal line placed at (100, 230); the magnet candidates of the bar at x = 100 are 100 / 400 / 50 / 200. */
+function placedPrice(s: S, mods: Record<string, unknown> = {}): number {
+  s.dm.setTool("horizontal-line");
+  place(s, 100, 230, mods);
+  return s.dm.drawings()[0].points[0].price;
+}
+const BAR = [{ time: 100, open: 100, high: 400, low: 50, close: 200 }] as never;
+
+describe("modifiers come from pointer events", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("Shift still constrains a drag with keyboard: false", () => {
+    const free = dragHandle(setup({ keyboard: false }));
+    const shifted = dragHandle(setup({ keyboard: false }), { shiftKey: true });
+    expect(free).toBe(280);
+    expect(shifted).toBe(300); // 45-degree rule: horizontal from the other end keeps its price
+  });
+
+  it.each([{ ctrlKey: true }, { metaKey: true }])("keyboard: false, %o inverts the magnet (off -> strong)", (mods) => {
+    const opts = { keyboard: false, bars: () => BAR } as const;
+    expect(placedPrice(setup(opts))).toBe(270);
+    expect(placedPrice(setup(opts), mods)).toBe(200);
+  });
+
+  it("the placement preview follows the modifiers of the latest pointermove", () => {
+    const s = setup({ keyboard: false });
+    s.dm.setTool("trend-line");
+    place(s, 100, 200);
+    hover(s, 400, 220, { shiftKey: true });
+    const snapped = preview(s);
+    hover(s, 400, 220);
+    const free = preview(s);
+    expect(free).not.toBe(snapped);
+    hover(s, 400, 220, { shiftKey: true });
+    expect(preview(s)).toBe(snapped);
+  });
+
+  it("keyboard: false registers no key listener and keys stay inert while modifiers work", () => {
+    const s = setup({ keyboard: false });
+    expect(s.win.live("keydown") + s.win.live("keyup")).toBe(0);
+    const id = withSelectedLine(s);
+    s.win.dispatchEvent(keyEv("keydown", "Delete"));
+    s.win.dispatchEvent(keyEv("keydown", "Escape"));
+    expect(s.dm.drawings()).toHaveLength(1);
+    expect(s.dm.selection()).toEqual([id]);
   });
 });
