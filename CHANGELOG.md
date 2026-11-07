@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+- `formatLabel` option (`DrawingManagerOptions`, also `Coords.formatLabel`):
+  host text for every on-canvas label (field names, numbers, dates) with raw
+  values; `DrawingLabel` / `LabelFormatter` types exported. Without it the
+  labels are unchanged.
+- `DrawingManager.setFormatLabel(fn)` swaps the label hook after construction and
+  repaints (live language switch); `setFormatLabel(undefined)` restores the defaults.
+- Every label the `formatLabel` hook receives carries `kind` (the drawing's tool)
+  and `drawingId` (`"__preview__"` while placing), so a host can tell which drawing
+  a label belongs to. `LabelContext` type exported.
+- `formatLabel` row-level label `stats-row` for each stats-box row of the trend-line family
+  and the range tools (`text` = library join, `row`, `parts` = the piece labels); return
+  `undefined` to keep the join. Position and forecast labels already carry all raw values and
+  stay one label (rule and table in the code API reference).
+
 ### Fixed
 
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`

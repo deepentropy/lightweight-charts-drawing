@@ -5,8 +5,10 @@
  * copies in .tmp/tv-bundles, 10/07/2026; checked against TV 3.4.1 screenshots
  * 25/09/2026, research/drawings-gap/captures/dialog-fix).
  */
+import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle } from "../types";
 import type { Pt } from "../_shared";
+import { labelOrDefault } from "../labels";
 import { measureTextStyled, tvTextLayout, tvWordWrap } from "./tv-text";
 
 /** TV placeholder of an empty text tool ("Add text", drawn at 50%). */
@@ -127,6 +129,19 @@ export function pinTooltipPath(t: ReturnType<typeof pinLayout>, x: number): stri
   if (caret === "bottom") d += ` L ${c1} ${tp + h} L ${x} ${tp + h + 10} L ${c0} ${tp + h}`;
   d += ` L ${l + r} ${tp + h} A ${r} ${r} 0 0 1 ${l} ${tp + h - r} Z`;
   return d;
+}
+
+/** Digits for a price label from the chart's pip size (same clamp as 0.6.3). */
+export function priceLabelDigits(coords: Coords | null | undefined): number {
+  const pip = coords?.pipSize() ?? 0.01;
+  return Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
+}
+
+/** Default `toFixed` text through `formatLabel` (id `price`) — paint and hit share this. */
+export function priceLabelText(price: number, coords: Coords | null | undefined): string {
+  const digits = priceLabelDigits(coords);
+  const text = price.toFixed(digits);
+  return labelOrDefault(coords, { id: "price", text, price, digits });
 }
 
 /** TV price label: box (text + 20) x (fs + 10), bottom-left 9px right of
