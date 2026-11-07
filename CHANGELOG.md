@@ -11,6 +11,10 @@
   of the same day) was drawn part-way into the future instead of on that bar. Without
   a host calendar, times after the last bar now sit on whole future bars, and an x in
   the future gives the open time of its nearest future bar.
+- A manager on a series whose pane was added in the same frame threw `Value is undefined`
+  from `chart.paneSize()` during the primitive's view update (the pane is in the chart model
+  before its widget exists), which broke the host's series / pane update. The pane is now
+  treated as empty until it has a size.
 
 ## 0.6.3 (02/11/2026)
 
