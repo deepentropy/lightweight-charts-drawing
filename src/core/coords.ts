@@ -4,7 +4,7 @@
  * it. Bar data type included (OHLC).
  */
 import type { CreatePriceLineOptions, IPriceLine, Time } from "lightweight-charts";
-import type { LabelFormatter } from "./labels";
+import type { LabelContext, LabelFormatter } from "./labels";
 
 export type OHLC = {
   time: Time;
@@ -85,4 +85,7 @@ export type Coords = {
   /** Label text hook: called for every label with its default text and raw
    *  numbers; return the text to draw (undefined / null = the default, "" = empty). */
   formatLabel?: LabelFormatter;
+  /** Kind and id of the drawing being built / hit-tested, set by sceneOf and
+   *  hitTestKind (withLabelContext) so every label carries them. */
+  labelContext?: LabelContext;
 };

@@ -8,6 +8,9 @@
   host text for every on-canvas label (field names, numbers, dates) with raw
   values; `DrawingLabel` / `LabelFormatter` types exported. Without it the
   labels are unchanged.
+- Every label the `formatLabel` hook receives carries `kind` (the drawing's tool)
+  and `drawingId` (`"__preview__"` while placing), so a host can tell which drawing
+  a label belongs to. `LabelContext` type exported.
 
 ### Fixed
 

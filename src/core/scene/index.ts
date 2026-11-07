@@ -5,6 +5,7 @@
  */
 import { HANDLE_RADIUS, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { withLabelContext } from "../labels";
 import type { Drawing } from "../types";
 import type { TableUi } from "../kinds/table";
 import type { Scene, SceneItem } from "./types";
@@ -43,8 +44,14 @@ export type SceneContext = {
   tableUi?: TableUi | null;
 };
 
-/** Screen scene of drawing `d` at the screen points `pts`. */
+/** Screen scene of drawing `d` at the screen points `pts`. Every label built
+ *  for it reaches the host hook with `d.kind` / `d.id` (the placement preview
+ *  has id "__preview__"). */
 export function sceneOf(d: Drawing, pts: Pt[], c: SceneContext): Scene {
+  return withLabelContext(c.coords, d, () => buildScene(d, pts, c));
+}
+
+function buildScene(d: Drawing, pts: Pt[], c: SceneContext): Scene {
   const { w, h, coords, selected } = c;
   const hovered = !!c.hovered;
   const active = selected || hovered;

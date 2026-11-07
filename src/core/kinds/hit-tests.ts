@@ -24,6 +24,7 @@ import type { Drawing } from "../types";
 import { TREND_FIB_TIME_LEVEL_DEFAULTS } from "../specs";
 import { FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_WEDGE_LEVEL_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, PARALLEL_CHANNEL_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_LEVEL_DEFAULTS } from "../specs";
 import type { Coords } from "../coords";
+import { withLabelContext } from "../labels";
 import { positionAnchors } from "./position";
 import { gannBox, gannFrame } from "./gann-square";
 import { gannFanDir } from "./gann-fan";
@@ -1034,6 +1035,19 @@ export function hitTestKind(
   coords: Coords | null,
   /** The drawing is selected (table: its row / column edges resize). */
   selected = false,
+): HitResult | null {
+  // Hit boxes build the same labels as the scene (price note / price label), so the hook sees the same context.
+  return withLabelContext(coords, drawing, () => hitTestKindOf(drawing, pts, cursor, width, height, coords, selected));
+}
+
+function hitTestKindOf(
+  drawing: Drawing,
+  pts: Pt[],
+  cursor: Pt,
+  width: number,
+  height: number,
+  coords: Coords | null,
+  selected: boolean,
 ): HitResult | null {
   // Stroked-line kinds get a hit slop that scales with the drawing's width.
   const tol = strokeTolerance(drawing.style);
