@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- `interactive` option and `setInteractive(on)`: a view-only manager paints its drawings
+  but takes no pointer input (no placement, selection, drag, hover, double-click) and
+  stops no event, so the chart pans and zooms over them. Useful for a read-only or
+  phone view and for a host with several managers where only one is armed.
+
 ### Fixed
 
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`

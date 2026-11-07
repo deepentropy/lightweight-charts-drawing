@@ -13,6 +13,7 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  interactive: true,                   // false = view-only: paints, takes no pointer input, stops no event
 });
 ```
 
@@ -31,7 +32,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `bringToFront(id)`, `sendToBack(id)` | z-order |
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
-| `setMagnet`, `setInterval`, `setStayInDrawingMode` | settings |
+| `setMagnet`, `setInterval`, `setStayInDrawingMode`, `setInteractive` | settings |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |
 | `setTableCellText`, `endTableEdit`, `tableOp`, `tableState` | table editing after `tableEdit` |

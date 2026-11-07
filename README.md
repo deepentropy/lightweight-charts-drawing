@@ -54,12 +54,14 @@ usually has no volume: the volume profiles then show no rows and the
 anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
-intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing), `interactive`
+(default `true`; `false` = view-only: drawings paint but take no pointer input and no
+event is stopped, so the chart pans over them).
 
 | Method | |
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
-| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)` | settings |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setInteractive(on)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
 | `setDrawingsVisible(visible)`, `drawingsVisible()` | hide / show every drawing at once (TV "Hide all drawings"; not saved, the drawings are untouched) |
