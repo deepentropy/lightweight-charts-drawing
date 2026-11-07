@@ -95,6 +95,9 @@ const ALL_STATS: Partial<DrawingStyle> = {
 };
 const TREND = drawing("trend-line", [pt(5, 150), pt(20, 100)], ALL_STATS);
 
+type StatsRow = Extract<DrawingLabel, { id: "stats-row" }>;
+const TREND_DEFAULTS = ["\u221250.00 (\u221233.33%), \u22125000", "15 bars (15d), distance: 292 px", "-59.04\u00ba"];
+
 describe("label context: kind + drawingId on every label", () => {
   it("a trend line's labels all carry its kind and id", () => {
     const seen: DrawingLabel[] = [];
@@ -166,5 +169,68 @@ describe("label context: kind + drawingId on every label", () => {
       expect(preview.length).toBeGreaterThan(0);
       expect(preview.every((l) => l.kind === "price-range")).toBe(true);
     });
+  });
+});
+
+describe("stats-row: one row-level label per stats row", () => {
+  it("a hook returning undefined / null keeps the 0.6.3 join", () => {
+    for (const ret of [undefined, null] as const) {
+      expect(texts(TREND, baseCoords({ formatLabel: () => ret }))).toEqual(TREND_DEFAULTS);
+    }
+  });
+
+  it("carries row index and the piece labels with the text each will draw", () => {
+    const rows: StatsRow[] = [];
+    const formatLabel: LabelFormatter = (l) => {
+      if (l.id === "stats-row") rows.push(l);
+      return l.id === "bars-range" ? "B" : undefined;
+    };
+    texts(TREND, baseCoords({ formatLabel }));
+    expect(rows.map((r) => r.row)).toEqual([0, 1, 2]);
+    const [price, span, angle] = rows;
+    expect(price.parts.map((p) => p.id)).toEqual(["price-range"]);
+    expect(span.parts.map((p) => [p.id, p.text])).toEqual([
+      ["bars-range", "B"],
+      ["time-span", "15d"],
+      ["distance", "distance: 292 px"],
+    ]);
+    expect(angle.parts.map((p) => p.id)).toEqual(["angle"]);
+    expect(span.text).toBe("B (15d), distance: 292 px");
+    for (const r of rows) expect(r.parts.every((p) => p.kind === "trend-line" && p.drawingId === "dw_trend-line")).toBe(true);
+  });
+
+  it("a rewritten row replaces the whole row; the other rows still use their pieces", () => {
+    const formatLabel: LabelFormatter = (l) => {
+      if (l.id === "stats-row" && l.row === 0) return "X";
+      if (l.id === "bars-range") return "B";
+      return undefined;
+    };
+    expect(texts(TREND, baseCoords({ formatLabel }))).toEqual(["X", "B (15d), distance: 292 px", TREND_DEFAULTS[2]]);
+  });
+
+  it("range tools use the same row label", () => {
+    const rows: StatsRow[] = [];
+    const c = baseCoords({ formatLabel: (l) => (l.id === "stats-row" ? (rows.push(l), "R") : undefined) });
+    const out = texts(drawing("date-and-price-range", [pt(5, 150), pt(20, 100)]), c);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(rows.every((r) => r.kind === "date-and-price-range")).toBe(true);
+    expect(out.every((t) => t === "R")).toBe(true);
+  });
+
+  it("position target / stop / middle and forecast stay single labels (no row label)", () => {
+    const seen: DrawingLabel[] = [];
+    const c = baseCoords({ formatLabel: (l) => (seen.push(l), undefined) });
+    const pos = [pt(10, 120), pt(25, 120)] as Drawing["points"];
+    texts(drawing("long-position", pos, { showStats: true, stopLevel: 15, profitLevel: 30 }), c);
+    texts(drawing("position-forecast", [pt(10, 110), pt(30, 140)]), c);
+    const ids = new Set(seen.map((l) => l.id));
+    expect(ids.has("stats-row")).toBe(false);
+    for (const id of ["position-target", "position-stop", "position-middle", "forecast"]) expect(ids.has(id as DrawingLabel["id"])).toBe(true);
+    const target = seen.find((l) => l.id === "position-target");
+    expect(target && "distance" in target && "percent" in target && "ticks" in target && "amount" in target && "pnl" in target).toBe(true);
+    const mid = seen.find((l) => l.id === "position-middle");
+    expect(mid && "pnl" in mid && "closed" in mid && "qty" in mid && "ratio" in mid).toBe(true);
+    const fc = seen.find((l) => l.id === "forecast");
+    expect(fc && "change" in fc && "percent" in fc && "seconds" in fc).toBe(true);
   });
 });

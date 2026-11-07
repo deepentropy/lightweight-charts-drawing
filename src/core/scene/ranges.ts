@@ -13,7 +13,7 @@
  */
 import { timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
-import { labelOrDefault } from "../labels";
+import { labelOrDefault, labelPart, type DrawingLabel } from "../labels";
 import type { Drawing, DrawingStyle } from "../types";
 import { barsBetween } from "../kinds/data-series";
 import type { Scene, SceneItem, Shadow } from "./types";
@@ -57,6 +57,8 @@ function rangeLabelY(a: Pt, b: Pt, lh: number, paneH: number): number {
 export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | null, withPrice: boolean, withDate: boolean): string[] {
   const on = (v: boolean | undefined) => v !== false;
   const out: string[] = [];
+  // Each line is one stats-row label: the library join of its piece labels.
+  const row = (text: string, parts: DrawingLabel[]) => out.push(labelOrDefault(coords, { id: "stats-row", text, row: out.length, parts }));
   const [q0, q1] = d.points;
   if (!q0 || !q1) return out;
   if (withPrice) {
@@ -82,18 +84,8 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
       c += signedFixed(pips, 0);
     }
     if (c) {
-      out.push(
-        labelOrDefault(coords, {
-          id: "price-range",
-          text: c,
-          change,
-          percent,
-          pips,
-          digits,
-          price0: p0,
-          price1: p1,
-        }),
-      );
+      const part = labelPart(coords, { id: "price-range", text: c, change, percent, pips, digits, price0: p0, price1: p1 });
+      row(part.text, [part]);
     }
   }
   if (withDate) {
@@ -102,27 +94,28 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
     const t1 = timeToSec(q1.time);
     const i0 = coords?.timeToBarIndex(q0.time) ?? null;
     const i1 = coords?.timeToBarIndex(q1.time) ?? null;
-    const bits: { kind: "bars" | "span"; text: string }[] = [];
+    const bits: { kind: "bars" | "span"; part: DrawingLabel }[] = [];
     if (g && i0 != null && i1 != null) {
       const nBars = i1 - i0;
       const barsText = `${nBars} bars`;
-      bits.push({ kind: "bars", text: labelOrDefault(coords, { id: "bars-range", text: barsText, bars: nBars }) });
+      bits.push({ kind: "bars", part: labelPart(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (f && t0 != null && t1 != null) {
       const seconds = t1 - t0;
       const span = tvTimeSpan(seconds);
-      bits.push({ kind: "span", text: labelOrDefault(coords, { id: "time-span", text: span, seconds }) });
+      bits.push({ kind: "span", part: labelPart(coords, { id: "time-span", text: span, seconds }) });
     }
     if (bits.length) {
-      if (bits.every((b) => b.text === "")) out.push("");
+      const parts = bits.map((b) => b.part);
+      if (bits.every((b) => b.part.text === "")) row("", parts);
       else {
         let k = "";
         for (const b of bits) {
-          if (!b.text) continue;
-          if (b.kind === "bars") k += b.text;
-          else k += (k ? ", " : "") + b.text;
+          if (!b.part.text) continue;
+          if (b.kind === "bars") k += b.part.text;
+          else k += (k ? ", " : "") + b.part.text;
         }
-        if (k) out.push(k);
+        if (k) row(k, parts);
       }
     }
     if (x && coords && t0 != null && t1 != null) {
@@ -137,7 +130,8 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
       }
       if (any) {
         const volText = `Vol ${tvVolume(vol)}`;
-        out.push(labelOrDefault(coords, { id: "volume", text: volText, volume: vol }));
+        const part = labelPart(coords, { id: "volume", text: volText, volume: vol });
+        row(part.text, [part]);
       }
     }
   }

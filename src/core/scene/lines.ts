@@ -7,7 +7,7 @@
  */
 import { dashFor, timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
-import { labelOrDefault } from "../labels";
+import { labelOrDefault, labelPart, type DrawingLabel } from "../labels";
 import type { Drawing, DrawingStyle } from "../types";
 import { tvTextLayout } from "../kinds/tv-text";
 import type { Scene, SceneItem } from "./types";
@@ -43,6 +43,9 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
   const p1 = d.points[1];
   if (!p0 || !p1) return [];
   const rows: StatRow[] = [];
+  // Each row is one stats-row label: the library join of its piece labels.
+  const pushRow = (icon: StatRow["icon"], text: string, parts: DrawingLabel[]) =>
+    rows.push({ icon, text: labelOrDefault(coords, { id: "stats-row", text, row: rows.length, parts }) });
   const dPrice = p1.price - p0.price;
   const pip = coords?.pipSize() ?? 0.01;
   const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
@@ -61,30 +64,19 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
     const pips = Math.round(dPrice / pip);
     if (s.showPipsPriceRange) parts.push(signedFixed(pips, 0));
     const text = parts.join(", ");
-    rows.push({
-      icon: "price",
-      text: labelOrDefault(coords, {
-        id: "price-range",
-        text,
-        change: dPrice,
-        percent,
-        pips,
-        digits,
-        price0: p0.price,
-        price1: p1.price,
-      }),
-    });
+    const part = labelPart(coords, { id: "price-range", text, change: dPrice, percent, pips, digits, price0: p0.price, price1: p1.price });
+    pushRow("price", part.text, [part]);
   }
   const showDate = withExtras && !!s.showDateTimeRange;
   const showDist = withExtras && !!s.showDistance;
   if (s.showBarsRange || showDate || showDist) {
-    const bits: { kind: "bars" | "span" | "dist"; text: string }[] = [];
+    const bits: { kind: "bars" | "span" | "dist"; part: DrawingLabel }[] = [];
     if (s.showBarsRange) {
       const i0 = coords ? coords.timeToBarIndex(p0.time) : null;
       const i1 = coords ? coords.timeToBarIndex(p1.time) : null;
       const nBars = i0 != null && i1 != null ? i1 - i0 : 0;
       const barsText = `${nBars} bars`;
-      bits.push({ kind: "bars", text: labelOrDefault(coords, { id: "bars-range", text: barsText, bars: nBars }) });
+      bits.push({ kind: "bars", part: labelPart(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (showDate) {
       const aSec = timeToSec(p0.time);
@@ -93,36 +85,35 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
       if (seconds != null) {
         const span = tvTimeSpan(seconds);
         if (span || coords?.formatLabel) {
-          bits.push({ kind: "span", text: labelOrDefault(coords, { id: "time-span", text: span, seconds }) });
+          bits.push({ kind: "span", part: labelPart(coords, { id: "time-span", text: span, seconds }) });
         }
       }
     }
     if (showDist) {
       const distancePx = Math.round(Math.hypot(b.x - a.x, b.y - a.y));
       const distText = `distance: ${distancePx} px`;
-      bits.push({ kind: "dist", text: labelOrDefault(coords, { id: "distance", text: distText, distancePx }) });
+      bits.push({ kind: "dist", part: labelPart(coords, { id: "distance", text: distText, distancePx }) });
     }
     if (bits.length) {
-      if (bits.every((b) => b.text === "")) rows.push({ icon: "bars", text: "" });
+      const parts = bits.map((b) => b.part);
+      if (bits.every((b) => b.part.text === "")) pushRow("bars", "", parts);
       else {
         let t = "";
-        for (const b of bits) {
-          if (!b.text) continue;
-          if (b.kind === "bars") t += b.text;
-          else if (b.kind === "span") t += bits.some((x) => x.kind === "bars") ? ` (${b.text})` : b.text;
-          else t += (t ? ", " : "") + b.text;
+        for (const { kind, part } of bits) {
+          if (!part.text) continue;
+          if (kind === "bars") t += part.text;
+          else if (kind === "span") t += bits.some((x) => x.kind === "bars") ? ` (${part.text})` : part.text;
+          else t += (t ? ", " : "") + part.text;
         }
-        if (t) rows.push({ icon: "bars", text: t });
+        if (t) pushRow("bars", t, parts);
       }
     }
   }
   if (withExtras && s.showAngle && Math.hypot(b.x - a.x, b.y - a.y) > 0) {
     const deg = (Math.atan2(-(b.y - a.y), b.x - a.x) * 180) / Math.PI;
     const angleText = `${Math.round(deg * 100) / 100}º`;
-    rows.push({
-      icon: "angle",
-      text: labelOrDefault(coords, { id: "angle", text: angleText, degrees: deg }),
-    });
+    const part = labelPart(coords, { id: "angle", text: angleText, degrees: deg });
+    pushRow("angle", part.text, [part]);
   }
   return rows;
 }

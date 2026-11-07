@@ -170,7 +170,8 @@ describe("formatLabel hook (trend-line stats)", () => {
     const seen: DrawingLabel[] = [];
     const formatLabel: LabelFormatter = (label) => {
       seen.push(label);
-      return `X:${label.id}`;
+      // stats-row (the row-level label) stays the library join; rewriting it would replace the pieces.
+      return label.id === "stats-row" ? undefined : `X:${label.id}`;
     };
     const c = baseCoords({ formatLabel });
     const texts = textsOf(drawing("trend-line", [pt(5, 1500), pt(20, 1000)], ALL_STATS), c);

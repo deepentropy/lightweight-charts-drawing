@@ -66,7 +66,16 @@ type DrawingLabelBody =
       digits: number;
     }
   | { id: "pearson"; text: string; r: number }
-  | { id: "gann-ratio"; text: string; ratio: number };
+  | { id: "gann-ratio"; text: string; ratio: number }
+  | {
+      /** One row of a stats box (trend-line family, range tools). `text` is the
+       *  library join of the row's pieces, `parts` are the piece labels (each
+       *  with the text it will draw), `row` is the 0-based row index. */
+      id: "stats-row";
+      text: string;
+      row: number;
+      parts: DrawingLabel[];
+    };
 
 /** Which drawing a label belongs to; `drawingId` is "__preview__" while placing. */
 export type LabelContext = { kind: string; drawingId: string };

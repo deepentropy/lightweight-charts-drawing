@@ -36,6 +36,36 @@ variant carries the default `text` plus raw fields the host can reformat:
 | `fib-level` | `coeff`, `price`, `digits` |
 | `pearson` | `r` |
 | `gann-ratio` | `ratio` |
+| `stats-row` | `row`, `parts` (the row's piece labels) |
+
+Every label also carries `kind` (the drawing's tool, e.g. `"trend-line"`) and `drawingId`
+(the drawing's id; `"__preview__"` while the user is placing it), so a host can tell which
+drawing a label belongs to.
+
+### Composite labels
+
+One rule: a string the library joins from **several separately hooked pieces** also reaches the
+hook as one row-level `stats-row` label. The piece labels are still hooked first; `stats-row`
+gets `text` (the library join of the pieces as they will draw), `row` (0-based index in the
+stats box) and `parts` (the piece labels, each with the text it will draw and its own raw
+fields). Return `undefined` / `null` to keep the join, a string to replace the whole row. A
+string that already comes from **one label carrying every raw value it shows** stays one label.
+
+| Drawing | String | Outcome |
+|---|---|---|
+| trend line family, range tools (stats box) | price row | `stats-row`, `parts` = [`price-range`] |
+| trend line family, range tools | bars row ("N bars (span), distance") | `stats-row`, `parts` = [`bars-range`, `time-span`, `distance`] (those present) |
+| trend line family | angle row | `stats-row`, `parts` = [`angle`] |
+| range tools | volume row | `stats-row`, `parts` = [`volume`] |
+| long / short position | `position-target` / `position-stop` ("Target: 30.00 (25.000%) 3,000, Amount: 1500") | one label, already carries `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| long / short position | `position-middle` (PnL, qty, risk / reward on two lines) | one label, already carries `pnl`, `closed`, `qty`, `ratio` |
+| position forecast | `forecast` ("30.00 (27.27%) in 20d") | one label, already carries `change`, `percent`, `seconds`, `digits` |
+| position forecast | balloon price + clock + date | not a joined string: `price` and `forecast-date` are drawn as separate items |
+| position forecast | `SUCCESS` / `FAILURE` banner | status text, not hooked (not in the label inventory) |
+
+Rewriting a piece changes the join; rewriting `stats-row` replaces the join. A hook that returns
+text for every `id` will also replace the rows, so return `undefined` for `stats-row` unless you
+mean to.
 
 One manager per series. It attaches one series primitive and listens to pointer and key events on
 the chart element. Call `dm.destroy()` before removing the chart or the series.

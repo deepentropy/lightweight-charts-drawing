@@ -11,6 +11,10 @@
 - Every label the `formatLabel` hook receives carries `kind` (the drawing's tool)
   and `drawingId` (`"__preview__"` while placing), so a host can tell which drawing
   a label belongs to. `LabelContext` type exported.
+- `formatLabel` row-level label `stats-row` for each stats-box row of the trend-line family
+  and the range tools (`text` = library join, `row`, `parts` = the piece labels); return
+  `undefined` to keep the join. Position and forecast labels already carry all raw values and
+  stay one label (rule and table in the code API reference).
 
 ### Fixed
 
