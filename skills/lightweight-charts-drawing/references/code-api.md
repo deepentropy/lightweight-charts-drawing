@@ -13,6 +13,7 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
 });
 ```
 

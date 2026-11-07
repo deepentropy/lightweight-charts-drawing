@@ -50,6 +50,10 @@ export type DrawingManagerOptions = {
   timeInfo?: () => { timeZone: string; intraday: boolean };
   /** Keep the tool armed after a placement (TV "Keep drawing"). */
   stayInDrawingMode?: boolean;
+  /** Place the first two points of a tool with two or more fixed points by
+   *  press, drag and release (TV). A movement under 3 px is a click, so
+   *  click-click still works. Default false (click placement only). */
+  dragToPlace?: boolean;
 };
 
 export type DrawingManagerEvents = {
@@ -647,8 +651,11 @@ export class DrawingManager {
       this.holdChart(e);
       if (this.spec.freehand) this.startFreehand(sp);
       else {
+        const first = this.pending.length === 0;
         this.placementClick(sp);
-        this.onRelease(window, () => this.releaseChart());
+        // Point 1 of a fixed multi-point tool is down (a placed one-point tool leaves nothing pending).
+        if (this.opts.dragToPlace && first && this.pending.length === 1 && !this.spec?.variableLength) this.dragPlace(this.spec!, sp);
+        else this.onRelease(window, () => this.releaseChart());
       }
       return;
     }
@@ -717,6 +724,24 @@ export class DrawingManager {
     this.cursor = null;
     if (placed) this.placeNew(placed, spec.textEditable ? sp : null);
     else this.afterPlacement();
+  }
+
+  /** dragToPlace: follow the pointer after the press that placed point 1; the release places point 2 when the
+   *  pointer moved at least DRAG_THRESHOLD (else it was a click and point 1 stays pending). pointercancel
+   *  places nothing. */
+  private dragPlace(spec: OverlaySpec, sp0: Pt): void {
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      this.cursor = this.panePoint(ev as PointerEvent);
+      this.redraw();
+    });
+    this.onRelease(document, (ev) => {
+      rmMove();
+      this.releaseChart();
+      // The tool or the pending point may be gone (Escape, setTool) while the button was down.
+      if (ev.type === "pointercancel" || this.spec !== spec || this.pending.length !== 1) return;
+      const up = this.panePoint(ev as PointerEvent);
+      if (Math.hypot(up.x - sp0.x, up.y - sp0.y) >= DRAG_THRESHOLD) this.placementClick(up);
+    });
   }
 
   private finishVariable(closed: boolean): void {

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- `dragToPlace` option: press places point 1 and release places point 2 of a tool with two
+  or more fixed points; a movement under 3 px is a click, so click-click still works.
+  Default `false` keeps the current placement.
+
 ### Fixed
 
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`
