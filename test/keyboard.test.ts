@@ -234,3 +234,83 @@ describe("modifiers come from pointer events", () => {
     expect(s.dm.selection()).toEqual([id]);
   });
 });
+
+describe("default keyboard behaviour is unchanged from 0.6.3", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const cases = [
+    { label: "option omitted", opts: {} },
+    { label: "keyboard: true", opts: { keyboard: true } },
+  ];
+
+  it.each(cases)("$label: Shift / Ctrl come from keydown / keyup, not the pointer event", ({ opts }) => {
+    const s = setup(opts);
+    s.win.dispatchEvent(keyEv("keydown", "Shift"));
+    expect(dragHandle(s)).toBe(300);
+    s.win.dispatchEvent(keyEv("keyup", "Shift"));
+    expect(dragHandle(setup(opts))).toBe(280);
+    const m = setup({ ...opts, bars: () => BAR });
+    m.win.dispatchEvent(keyEv("keydown", "Control"));
+    expect(placedPrice(m)).toBe(200);
+  });
+
+  it.each(cases)("$label: Escape cascade pending -> armed tool -> selection", ({ opts }) => {
+    const s = setup(opts);
+    withSelectedLine(s);
+    s.dm.setTool("trend-line");
+    place(s, 100, 200);
+    hover(s, 150, 220);
+    expect(preview(s)).not.toBe("null");
+    s.win.dispatchEvent(keyEv("keydown", "Escape"));
+    expect(preview(s)).toBe("null");
+    expect(s.dm.tool()).toBe("trend-line");
+    expect(s.dm.selection()).toHaveLength(1);
+    s.win.dispatchEvent(keyEv("keydown", "Escape"));
+    expect(s.dm.tool()).toBeNull();
+    expect(s.dm.selection()).toHaveLength(1);
+    s.win.dispatchEvent(keyEv("keydown", "Escape"));
+    expect(s.dm.selection()).toEqual([]);
+  });
+
+  it.each(cases)("$label: Delete / Backspace remove an unlocked selection and keep a locked one", ({ opts }) => {
+    const s = setup(opts);
+    for (const k of ["Delete", "Backspace"]) {
+      withSelectedLine(s);
+      s.win.dispatchEvent(keyEv("keydown", k));
+      expect(s.dm.drawings()).toHaveLength(0);
+    }
+    const id = withSelectedLine(s);
+    s.dm.update({ ...s.dm.get(id)!, locked: true } as never);
+    s.win.dispatchEvent(keyEv("keydown", "Delete"));
+    expect(s.dm.drawings()).toHaveLength(1);
+  });
+});
+
+describe("cancelPending", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("drops the half-placed drawing, keeps the tool, the next click starts afresh", () => {
+    const s = setup();
+    s.dm.setTool("trend-line");
+    place(s, 100, 200);
+    hover(s, 150, 220);
+    expect(preview(s)).not.toBe("null");
+    s.dm.cancelPending();
+    expect(preview(s)).toBe("null");
+    expect(s.dm.drawings()).toHaveLength(0);
+    expect(s.dm.tool()).toBe("trend-line");
+    place(s, 200, 200);
+    hover(s, 250, 220);
+    expect(preview(s)).not.toBe("null");
+    expect(s.dm.drawings()).toHaveLength(0);
+  });
+
+  it("is a no-op with nothing pending", () => {
+    const s = setup();
+    const tools: unknown[] = [];
+    s.dm.on("tool", (k) => tools.push(k));
+    s.dm.setTool("trend-line");
+    s.dm.cancelPending();
+    expect(s.dm.tool()).toBe("trend-line");
+    expect(tools).toEqual(["trend-line"]);
+  });
+});

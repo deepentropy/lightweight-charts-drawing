@@ -13,7 +13,7 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
-  keyboard: true,                      // false: no window key listener
+  keyboard: true,                      // false: no window key listener (Escape / Delete off; pointer-event Shift / Ctrl stay)
 });
 ```
 
@@ -32,6 +32,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `bringToFront(id)`, `sendToBack(id)` | z-order |
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
+| `cancelPending()` | cancels a half-placed drawing and its preview, keeps the tool armed; no-op with nothing pending |
 | `setMagnet`, `setInterval`, `setStayInDrawingMode` | settings |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |
@@ -59,7 +60,9 @@ adds to the selection, Ctrl + body drag clones. Shift constrains (45 degree step
 lock) and turns the magnet off; Ctrl / Cmd inverts the magnet. Escape drops pending points, then
 the tool, then the selection; Delete / Backspace removes the selected unlocked drawings.
 With `keyboard: false` the manager adds no key listener: no Escape cascade, no Delete / Backspace
-removal, no Shift / Ctrl modifiers; Ctrl / Cmd on pointer events still multi-selects and clones.
+removal. Shift and Ctrl / Cmd are read from the pointer events of a gesture (`shiftKey`, `ctrlKey` / `metaKey`), so
+angle snap, axis lock, the magnet inversion, multi-select and clone keep working; the placement preview follows
+the modifiers of the latest `pointermove`.
 
 ## Creating from clicks
 

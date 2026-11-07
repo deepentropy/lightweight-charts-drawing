@@ -191,6 +191,13 @@ export class DrawingManager {
   tool(): DrawingKind | null {
     return this.spec?.kind ?? null;
   }
+  /** Cancel a half-placed drawing and its preview; the armed tool stays. No-op with nothing pending. */
+  cancelPending(): void {
+    if (!this.pending.length) return;
+    this.pending = [];
+    this.cursor = null;
+    this.redraw();
+  }
   setMagnet(mode: MagnetMode): void {
     this.opts.magnet = mode;
   }
