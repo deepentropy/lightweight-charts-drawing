@@ -54,11 +54,13 @@ usually has no volume: the volume profiles then show no rows and the
 anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
-intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
+`keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events).
 
 | Method | |
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
+| `cancelPending()` | cancel a half-placed drawing, the tool stays armed |
 | `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
@@ -86,6 +88,9 @@ click to multi-select and group drag, Ctrl + body drag clones; Shift = 45°
 steps / square boxes and magnet off, Ctrl / Cmd inverts the magnet; Escape
 drops pending points, then the tool, then the selection; Delete removes the
 selection (locked drawings stay).
+With `keyboard: false` the manager adds no key listener: no Escape cascade,
+no Delete / Backspace removal. Shift and Ctrl / Cmd are read from the pointer
+events of a gesture, so snap, axis lock, magnet inversion, multi-select and clone still work.
 
 Touch and pen: a press on a drawing or with an armed tool holds the chart until
 the finger lifts or the browser cancels the pointer; elsewhere the chart pans
