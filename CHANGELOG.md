@@ -28,6 +28,11 @@
   or more fixed points; a movement under 3 px is a click, so click-click still works.
   Default `false` keeps the current placement. With `keyboard: false`, Shift / Ctrl / Cmd
   are read from the drag's pointer events (the release included).
+- `clampToPane` option: with a point pending, a press outside the pane is accepted and lands
+  on the nearest pane edge (as in TradingView). The pointer of a handle or body drag, a
+  `dragToPlace` release and the placement preview are kept inside the pane; a body drag can
+  still move the drawing's other anchors past the edge. Default `false` keeps the current
+  behaviour (outside presses are ignored).
 
 ### Fixed
 
