@@ -52,7 +52,9 @@ drawings' axis labels.
 Options: `bars` (bar getter with volume; default the series data, which
 usually has no volume: the volume profiles then show no rows and the
 anchored VWAP uses equal weights), `fontFamily`
-(default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
+(default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `magnetSource`
+(`(time) => { time, values } | null`: the host's magnet candidates for the cursor time, instead of the
+series OHLC; `null` or no values = no snap), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
 intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
 `keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events),

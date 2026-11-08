@@ -19,6 +19,11 @@
   and the range tools (`text` = library join, `row`, `parts` = the piece labels); return
   `undefined` to keep the join. Position and forecast labels already carry all raw values and
   stay one label (rule and table in the code API reference).
+- `magnetSource` option: the host supplies the magnet candidates (`{ time, values }` or
+  `null`) for the cursor's time instead of the series OHLC. A host with several panes
+  feeds one time grid through `bars` but needs per-pane candidates (for example an
+  indicator line value). The point takes the returned bar time and the exact price;
+  `null`, an empty list or a throwing source means no snap.
 
 ### Fixed
 
