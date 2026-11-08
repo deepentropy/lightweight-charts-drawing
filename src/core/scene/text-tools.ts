@@ -181,7 +181,7 @@ export function scenePriceNote(d: Drawing, pts: Pt[], selected: boolean, s: Draw
   // ring.
   const pip = coords?.pipSize() ?? 0.01;
   const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
-  const priceLabel = priceNoteLabel(d, pts, digits);
+  const priceLabel = priceNoteLabel(d, pts, digits, coords);
   // TV price note text (line-tool-price-note `_customLabelRenderer`): the
   // TV text box at the left end / right end / middle of the line, turned to
   // the line angle, no placeholder on the chart; factory tv-blue-500, 14px,

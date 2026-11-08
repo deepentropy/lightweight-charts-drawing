@@ -5,6 +5,7 @@
  */
 import { bboxCorners, dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import type { Drawing, DrawingStyle } from "../types";
 import { GANN_ARC_DEFAULTS, GANN_BOX_LEVEL_DEFAULTS, GANN_FAN_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, GANN_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS } from "../specs";
 import { tvTextLayout } from "../kinds/tv-text";
@@ -44,11 +45,20 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     const fs = s.labelFontSize ?? 12;
     const mk = (x: number, y: number, text: string, horz: "left" | "right", vert: "top" | "bottom", oy: number) =>
       tvTextLayout({ x, y, text, fs, bold: s.bold, italic: s.italic, horz, vert, offsetX: 10, offsetY: oy });
+    const priceDefault = signedFixed(c, digits);
+    const priceText = labelOrDefault(coords, { id: "price", text: priceDefault, price: c, digits });
+    const barsDefault = String(u);
+    const barsText = labelOrDefault(coords, { id: "bars-range", text: barsDefault, bars: u });
     const out = [
-      mk(f.start.x, f.end.y, signedFixed(c, digits), u > 0 ? "right" : "left", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10),
-      mk(f.end.x, f.start.y, String(u), u > 0 ? "left" : "right", c > 0 ? "top" : "bottom", c > 0 ? 10 : 8),
+      mk(f.start.x, f.end.y, priceText, u > 0 ? "right" : "left", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10),
+      mk(f.end.x, f.start.y, barsText, u > 0 ? "left" : "right", c > 0 ? "top" : "bottom", c > 0 ? 10 : 8),
     ];
-    if (u !== 0) out.push(mk(f.end.x, f.end.y, String(Number(Math.abs(c / u).toFixed(7))), u > 0 ? "left" : "right", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10));
+    if (u !== 0) {
+      const ratio = Math.abs(c / u);
+      const ratioDefault = String(Number(ratio.toFixed(7)));
+      const ratioText = labelOrDefault(coords, { id: "gann-ratio", text: ratioDefault, ratio });
+      out.push(mk(f.end.x, f.end.y, ratioText, u > 0 ? "left" : "right", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10));
+    }
     return out;
   })();
   const labelColor = levels[levels.length - 1]?.color ?? "#808080";

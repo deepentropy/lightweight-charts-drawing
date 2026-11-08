@@ -6,11 +6,13 @@
  * centred below, left otherwise to the left. Padding 6 / 8, 12px factory,
  * background + 1px border, radius 4. TV hit-tests the line (3px) and this box.
  */
+import type { Coords } from "../coords";
 import type { Drawing } from "../types";
 import type { Pt } from "../_shared";
+import { labelOrDefault } from "../labels";
 import { tvTextLayout } from "./tv-text";
 
-export function priceNoteLabel(d: Drawing, pts: Pt[], digits: number) {
+export function priceNoteLabel(d: Drawing, pts: Pt[], digits: number, coords?: Coords | null) {
   const [a, b] = pts;
   const p0 = d.points[0];
   if (!a || !b || !p0) return null;
@@ -24,10 +26,17 @@ export function priceNoteLabel(d: Drawing, pts: Pt[], digits: number) {
           ? (["center", "top"] as const)
           : (["right", "middle"] as const);
   const s = d.style;
+  const defaultText = p0.price.toFixed(digits);
+  const text = labelOrDefault(coords, {
+    id: "price",
+    text: defaultText,
+    price: p0.price,
+    digits,
+  });
   return tvTextLayout({
     x: b.x,
     y: b.y,
-    text: p0.price.toFixed(digits),
+    text,
     fs: s.priceLabelFontSize ?? 12,
     bold: s.priceLabelBold,
     italic: s.priceLabelItalic,
