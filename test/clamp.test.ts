@@ -1,5 +1,6 @@
-// clampToPane: a pending placement accepts a press outside the pane and clamps it to the pane edge; handle and
-// body drags stop at the pane edge. Option off, or no placement pending: a press outside the pane is ignored.
+// clampToPane: a pending placement accepts a press outside the pane and clamps it to the pane edge; the preview,
+// a dragToPlace release and the drag pointer are clamped too. Option off, or no placement pending: a press outside
+// the pane is ignored.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ptr, setup, withSelectedLine } from "./pointer-harness";
 
@@ -90,5 +91,41 @@ describe("drags", () => {
     s.doc.dispatchEvent(ptr("pointermove", "mouse", 200, 900));
     s.doc.dispatchEvent(ptr("pointerup", "mouse", 200, 900));
     expect(first(s, id)[0]).toEqual({ time: 100, price: 50 });
+  });
+});
+
+describe("with dragToPlace and the placement preview", () => {
+  const cursor = (s: ReturnType<typeof setup>) => (s.dm as unknown as { cursor: { x: number; y: number } | null }).cursor;
+
+  it("option on: a dragToPlace release below the pane lands on the bottom edge", () => {
+    const s = setup({ clampToPane: true, dragToPlace: true });
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "mouse", 100, 200));
+    s.doc.dispatchEvent(ptr("pointermove", "mouse", 300, 650));
+    expect(cursor(s)).toEqual({ x: 300, y: 500 });
+    s.doc.dispatchEvent(ptr("pointerup", "mouse", 300, 650));
+    expect(pts(s)).toEqual([[{ time: 100, price: 300 }, { time: 300, price: 0 }]]);
+  });
+
+  it("option off: the dragToPlace release keeps the raw pointer (outside the pane)", () => {
+    const s = setup({ dragToPlace: true });
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "mouse", 100, 200));
+    s.doc.dispatchEvent(ptr("pointermove", "mouse", 300, 650));
+    s.doc.dispatchEvent(ptr("pointerup", "mouse", 300, 650));
+    expect(pts(s)).toEqual([[{ time: 100, price: 300 }, { time: 300, price: -150 }]]);
+  });
+
+  it("option on: the preview follows the pointer onto the pane edge while a point is pending", () => {
+    const s = pending({ clampToPane: true });
+    s.el.dispatchEvent(ptr("pointermove", "mouse", 900, -30));
+    expect(cursor(s)).toEqual({ x: 800, y: 0 });
+  });
+
+  it("option on, nothing pending: the preview cursor is not clamped", () => {
+    const s = setup({ clampToPane: true });
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointermove", "mouse", 900, -30));
+    expect(cursor(s)).toEqual({ x: 900, y: -30 });
   });
 });

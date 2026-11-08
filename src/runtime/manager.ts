@@ -520,6 +520,11 @@ export class DrawingManager {
     const { w, h } = this.paneSize();
     return { x: Math.min(Math.max(p.x, 0), w), y: Math.min(Math.max(p.y, 0), h) };
   }
+  /** The next placement point: on the pane edge when clampToPane and a point is pending (the preview and a
+   *  dragToPlace release land where a press outside the pane would). */
+  private placementPoint(p: Pt): Pt {
+    return this.opts.clampToPane && this.spec && this.pending.length ? this.toPane(p) : p;
+  }
   /** Pointer position in pane coordinates. */
   private panePoint(e: MouseEvent): Pt {
     const paneEl = this.series.getPane().getHTMLElement();
@@ -670,7 +675,7 @@ export class DrawingManager {
     if (this.gesture || e.buttons) return;
     const sp = this.panePoint(e);
     if (this.spec) {
-      this.cursor = sp;
+      this.cursor = this.placementPoint(sp);
       this.redraw();
       return;
     }
@@ -799,7 +804,7 @@ export class DrawingManager {
     const rmMove = this.gestureListen(document, "pointermove", (ev) => {
       // keyboard: false reads Shift / Ctrl from the pointer events: the preview follows them.
       this.pointerMods(ev as PointerEvent);
-      this.cursor = this.panePoint(ev as PointerEvent);
+      this.cursor = this.placementPoint(this.panePoint(ev as PointerEvent));
       this.redraw();
     });
     this.onRelease(document, (ev) => {
@@ -809,7 +814,7 @@ export class DrawingManager {
       if (ev.type === "pointercancel" || this.spec !== spec || this.pending.length !== 1) return;
       // Point 2 takes the modifiers held at the release.
       this.pointerMods(ev as PointerEvent);
-      const up = this.panePoint(ev as PointerEvent);
+      const up = this.placementPoint(this.panePoint(ev as PointerEvent));
       if (Math.hypot(up.x - sp0.x, up.y - sp0.y) >= DRAG_THRESHOLD) this.placementClick(up);
     });
   }
