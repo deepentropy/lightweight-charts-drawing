@@ -494,9 +494,14 @@ export class DrawingManager {
     if (!this.selected.every(isShown)) this.select(this.selected.filter(isShown));
   }
   private paneSize(): { w: number; h: number } {
-    const idx = this.series.getPane().paneIndex();
-    const s = this.chart.paneSize(idx);
-    return { w: s.width, h: s.height };
+    // A pane added this frame is in the chart model before its widget exists, and
+    // chart.paneSize() throws for it until the next layout: treat it as empty meanwhile.
+    try {
+      const s = this.chart.paneSize(this.series.getPane().paneIndex());
+      return { w: s.width, h: s.height };
+    } catch {
+      return { w: 0, h: 0 };
+    }
   }
   /** Pointer position in pane coordinates. */
   private panePoint(e: MouseEvent): Pt {
