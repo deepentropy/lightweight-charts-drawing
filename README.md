@@ -63,8 +63,9 @@ intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
 so click-click still works; default `false`), `clampToPane`
 (a pending placement accepts a press outside the pane and clamps it to the pane edge; the
 pointer of a drag and the placement preview are kept inside the pane; default `false`), `interactive`
-(default `true`; `false` = view-only: drawings paint but take no pointer input and no
-event is stopped, so the chart pans over them).
+(default `true`; `false` = view-only: drawings paint but take no pointer input and no key action
+(Escape, Delete / Backspace), and no event is stopped, so the chart pans over them;
+`setInteractive(false)` also clears the selection and a half-placed drawing).
 
 ### Labels and number format
 

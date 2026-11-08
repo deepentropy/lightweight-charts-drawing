@@ -1,8 +1,9 @@
 // View-only manager: `interactive: false` / setInteractive(false) takes no pointer input (no hold, no stopPropagation,
-// no hover, no dblclick) while the drawings still paint, so a touch or mouse drag over them pans the chart.
+// no hover, no dblclick) and no key action, while the drawings still paint, so a touch or mouse drag over them pans the
+// chart. setInteractive(false) clears the selection and a half-placed drawing.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DrawingManager } from "../src";
-import { OFF, ptr, setup, withSelectedLine } from "./pointer-harness";
+import { OFF, ev, ptr, setup, withSelectedLine } from "./pointer-harness";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -101,4 +102,50 @@ describe("setInteractive", () => {
 it("the option type is part of DrawingManager's constructor options", () => {
   const o: ConstructorParameters<typeof DrawingManager>[2] = { interactive: false };
   expect(o?.interactive).toBe(false);
+});
+
+describe("view-only and the keyboard", () => {
+  const key = (s: ReturnType<typeof setup>, k: string) => s.win.dispatchEvent(ev("keydown", { key: k }));
+
+  it("interactive: false, a drawing selected through the API: Delete / Backspace remove nothing, Escape keeps the selection", () => {
+    const s = setup({ interactive: false });
+    const id = withSelectedLine(s);
+    key(s, "Delete");
+    key(s, "Backspace");
+    expect(s.dm.get(id)).toBeDefined();
+    key(s, "Escape");
+    expect(s.dm.selection()).toEqual([id]);
+  });
+
+  it("interactive: false: Escape does not disarm the tool", () => {
+    const s = setup({ interactive: false });
+    s.dm.setTool("trend-line");
+    key(s, "Escape");
+    expect(s.dm.tool()).toBe("trend-line");
+  });
+
+  it("setInteractive(false) clears the selection and the pending points; the drawing and the tool stay", () => {
+    const s = setup();
+    const id = withSelectedLine(s);
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "mouse", 50, 50));
+    s.win.dispatchEvent(ptr("pointerup", "mouse", 50, 50));
+    expect((s.dm as unknown as { pending: unknown[] }).pending).toHaveLength(1);
+    const selection = vi.fn();
+    s.dm.on("selection", selection);
+    s.dm.setInteractive(false);
+    expect(s.dm.selection()).toEqual([]);
+    expect(selection).toHaveBeenCalledWith([]);
+    expect((s.dm as unknown as { pending: unknown[] }).pending).toHaveLength(0);
+    expect(s.dm.get(id)).toBeDefined();
+    expect(s.dm.tool()).toBe("trend-line");
+  });
+
+  it("setInteractive(true) brings the key actions back", () => {
+    const s = setup({ interactive: false });
+    s.dm.setInteractive(true);
+    const id = withSelectedLine(s);
+    key(s, "Delete");
+    expect(s.dm.get(id)).toBeUndefined();
+  });
 });
