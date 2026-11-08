@@ -13,6 +13,7 @@ const dm = new DrawingManager(chart, series, {
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  keyboard: true,                      // false: no window key listener (Escape / Delete off; pointer-event Shift / Ctrl stay)
   formatLabel: (label) => string | undefined,  // host text for every on-canvas label; see DrawingLabel
 });
 ```
@@ -101,6 +102,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `bringToFront(id)`, `sendToBack(id)` | z-order |
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
+| `cancelPending()` | cancels a half-placed drawing and its preview, keeps the tool armed; no-op with nothing pending |
 | `setMagnet`, `setInterval`, `setStayInDrawingMode` | settings |
 | `setFormatLabel(fn \| undefined)` | swap the `formatLabel` hook and repaint; `undefined` = library defaults |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
@@ -128,6 +130,10 @@ draw while the button is held. Drag anchors or the body of a selected drawing; C
 adds to the selection, Ctrl + body drag clones. Shift constrains (45 degree steps, squares, axis
 lock) and turns the magnet off; Ctrl / Cmd inverts the magnet. Escape drops pending points, then
 the tool, then the selection; Delete / Backspace removes the selected unlocked drawings.
+With `keyboard: false` the manager adds no key listener: no Escape cascade, no Delete / Backspace
+removal. Shift and Ctrl / Cmd are read from the pointer events of a gesture (`shiftKey`, `ctrlKey` / `metaKey`), so
+angle snap, axis lock, the magnet inversion, multi-select and clone keep working; the placement preview follows
+the modifiers of the latest `pointermove`.
 
 ## Creating from clicks
 

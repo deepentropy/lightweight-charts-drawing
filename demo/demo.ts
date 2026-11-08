@@ -8,6 +8,8 @@
  * `window.dm` / `window.chart` / `window.series` / `window.lwcd` (the library
  * module) for scripted checks; `window.autoText` answers the text editor
  * request without the editor.
+ * «Keyboard off» reloads with `?keyboard=off` because the option is set once
+ * at DrawingManager construction.
  */
 import { CandlestickSeries, createChart, type Time } from "lightweight-charts";
 import * as lwcd from "../src";
@@ -47,7 +49,17 @@ async function main() {
   const series = chart.addSeries(CandlestickSeries, { upColor: "#089981", downColor: "#f23645", borderVisible: false, wickUpColor: "#089981", wickDownColor: "#f23645" });
   series.setData(data);
   chart.timeScale().setVisibleLogicalRange({ from: data.length - 160, to: data.length + 12 });
-  const dm = new DrawingManager(chart, series, { magnet: "off" });
+  // Keyboard off reloads the page with ?keyboard=off — option is construction-time only.
+  const keyboardOff = new URLSearchParams(location.search).get("keyboard") === "off";
+  const keyboardToggle = $("keyboard-off") as HTMLInputElement;
+  keyboardToggle.checked = keyboardOff;
+  keyboardToggle.addEventListener("change", () => {
+    const url = new URL(location.href);
+    if (keyboardToggle.checked) url.searchParams.set("keyboard", "off");
+    else url.searchParams.delete("keyboard");
+    location.assign(url.toString());
+  });
+  const dm = new DrawingManager(chart, series, { magnet: "off", keyboard: !keyboardOff });
   Object.assign(window, { dm, chart, series, lwcd });
 
   $("version").textContent = `v${VERSION}`;

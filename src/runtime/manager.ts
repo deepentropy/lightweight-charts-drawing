@@ -51,6 +51,9 @@ export type DrawingManagerOptions = {
   timeInfo?: () => { timeZone: string; intraday: boolean };
   /** Keep the tool armed after a placement (TV "Keep drawing"). */
   stayInDrawingMode?: boolean;
+  /** Window key handling: Escape cascade, Delete / Backspace removal. Default true. false: no key listener is added;
+   *  Shift / Ctrl / Cmd of a pointer gesture are still read from the pointer events. */
+  keyboard?: boolean;
   /** Label text hook: called for every label with its default text and raw numbers; return the text to draw (undefined / null = the default, "" = empty). */
   formatLabel?: LabelFormatter;
 };
@@ -115,8 +118,11 @@ export class DrawingManager {
   /** Cursor over the hovered drawing (TV: pointer, move when selected,
    *  resize cursors on anchors and table edges), null = the chart's own. */
   private hoverCursor: string | null = null;
-  private shift = false;
-  private ctrl = false;
+  /** Modifiers held on the keyboard (used when `keyboard !== false`) and on the latest pointer event (used when `keyboard: false`). */
+  private keyShift = false;
+  private keyCtrl = false;
+  private ptrShift = false;
+  private ptrCtrl = false;
   private savedScroll: { handleScroll: unknown; handleScale: unknown } | null = null;
   /** Removers of the active gesture's window / document listeners (destroy() runs them). */
   private readonly gestureOff: (() => void)[] = [];
@@ -138,9 +144,11 @@ export class DrawingManager {
     this.listen(this.el, "pointermove", (e) => this.onHover(e as PointerEvent));
     this.listen(this.el, "pointerleave", () => { this.hoverCursor = null; this.setHover(null); });
     this.listen(this.el, "dblclick", (e) => this.onDoubleClick(e as MouseEvent), true);
-    this.listen(window, "keydown", (e) => this.onKey(e as KeyboardEvent));
-    this.listen(window, "keyup", (e) => this.onKey(e as KeyboardEvent));
-    this.listen(window, "blur", () => { this.shift = false; this.ctrl = false; });
+    if (opts.keyboard !== false) {
+      this.listen(window, "keydown", (e) => this.onKey(e as KeyboardEvent));
+      this.listen(window, "keyup", (e) => this.onKey(e as KeyboardEvent));
+    }
+    this.listen(window, "blur", () => { this.keyShift = this.keyCtrl = this.ptrShift = this.ptrCtrl = false; });
     // Images load asynchronously (core image cache, filled by the host's
     // reader): redraw, and drop an image drawing whose file failed (TV).
     this.off.push(onImagesChanged(() => {
@@ -186,6 +194,13 @@ export class DrawingManager {
   }
   tool(): DrawingKind | null {
     return this.spec?.kind ?? null;
+  }
+  /** Cancel a half-placed drawing and its preview; the armed tool stays. No-op with nothing pending. */
+  cancelPending(): void {
+    if (!this.pending.length) return;
+    this.pending = [];
+    this.cursor = null;
+    this.redraw();
   }
   setMagnet(mode: MagnetMode): void {
     this.opts.magnet = mode;
@@ -587,10 +602,23 @@ export class DrawingManager {
     const rmCancel = this.gestureListen(t, "pointercancel", end);
   }
 
+  // keyboard on (default): the keys alone, exactly as 0.6.3; keyboard: false: the pointer events.
+  private get shift(): boolean {
+    return this.opts.keyboard === false ? this.ptrShift : this.keyShift;
+  }
+  private get ctrl(): boolean {
+    return this.opts.keyboard === false ? this.ptrCtrl : this.keyCtrl;
+  }
+  /** Shift / Ctrl / Cmd of a pointer gesture: read from the event, so they work with `keyboard: false`. */
+  private pointerMods(e: PointerEvent): void {
+    this.ptrShift = !!e.shiftKey;
+    this.ptrCtrl = !!(e.ctrlKey || e.metaKey);
+  }
+
   private onKey(e: KeyboardEvent): void {
     const down = e.type === "keydown";
-    if (e.key === "Shift") this.shift = down;
-    else if (e.key === "Control" || e.key === "Meta") this.ctrl = down;
+    if (e.key === "Shift") this.keyShift = down;
+    else if (e.key === "Control" || e.key === "Meta") this.keyCtrl = down;
     if (!down) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
@@ -612,6 +640,7 @@ export class DrawingManager {
   }
 
   private onHover(e: PointerEvent): void {
+    this.pointerMods(e);
     if (this.gesture || e.buttons) return;
     const sp = this.panePoint(e);
     if (this.spec) {
@@ -649,6 +678,7 @@ export class DrawingManager {
     // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) return;
+    this.pointerMods(e);
     const sp = this.panePoint(e);
     const { w, h } = this.paneSize();
     if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) return;
@@ -765,6 +795,7 @@ export class DrawingManager {
     this.cursor = sp0;
     let last = sp0;
     const move = (ev: PointerEvent) => {
+      this.pointerMods(ev);
       const cur = this.panePoint(ev);
       this.cursor = cur;
       if (Math.hypot(cur.x - last.x, cur.y - last.y) < FREEHAND_SAMPLE_PX) return;
@@ -834,7 +865,10 @@ export class DrawingManager {
       pane,
       canDrag: hit.mode.hit === "handle" || wasSelected,
     };
-    const move = (ev: PointerEvent) => this.dragMove(this.panePoint(ev));
+    const move = (ev: PointerEvent) => {
+      this.pointerMods(ev);
+      this.dragMove(this.panePoint(ev));
+    };
     const rmMove = this.gestureListen(document, "pointermove", (ev) => move(ev as PointerEvent));
     const up = () => {
       rmMove();

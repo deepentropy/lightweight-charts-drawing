@@ -1,7 +1,7 @@
 // Node harness for the pointer gestures of DrawingManager (no jsdom): fake window / document / chart /
 // series, and an event builder. Events are plain `Event`s with the pointer fields assigned.
 import { vi } from "vitest";
-import { DrawingManager } from "../src";
+import { DrawingManager, type DrawingManagerOptions } from "../src";
 
 type Entry = { type: string; fn: (e: Event) => void; once: boolean; capture: boolean };
 
@@ -53,7 +53,7 @@ export const SAVED = { handleScroll: SAVED_SCROLL, handleScale: SAVED_SCALE };
 export const OFF = { handleScroll: false, handleScale: false };
 
 /** x = time, y = 500 - price; a 800 x 500 pane at the origin. */
-export function setup() {
+export function setup(managerOpts: DrawingManagerOptions = {}) {
   const win = new FakeTarget();
   const doc = new FakeTarget();
   vi.stubGlobal("window", win);
@@ -85,7 +85,7 @@ export function setup() {
     priceScale: () => ({ options: () => ({ mode: 0 }) }),
     options: () => ({}),
   };
-  const dm = new DrawingManager(chart as never, series as never);
+  const dm = new DrawingManager(chart as never, series as never, managerOpts);
   // Listeners of the constructor stay out of the gesture counts.
   const base = { win: win.liveTotal(), doc: doc.liveTotal(), el: el.liveTotal() };
   return { win, doc, el, chart, dm, base };
