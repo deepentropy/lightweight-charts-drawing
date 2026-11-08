@@ -58,7 +58,9 @@ series OHLC; `null` or no values = no snap), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
 intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
 `keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events),
-`formatLabel` (optional host formatter for every on-canvas label).
+`formatLabel` (optional host formatter for every on-canvas label), `dragToPlace`
+(place the first two points of a tool by press, drag, release; a movement under 3 px is a click,
+so click-click still works; default `false`).
 
 ### Labels and number format
 
