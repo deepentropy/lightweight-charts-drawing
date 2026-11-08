@@ -134,3 +134,27 @@ describe("option on", () => {
     expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
   });
 });
+
+describe("option on with keyboard: false (Shift / Ctrl from the pointer events)", () => {
+  // Press at (100, 200) = { time 100, price 300 }; the release at (300, 210) is 10 px below the horizontal.
+  const drag = (moveMods: Record<string, unknown>, upMods: Record<string, unknown>) => {
+    const s = setup({ dragToPlace: true, keyboard: false });
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "mouse", 100, 200));
+    s.doc.dispatchEvent(ptr("pointermove", "mouse", 300, 210, moveMods));
+    s.doc.dispatchEvent(ptr("pointerup", "mouse", 300, 210, upMods));
+    return pts(s)[0]?.[1];
+  };
+
+  it("without Shift, point 2 is where the pointer was released", () => {
+    expect(drag({}, {})).toEqual({ time: 300, price: 290 });
+  });
+
+  it("Shift held during the drag and at the release constrains point 2", () => {
+    expect(drag({ shiftKey: true }, { shiftKey: true })).toEqual({ time: 300, price: 300 });
+  });
+
+  it("Shift pressed only at the release still constrains point 2", () => {
+    expect(drag({}, { shiftKey: true })).toEqual({ time: 300, price: 300 });
+  });
+});

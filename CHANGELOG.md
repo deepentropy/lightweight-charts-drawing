@@ -26,7 +26,8 @@
   `null`, an empty list or a throwing source means no snap.
 - `dragToPlace` option: press places point 1 and release places point 2 of a tool with two
   or more fixed points; a movement under 3 px is a click, so click-click still works.
-  Default `false` keeps the current placement.
+  Default `false` keeps the current placement. With `keyboard: false`, Shift / Ctrl / Cmd
+  are read from the drag's pointer events (the release included).
 
 ### Fixed
 

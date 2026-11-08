@@ -783,6 +783,8 @@ export class DrawingManager {
    *  places nothing. */
   private dragPlace(spec: OverlaySpec, sp0: Pt): void {
     const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      // keyboard: false reads Shift / Ctrl from the pointer events: the preview follows them.
+      this.pointerMods(ev as PointerEvent);
       this.cursor = this.panePoint(ev as PointerEvent);
       this.redraw();
     });
@@ -791,6 +793,8 @@ export class DrawingManager {
       this.releaseChart();
       // The tool or the pending point may be gone (Escape, setTool) while the button was down.
       if (ev.type === "pointercancel" || this.spec !== spec || this.pending.length !== 1) return;
+      // Point 2 takes the modifiers held at the release.
+      this.pointerMods(ev as PointerEvent);
       const up = this.panePoint(ev as PointerEvent);
       if (Math.hypot(up.x - sp0.x, up.y - sp0.y) >= DRAG_THRESHOLD) this.placementClick(up);
     });
