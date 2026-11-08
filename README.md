@@ -58,9 +58,11 @@ series OHLC; `null` or no values = no snap), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
 intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
 `keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events),
-`formatLabel` (optional host formatter for every on-canvas label), `clampToPane`
-(a pending placement accepts a press outside the pane and clamps it to the pane edge; handle and
-body drags stop at the edge; default `false`).
+`formatLabel` (optional host formatter for every on-canvas label), `dragToPlace`
+(place the first two points of a tool by press, drag, release; a movement under 3 px is a click,
+so click-click still works; default `false`), `clampToPane`
+(a pending placement accepts a press outside the pane and clamps it to the pane edge; the
+pointer of a drag and the placement preview are kept inside the pane; default `false`).
 
 ### Labels and number format
 

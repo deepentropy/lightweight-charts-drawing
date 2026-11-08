@@ -16,7 +16,8 @@ const dm = new DrawingManager(chart, series, {
   stayInDrawingMode: false,            // keep the tool armed after a placement
   keyboard: true,                      // false: no window key listener (Escape / Delete off; pointer-event Shift / Ctrl stay)
   formatLabel: (label) => string | undefined,  // host text for every on-canvas label; see DrawingLabel
-  clampToPane: false,                  // pending placement + drags stop at the pane edge (else outside presses are ignored)
+  dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
+  clampToPane: false,                  // pending press / preview / drag pointer kept inside the pane (else outside presses are ignored)
 });
 ```
 
