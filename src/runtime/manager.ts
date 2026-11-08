@@ -59,6 +59,15 @@ export type DrawingManagerOptions = {
   keyboard?: boolean;
   /** Label text hook: called for every label with its default text and raw numbers; return the text to draw (undefined / null = the default, "" = empty). */
   formatLabel?: LabelFormatter;
+  /** Place the first two points of a tool with two or more fixed points by
+   *  press, drag and release (TV). A movement under 3 px is a click, so
+   *  click-click still works. Default false (click placement only). */
+  dragToPlace?: boolean;
+  /** Keep a placement inside the pane (TV): with a point pending, a press outside the pane is
+   *  accepted and lands on the nearest pane edge; the placement preview, a dragToPlace release and
+   *  the pointer of a handle / body drag are clamped to the pane (a body drag can still move the
+   *  drawing's other anchors past the edge). Default false (a press outside the pane is ignored). */
+  clampToPane?: boolean;
   /** Default true. false = view-only: drawings are painted but take no pointer input (no placement, selection,
    *  drag, hover or double-click), nothing is held and no pointer event is stopped, so the chart pans and zooms
    *  over them. Change it later with setInteractive(). */
@@ -521,6 +530,16 @@ export class DrawingManager {
       return { w: 0, h: 0 };
     }
   }
+  /** `p` moved onto the pane rect. */
+  private toPane(p: Pt): Pt {
+    const { w, h } = this.paneSize();
+    return { x: Math.min(Math.max(p.x, 0), w), y: Math.min(Math.max(p.y, 0), h) };
+  }
+  /** The next placement point: on the pane edge when clampToPane and a point is pending (the preview and a
+   *  dragToPlace release land where a press outside the pane would). */
+  private placementPoint(p: Pt): Pt {
+    return this.opts.clampToPane && this.spec && this.pending.length ? this.toPane(p) : p;
+  }
   /** Pointer position in pane coordinates. */
   private panePoint(e: MouseEvent): Pt {
     const paneEl = this.series.getPane().getHTMLElement();
@@ -671,7 +690,7 @@ export class DrawingManager {
     if (this.opts.interactive === false || this.gesture || e.buttons) return;
     const sp = this.panePoint(e);
     if (this.spec) {
-      this.cursor = sp;
+      this.cursor = this.placementPoint(sp);
       this.redraw();
       return;
     }
@@ -706,16 +725,23 @@ export class DrawingManager {
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) return;
     this.pointerMods(e);
-    const sp = this.panePoint(e);
+    let sp = this.panePoint(e);
     const { w, h } = this.paneSize();
-    if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) return;
+    if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) {
+      // Only a pending placement takes a press from outside the pane (clampToPane).
+      if (!(this.opts.clampToPane && this.spec && this.pending.length)) return;
+      sp = this.toPane(sp);
+    }
     if (this.spec) {
       e.stopPropagation();
       this.holdChart(e);
       if (this.spec.freehand) this.startFreehand(sp);
       else {
+        const first = this.pending.length === 0;
         this.placementClick(sp);
-        this.onRelease(window, () => this.releaseChart());
+        // Point 1 of a fixed multi-point tool is down (a placed one-point tool leaves nothing pending).
+        if (this.opts.dragToPlace && first && this.pending.length === 1 && !this.spec?.variableLength) this.dragPlace(this.spec!, sp);
+        else this.onRelease(window, () => this.releaseChart());
       }
       return;
     }
@@ -785,6 +811,28 @@ export class DrawingManager {
     this.cursor = null;
     if (placed) this.placeNew(placed, spec.textEditable ? sp : null);
     else this.afterPlacement();
+  }
+
+  /** dragToPlace: follow the pointer after the press that placed point 1; the release places point 2 when the
+   *  pointer moved at least DRAG_THRESHOLD (else it was a click and point 1 stays pending). pointercancel
+   *  places nothing. */
+  private dragPlace(spec: OverlaySpec, sp0: Pt): void {
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      // keyboard: false reads Shift / Ctrl from the pointer events: the preview follows them.
+      this.pointerMods(ev as PointerEvent);
+      this.cursor = this.placementPoint(this.panePoint(ev as PointerEvent));
+      this.redraw();
+    });
+    this.onRelease(document, (ev) => {
+      rmMove();
+      this.releaseChart();
+      // The tool or the pending point may be gone (Escape, setTool) while the button was down.
+      if (ev.type === "pointercancel" || this.spec !== spec || this.pending.length !== 1) return;
+      // Point 2 takes the modifiers held at the release.
+      this.pointerMods(ev as PointerEvent);
+      const up = this.placementPoint(this.panePoint(ev as PointerEvent));
+      if (Math.hypot(up.x - sp0.x, up.y - sp0.y) >= DRAG_THRESHOLD) this.placementClick(up);
+    });
   }
 
   private finishVariable(closed: boolean): void {
@@ -895,7 +943,8 @@ export class DrawingManager {
     };
     const move = (ev: PointerEvent) => {
       this.pointerMods(ev);
-      this.dragMove(this.panePoint(ev));
+      const cur = this.panePoint(ev);
+      this.dragMove(this.opts.clampToPane ? this.toPane(cur) : cur);
     };
     const rmMove = this.gestureListen(document, "pointermove", (ev) => move(ev as PointerEvent));
     const up = () => {
