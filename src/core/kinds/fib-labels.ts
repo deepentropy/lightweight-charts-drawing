@@ -5,12 +5,39 @@
  * and / or " (price)", in a text box 4px from the level's end chosen by the
  * horizontal alignment; font = labelFontSize (factory 12).
  */
+import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import { tvTextLayout } from "./tv-text";
 
 /** Level value text (TV numeric / percentage formatter). */
 export function fibCoeffText(coeff: number, percents: boolean): string {
   if (percents) return `${(100 * coeff).toFixed(2)}%`;
   return String(Math.round(coeff * 1e4) / 1e4);
+}
+
+/** Combined coeff / price label string, hooked before layout / measure. */
+export function fibLevelText(
+  coeff: number,
+  percents: boolean,
+  price: number | null,
+  digits: number,
+  showC: boolean,
+  showP: boolean,
+  coords?: { formatLabel?: Coords["formatLabel"] } | null,
+  /** Override the coeff piece (fib channel uses trimmed toFixed(3)). */
+  coeffText?: string,
+): string {
+  let text = "";
+  if (showC) text += coeffText ?? fibCoeffText(coeff, percents);
+  if (showP && price != null) text += ` (${price.toFixed(digits)})`;
+  if (!text) return text;
+  return labelOrDefault(coords, {
+    id: "fib-level",
+    text,
+    coeff,
+    price: showP ? price : null,
+    digits,
+  });
 }
 
 /** Label of a horizontal level from `left` to `right` at `y`. TV Left = the

@@ -14,6 +14,7 @@
 import type { Drawing, DrawingStyle, PositionStatKey } from "../types";
 import type { Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 
 /** TV infoBlocks in the Stats list order, with their titles and factory
  *  visibility (all on except TP PL / SL PL). */
@@ -45,6 +46,13 @@ function fmtGrouped(v: number, digits: number): string {
   return v < 0 ? `\u2212${t}` : t;
 }
 
+/** Signed number with TV's minus sign (U+2212) — kept local so kinds/ does
+ *  not import from scene/. */
+function signedFixed(v: number, digits: number): string {
+  const t = Math.abs(v).toFixed(digits);
+  return v < 0 ? `\u2212${t}` : t;
+}
+
 /** TV _createTargetLabel / _createStopLabel: offset price, percent (3
  *  decimals of |entry|), ticks, amount and PL, each when its stat is on;
  *  full mode "Target: …" / "Stop: …", ", Amount: …", ", PnL: …", compact
@@ -58,30 +66,60 @@ export function positionLegText(
   digits: number,
   amount: number,
   pl: number,
+  coords?: { formatLabel?: Coords["formatLabel"] } | null,
 ): string {
   const on = (k: string) => positionStatOn(s, (leg + k) as PositionStatKey);
   const compact = !!s.compactStats;
   const price = fmtGrouped(dist, digits);
+  const percent = entry !== 0 ? (100 * dist) / entry : 0;
   const pct = `${(entry !== 0 ? Math.round((100 * 1000 * dist) / entry) / 1000 : 0).toFixed(3)}%`;
+  const ticks = Math.round(dist / pip);
   let t = "";
   if (on("PriceOffset")) t += compact ? price : `${leg === "tp" ? "Target" : "Stop"}: ${price}`;
   if (on("PercentOffset")) t += t !== "" ? ` (${pct})` : pct;
-  if (on("TickOffset")) t += (t !== "" ? " " : "") + fmtGrouped(Math.round(dist / pip), 0);
+  if (on("TickOffset")) t += (t !== "" ? " " : "") + fmtGrouped(ticks, 0);
   if (on("Amount")) t += compact ? (t !== "" ? " " : "") + String(amount) : (t !== "" ? ", " : "") + `Amount: ${amount}`;
   if (on("PL")) t += compact ? (t !== "" ? " " : "") + fmtGrouped(pl, digits) : (t !== "" ? ", " : "") + `PnL: ${fmtGrouped(pl, digits)}`;
-  return t;
+  if (!t) return t;
+  return labelOrDefault(coords, {
+    id: leg === "tp" ? "position-target" : "position-stop",
+    text: t,
+    distance: dist,
+    percent,
+    ticks,
+    amount,
+    pnl: pl,
+    digits,
+  });
 }
 
 /** TV _createMiddleLabel: open / closed P&L (signed change), qty, risk /
  *  reward ratio; full "{Open|Closed} PnL: …, Qty: …" then "Risk/reward
  *  ratio: …" on a new line, compact "pnl ~ qty" then the ratio. */
-export function positionMiddleText(s: DrawingStyle, pnl: string | null, closed: boolean, qty: number, ratio: number): string {
+export function positionMiddleText(
+  s: DrawingStyle,
+  pnl: number | null,
+  closed: boolean,
+  qty: number,
+  ratio: number,
+  digits: number,
+  coords?: { formatLabel?: Coords["formatLabel"] } | null,
+): string {
   const compact = !!s.compactStats;
+  const pnlText = pnl != null ? signedFixed(pnl, digits) : null;
   let t = "";
-  if (positionStatOn(s, "openClosePL") && pnl) t += compact ? pnl : `${closed ? "Closed" : "Open"} PnL: ${pnl}`;
+  if (positionStatOn(s, "openClosePL") && pnlText) t += compact ? pnlText : `${closed ? "Closed" : "Open"} PnL: ${pnlText}`;
   if (positionStatOn(s, "qty")) t += (t !== "" ? (compact ? " ~ " : ", ") : "") + (compact ? String(qty) : `Qty: ${qty}`);
   if (positionStatOn(s, "riskRewardRatio")) t += (t !== "" ? "\n" : "") + (compact ? String(ratio) : `Risk/reward ratio: ${ratio}`);
-  return t;
+  if (!t) return t;
+  return labelOrDefault(coords, {
+    id: "position-middle",
+    text: t,
+    pnl,
+    closed,
+    qty,
+    ratio,
+  });
 }
 
 /** TV factory inputs (properties defaults of the risk/reward tool). */

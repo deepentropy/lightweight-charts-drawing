@@ -55,13 +55,43 @@ anchored VWAP uses equal weights), `fontFamily`
 (default the chart font), `magnet` (`'off' | 'weak' | 'strong'`), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
 intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
-`keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events).
+`keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events),
+`formatLabel` (optional host formatter for every on-canvas label).
+
+### Labels and number format
+
+`formatLabel?: (label: DrawingLabel) => string | null | undefined` is called
+once per on-canvas label with the library's default `text` and the raw
+inputs (prices, volumes, dates, …). Return the string to draw; `undefined`
+or `null` keeps the default; `""` draws empty. Strings are measured after
+the hook, so translated labels size their boxes. Axis labels stay on the
+chart's own `priceFormatter` / `localization.timeFormatter`.
+`setFormatLabel(fn)` replaces the hook on a live manager and repaints (switch
+the language without rebuilding); `setFormatLabel(undefined)` restores the
+library defaults.
+
+| `id` | Raw fields |
+|---|---|
+| `price-range` | `change`, `percent`, `pips`, `digits`, `price0`, `price1` |
+| `bars-range` | `bars` |
+| `time-span` | `seconds` |
+| `distance` | `distancePx` |
+| `angle` | `degrees` |
+| `volume` | `volume` |
+| `position-target` / `position-stop` | `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| `position-middle` | `pnl`, `closed`, `qty`, `ratio` |
+| `forecast` | `change`, `percent`, `seconds`, `digits` |
+| `forecast-date` | `time`, `timeZone`, `intraday` |
+| `price` | `price`, `digits` |
+| `fib-level` | `coeff`, `price`, `digits` |
+| `pearson` | `r` |
+| `gann-ratio` | `ratio` |
 
 | Method | |
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
 | `cancelPending()` | cancel a half-placed drawing, the tool stays armed |
-| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)` | settings |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
 | `setDrawingsVisible(visible)`, `drawingsVisible()` | hide / show every drawing at once (TV "Hide all drawings"; not saved, the drawings are untouched) |
