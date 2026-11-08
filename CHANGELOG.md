@@ -33,6 +33,12 @@
   `dragToPlace` release and the placement preview are kept inside the pane; a body drag can
   still move the drawing's other anchors past the edge. Default `false` keeps the current
   behaviour (outside presses are ignored).
+- `interactive` option and `setInteractive(on)`: a view-only manager paints its drawings
+  but takes no pointer input (no placement, selection, drag, hover, double-click) and no
+  key action (Escape, Delete / Backspace), and stops no event, so the chart pans and zooms
+  over them. `setInteractive(false)` also clears the selection and a half-placed drawing.
+  Useful for a read-only or phone view and for a host with several managers where only
+  one is armed.
 
 ### Fixed
 

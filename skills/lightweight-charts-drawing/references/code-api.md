@@ -18,6 +18,7 @@ const dm = new DrawingManager(chart, series, {
   formatLabel: (label) => string | undefined,  // host text for every on-canvas label; see DrawingLabel
   dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
   clampToPane: false,                  // pending press / preview / drag pointer kept inside the pane (else outside presses are ignored)
+  interactive: true,                   // false = view-only: paints, no pointer input, no key action, stops no event
 });
 ```
 
@@ -106,7 +107,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
 | `cancelPending()` | cancels a half-placed drawing and its preview, keeps the tool armed; no-op with nothing pending |
-| `setMagnet`, `setInterval`, `setStayInDrawingMode` | settings |
+| `setMagnet`, `setInterval`, `setStayInDrawingMode`, `setInteractive` | settings |
 | `setFormatLabel(fn \| undefined)` | swap the `formatLabel` hook and repaint; `undefined` = library defaults |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |

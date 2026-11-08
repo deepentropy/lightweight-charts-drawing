@@ -68,6 +68,11 @@ export type DrawingManagerOptions = {
    *  the pointer of a handle / body drag are clamped to the pane (a body drag can still move the
    *  drawing's other anchors past the edge). Default false (a press outside the pane is ignored). */
   clampToPane?: boolean;
+  /** Default true. false = view-only: drawings are painted but take no pointer input (no placement, selection,
+   *  drag, hover or double-click) and no key action (Escape, Delete / Backspace); nothing is held and no pointer
+   *  event is stopped, so the chart pans and zooms over them. A tool armed meanwhile places nothing until it is
+   *  switched back. Change it later with setInteractive(). */
+  interactive?: boolean;
 };
 
 export type DrawingManagerEvents = {
@@ -240,6 +245,19 @@ export class DrawingManager {
   }
   setStayInDrawingMode(on: boolean): void {
     this.opts.stayInDrawingMode = on;
+  }
+  /** View-only switch (see the `interactive` option). Turning it off clears the selection, the pending points of
+   *  a half-placed drawing, the hover and the preview cursor; the armed tool and the drawings are left as they are,
+   *  and a drag already in progress finishes on its release. */
+  setInteractive(on: boolean): void {
+    this.opts.interactive = on;
+    if (on) return;
+    this.pending = [];
+    this.hoverCursor = null;
+    this.cursor = null;
+    this.setHover(null);
+    if (this.selected.length) this.select([]);
+    this.redraw();
   }
   /** Replace the label hook after construction (e.g. a live language switch) and
    *  repaint; `undefined` restores the library defaults. */
@@ -456,6 +474,7 @@ export class DrawingManager {
     return this.hovered?.id ?? null;
   }
   cursorAt(): string | null {
+    if (this.opts.interactive === false) return null;
     if (this.spec) return "crosshair";
     if (this.gesture?.active) return this.gesture.mode.hit === "body" ? "move" : this.hoverCursor;
     return this.hoverCursor;
@@ -650,7 +669,8 @@ export class DrawingManager {
     const down = e.type === "keydown";
     if (e.key === "Shift") this.keyShift = down;
     else if (e.key === "Control" || e.key === "Meta") this.keyCtrl = down;
-    if (!down) return;
+    // View-only: the modifiers above are still tracked (so switching back is seamless), the key actions are off.
+    if (!down || this.opts.interactive === false) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     if (e.key === "Escape") {
@@ -672,7 +692,7 @@ export class DrawingManager {
 
   private onHover(e: PointerEvent): void {
     this.pointerMods(e);
-    if (this.gesture || e.buttons) return;
+    if (this.opts.interactive === false || this.gesture || e.buttons) return;
     const sp = this.panePoint(e);
     if (this.spec) {
       this.cursor = this.placementPoint(sp);
@@ -705,7 +725,7 @@ export class DrawingManager {
   }
 
   private onPointerDown(e: PointerEvent): void {
-    if (e.button !== 0) return;
+    if (this.opts.interactive === false || e.button !== 0) return;
     // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) return;
@@ -734,6 +754,7 @@ export class DrawingManager {
   }
 
   private onDoubleClick(e: MouseEvent): void {
+    if (this.opts.interactive === false) return;
     // Variable-length tools (polyline / path / ghost feed): a double-click
     // finishes the drawing.
     if (this.spec?.variableLength) {
