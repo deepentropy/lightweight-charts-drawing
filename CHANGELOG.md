@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- `keyboard` option (`DrawingManagerOptions`): `false` adds no window key listener, so Delete / Backspace / Escape never change drawings or the selection (hosts with their own key policy).
+- `DrawingManager.cancelPending()`: cancels a half-placed drawing and its preview, keeps the armed tool (a host calls it when another tool or the cursor is chosen mid-placement).
+
 ### Fixed
 
+- With `keyboard: false`, Shift and Ctrl / Cmd are read from the pointer events (`shiftKey`, `ctrlKey` / `metaKey`) of every handled `pointerdown` / `pointermove`, so angle snap, axis lock and the magnet inversion still work; the placement preview follows the modifiers of the latest `pointermove`. With `keyboard: true` or omitted, only key presses drive them, exactly as in 0.6.3.
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`
   left the chart's pan / zoom off and stopped the drag; it now releases on cancel,
   keeps `touchmove` for the drag, and a second finger no longer places points.
