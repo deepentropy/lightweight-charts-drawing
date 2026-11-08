@@ -7,6 +7,7 @@
  */
 import { dashFor, HANDLE_RADIUS, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import type { Drawing, DrawingStyle, RegressionLine } from "../types";
 import { REGRESSION_LINE_DEFAULTS, volumeProfileStyle } from "../specs";
 import { anchoredVpBox, fixedVpBox, regressionScreenLines, vwapBandLine, vwapScreenSeries } from "../kinds/data-series";
@@ -55,7 +56,12 @@ export function sceneRegressionTrend(d: Drawing, pts: Pt[], selected: boolean, w
   // centred, 4px below, in the down line colour.
   const l = lines.lower;
   if (s.showPearsons !== false && l) {
-    out.push({ t: "text", x: l[0].x, y: l[0].y + 4, text: String(lines.pearsons), anchor: "middle", baseline: "hanging", size: 12, fill: rl.down.color, inert: true });
+    const pearsonText = labelOrDefault(coords, {
+      id: "pearson",
+      text: String(lines.pearsons),
+      r: lines.pearsons,
+    });
+    out.push({ t: "text", x: l[0].x, y: l[0].y + 4, text: pearsonText, anchor: "middle", baseline: "hanging", size: 12, fill: rl.down.color, inert: true });
   }
   // TV _updateAnchorsPrice: the anchors sit on the base line.
   if (selected) out.push({ t: "anchors", pts: lines.anchors });
@@ -157,8 +163,10 @@ function volumeProfileScene(box: NonNullable<ReturnType<typeof fixedVpBox>>, coo
       }
       if (s.showValues && r.h >= valueSize - 2) {
         const v = s.volume === "delta" ? row.up - row.down : row.up + row.down;
+        const defaultText = vpVolumeText(v);
+        const text = labelOrDefault(coords, { id: "volume", text: defaultText, volume: v });
         items.push({
-          t: "text", x: fromRight ? right - offset - 4 : left + offset + 4, y: r.y + r.h / 2, text: vpVolumeText(v),
+          t: "text", x: fromRight ? right - offset - 4 : left + offset + 4, y: r.y + r.h / 2, text,
           size: valueSize, fill: s.valuesColor, anchor: fromRight ? "end" : "start", baseline: "central",
         });
       }

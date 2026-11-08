@@ -56,12 +56,44 @@ anchored VWAP uses equal weights), `fontFamily`
 (`(time) => { time, values } | null`: the host's magnet candidates for the cursor time, instead of the
 series OHLC; `null` or no values = no snap), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
-intraday of date labels), `stayInDrawingMode` (TV Keep drawing).
+intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
+`keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events),
+`formatLabel` (optional host formatter for every on-canvas label).
+
+### Labels and number format
+
+`formatLabel?: (label: DrawingLabel) => string | null | undefined` is called
+once per on-canvas label with the library's default `text` and the raw
+inputs (prices, volumes, dates, …). Return the string to draw; `undefined`
+or `null` keeps the default; `""` draws empty. Strings are measured after
+the hook, so translated labels size their boxes. Axis labels stay on the
+chart's own `priceFormatter` / `localization.timeFormatter`.
+`setFormatLabel(fn)` replaces the hook on a live manager and repaints (switch
+the language without rebuilding); `setFormatLabel(undefined)` restores the
+library defaults.
+
+| `id` | Raw fields |
+|---|---|
+| `price-range` | `change`, `percent`, `pips`, `digits`, `price0`, `price1` |
+| `bars-range` | `bars` |
+| `time-span` | `seconds` |
+| `distance` | `distancePx` |
+| `angle` | `degrees` |
+| `volume` | `volume` |
+| `position-target` / `position-stop` | `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| `position-middle` | `pnl`, `closed`, `qty`, `ratio` |
+| `forecast` | `change`, `percent`, `seconds`, `digits` |
+| `forecast-date` | `time`, `timeZone`, `intraday` |
+| `price` | `price`, `digits` |
+| `fib-level` | `coeff`, `price`, `digits` |
+| `pearson` | `r` |
+| `gann-ratio` | `ratio` |
 
 | Method | |
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
-| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)` | settings |
+| `cancelPending()` | cancel a half-placed drawing, the tool stays armed |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
 | `setDrawingsVisible(visible)`, `drawingsVisible()` | hide / show every drawing at once (TV "Hide all drawings"; not saved, the drawings are untouched) |
@@ -88,6 +120,9 @@ click to multi-select and group drag, Ctrl + body drag clones; Shift = 45°
 steps / square boxes and magnet off, Ctrl / Cmd inverts the magnet; Escape
 drops pending points, then the tool, then the selection; Delete removes the
 selection (locked drawings stay).
+With `keyboard: false` the manager adds no key listener: no Escape cascade,
+no Delete / Backspace removal. Shift and Ctrl / Cmd are read from the pointer
+events of a gesture, so snap, axis lock, magnet inversion, multi-select and clone still work.
 
 Touch and pen: a press on a drawing or with an armed tool holds the chart until
 the finger lifts or the browser cancels the pointer; elsewhere the chart pans

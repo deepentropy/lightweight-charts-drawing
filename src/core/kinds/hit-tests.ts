@@ -24,6 +24,7 @@ import type { Drawing } from "../types";
 import { TREND_FIB_TIME_LEVEL_DEFAULTS } from "../specs";
 import { FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_WEDGE_LEVEL_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, PARALLEL_CHANNEL_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_LEVEL_DEFAULTS } from "../specs";
 import type { Coords } from "../coords";
+import { withLabelContext } from "../labels";
 import { positionAnchors } from "./position";
 import { gannBox, gannFrame } from "./gann-square";
 import { gannFanDir } from "./gann-fan";
@@ -38,7 +39,7 @@ import { arrowMarkTextBox } from "./arrow-mark";
 import { tableAnchors, tableEdgeIndex, tableHitCell, tableLayout } from "./table";
 import { imageAnchors, imageBox } from "./images";
 import { signpostLayout } from "./signpost";
-import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, textToolLayout } from "./text-tools";
+import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, priceLabelText, textToolLayout } from "./text-tools";
 
 const HANDLE_R = HANDLE_RADIUS + HIT_TOLERANCE;
 
@@ -936,7 +937,7 @@ function priceNoteHit(d: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null |
   if (h) return h;
   if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= HIT_TOLERANCE) return { hit: "body" };
   const pip = coords?.pipSize() ?? 0.01;
-  const box = priceNoteLabel(d, pts, Math.max(0, Math.min(8, Math.round(-Math.log10(pip)))))?.box;
+  const box = priceNoteLabel(d, pts, Math.max(0, Math.min(8, Math.round(-Math.log10(pip)))), coords)?.box;
   if (box && cursor.x >= box.left && cursor.x <= box.left + box.width && cursor.y >= box.top && cursor.y <= box.top + box.height) return { hit: "body" };
   return null;
 }
@@ -1035,6 +1036,19 @@ export function hitTestKind(
   /** The drawing is selected (table: its row / column edges resize). */
   selected = false,
 ): HitResult | null {
+  // Hit boxes build the same labels as the scene (price note / price label), so the hook sees the same context.
+  return withLabelContext(coords, drawing, () => hitTestKindOf(drawing, pts, cursor, width, height, coords, selected));
+}
+
+function hitTestKindOf(
+  drawing: Drawing,
+  pts: Pt[],
+  cursor: Pt,
+  width: number,
+  height: number,
+  coords: Coords | null,
+  selected: boolean,
+): HitResult | null {
   // Stroked-line kinds get a hit slop that scales with the drawing's width.
   const tol = strokeTolerance(drawing.style);
   switch (drawing.kind) {
@@ -1072,7 +1086,7 @@ export function hitTestKind(
     case "price-label": {
       const h = endpointHit(pts, cursor);
       if (h) return h;
-      const b = priceLabelLayout(drawing.points[0].price.toFixed(Math.max(0, Math.min(8, Math.round(-Math.log10(coords?.pipSize() ?? 0.01))))), pts[0], drawing.style.fontSize ?? 14);
+      const b = priceLabelLayout(priceLabelText(drawing.points[0].price, coords), pts[0], drawing.style.fontSize ?? 14);
       return inBox(cursor, { left: b.x, top: b.y, width: b.w, height: b.h }) ? { hit: "body" } : null;
     }
     case "flag-mark":

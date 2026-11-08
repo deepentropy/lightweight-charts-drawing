@@ -4,6 +4,7 @@
  */
 import { HANDLE_RADIUS, timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import type { Drawing, DrawingStyle } from "../types";
 import { applyOpacity, parseColor } from "../color";
 import { isoDateTimeParts } from "../time";
@@ -79,10 +80,10 @@ export function scenePosition(d: Drawing, pts: Pt[], selected: boolean, dir: "lo
   const pip = coords?.pipSize() ?? 0.01;
   const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
   // TV label texts from the Stats flags and compact mode (kinds/position.ts);
-  // TP / SL PL = (target | stop − entry) · side · qty.
-  const targetText = positionLegText(s, "tp", profit, entry, pip, digits, amountTarget, profit * qtyRaw);
-  const stopText = positionLegText(s, "sl", stop, entry, pip, digits, amountStop, -stop * qtyRaw);
-  const midText = positionMiddleText(s, pl != null ? signedFixed(pl, digits) : null, !!trade?.closed, qty, ratio);
+  // TP / SL PL = (target | stop − entry) · side · qty. Hook before measure.
+  const targetText = positionLegText(s, "tp", profit, entry, pip, digits, amountTarget, profit * qtyRaw, coords);
+  const stopText = positionLegText(s, "sl", stop, entry, pip, digits, amountStop, -stop * qtyRaw, coords);
+  const midText = positionMiddleText(s, pl, !!trade?.closed, qty, ratio, digits, coords);
   const midLines = midText ? midText.split("\n") : [];
   const midBg = pl != null && pl < 0 ? stopHex : pl != null && pl > 0 ? targetHex : s.color;
   // Screen geometry of the actual trade (TV entryX / right / closeLevel).
@@ -179,7 +180,14 @@ function fmtForecastDate(t: unknown, sep: string, coords: Coords | null): string
   if (n == null) return "";
   const info = coords?.timeInfo() ?? { timeZone: "UTC", intraday: true };
   const { date, time } = isoDateTimeParts(n, info.timeZone);
-  return info.intraday ? `${date}${sep}${time}` : date;
+  const text = info.intraday ? `${date}${sep}${time}` : date;
+  return labelOrDefault(coords, {
+    id: "forecast-date",
+    text,
+    time: n,
+    timeZone: info.timeZone,
+    intraday: info.intraday,
+  });
 }
 
 type BalloonProps = {
@@ -271,10 +279,33 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   const t1 = timeToSec(d.points[1].time);
   // TV line-tool-prediction texts: target "1.74 (7.04%) in 1d 21h 30m" /
   // "26.40 [clock] 2026-09-02  11:30"; source "24.67" / "2026-08-31 14:00".
-  const span = t0 != null && t1 != null ? tvTimeSpan(t1 - t0) : "";
+  const seconds = t0 != null && t1 != null ? t1 - t0 : null;
+  const span = seconds != null ? tvTimeSpan(seconds) : "";
   const pip = coords?.pipSize() ?? 0.01;
   const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
   const status = forecastStatus(d, coords);
+  const srcPrice = d.points[0].price;
+  const tgtPrice = d.points[1].price;
+  const forecastText = labelOrDefault(coords, {
+    id: "forecast",
+    text: `${signedFixed(dPrice, digits)} (${signedFixed(Math.round(pct * 100) / 100, 2)}%)${span ? ` in ${span}` : ""}`,
+    change: dPrice,
+    percent: pct,
+    seconds,
+    digits,
+  });
+  const srcPriceText = labelOrDefault(coords, {
+    id: "price",
+    text: srcPrice.toFixed(digits),
+    price: srcPrice,
+    digits,
+  });
+  const tgtPriceText = labelOrDefault(coords, {
+    id: "price",
+    text: tgtPrice.toFixed(digits),
+    price: tgtPrice,
+    digits,
+  });
   // TV: backgrounds, borders and banners at the drawing's transparency.
   const op = Math.max(0, Math.min(1, (100 - (s.transparency ?? 10)) / 100));
   const out: Scene = [
@@ -289,7 +320,7 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
       paneW: w,
       height: 32,
       rows: [
-        { text: d.points[0].price.toFixed(digits), size: 12, dy: 4 },
+        { text: srcPriceText, size: 12, dy: 4 },
         { text: fmtForecastDate(d.points[0].time, " ", coords), size: 10, dy: 18 },
       ],
       bg: s.sourceBackColor ?? "#2962FF",
@@ -304,8 +335,8 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
       paneW: w,
       height: 38,
       rows: [
-        { text: `${signedFixed(dPrice, digits)} (${signedFixed(Math.round(pct * 100) / 100, 2)}%)${span ? ` in ${span}` : ""}`, size: 14, dy: 5 },
-        { text: d.points[1].price.toFixed(digits), size: 11, dy: 22, clockThen: fmtForecastDate(d.points[1].time, "  ", coords) },
+        { text: forecastText, size: 14, dy: 5 },
+        { text: tgtPriceText, size: 11, dy: 22, clockThen: fmtForecastDate(d.points[1].time, "  ", coords) },
       ],
       bg: s.targetBackColor ?? "#2962FF",
       stroke: s.targetStrokeColor ?? "#2962FF",
