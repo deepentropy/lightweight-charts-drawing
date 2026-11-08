@@ -4,6 +4,26 @@
 
 ### Added
 
+- `keyboard` option (`DrawingManagerOptions`): `false` adds no window key listener, so Delete / Backspace / Escape never change drawings or the selection (hosts with their own key policy).
+- `DrawingManager.cancelPending()`: cancels a half-placed drawing and its preview, keeps the armed tool (a host calls it when another tool or the cursor is chosen mid-placement).
+- `formatLabel` option (`DrawingManagerOptions`, also `Coords.formatLabel`):
+  host text for every on-canvas label (field names, numbers, dates) with raw
+  values; `DrawingLabel` / `LabelFormatter` types exported. Without it the
+  labels are unchanged.
+- `DrawingManager.setFormatLabel(fn)` swaps the label hook after construction and
+  repaints (live language switch); `setFormatLabel(undefined)` restores the defaults.
+- Every label the `formatLabel` hook receives carries `kind` (the drawing's tool)
+  and `drawingId` (`"__preview__"` while placing), so a host can tell which drawing
+  a label belongs to. `LabelContext` type exported.
+- `formatLabel` row-level label `stats-row` for each stats-box row of the trend-line family
+  and the range tools (`text` = library join, `row`, `parts` = the piece labels); return
+  `undefined` to keep the join. Position and forecast labels already carry all raw values and
+  stay one label (rule and table in the code API reference).
+- `magnetSource` option: the host supplies the magnet candidates (`{ time, values }` or
+  `null`) for the cursor's time instead of the series OHLC. A host with several panes
+  feeds one time grid through `bars` but needs per-pane candidates (for example an
+  indicator line value). The point takes the returned bar time and the exact price;
+  `null`, an empty list or a throwing source means no snap.
 - `interactive` option and `setInteractive(on)`: a view-only manager paints its drawings
   but takes no pointer input (no placement, selection, drag, hover, double-click) and
   stops no event, so the chart pans and zooms over them. Useful for a read-only or
@@ -11,6 +31,7 @@
 
 ### Fixed
 
+- With `keyboard: false`, Shift and Ctrl / Cmd are read from the pointer events (`shiftKey`, `ctrlKey` / `metaKey`) of every handled `pointerdown` / `pointermove`, so angle snap, axis lock and the magnet inversion still work; the placement preview follows the modifiers of the latest `pointermove`. With `keyboard: true` or omitted, only key presses drive them, exactly as in 0.6.3.
 - Touch: a held gesture (drawing drag, placement, brush) ended by `pointercancel`
   left the chart's pan / zoom off and stopped the drag; it now releases on cancel,
   keeps `touchmove` for the drag, and a second finger no longer places points.
@@ -18,6 +39,10 @@
   of the same day) was drawn part-way into the future instead of on that bar. Without
   a host calendar, times after the last bar now sit on whole future bars, and an x in
   the future gives the open time of its nearest future bar.
+- A manager on a series whose pane was added in the same frame threw `Value is undefined`
+  from `chart.paneSize()` during the primitive's view update (the pane is in the chart model
+  before its widget exists), which broke the host's series / pane update. The pane is now
+  treated as empty until it has a size.
 
 ## 0.6.3 (02/11/2026)
 
