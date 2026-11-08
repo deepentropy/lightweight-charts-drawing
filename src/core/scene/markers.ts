@@ -9,7 +9,7 @@ import type { Drawing, DrawingStyle } from "../types";
 import { GHOST_CANDLE_DEFAULTS } from "../specs";
 import { arrowMarkTextBox } from "../kinds/arrow-mark";
 import { barsPatternGeometry } from "../kinds/bars-pattern";
-import { priceLabelLayout, priceLabelPath } from "../kinds/text-tools";
+import { priceLabelLayout, priceLabelPath, priceLabelText } from "../kinds/text-tools";
 import { applyOpacity, parseColor } from "../color";
 import type { Scene, SceneItem } from "./types";
 
@@ -165,9 +165,7 @@ export function sceneFlagMark(pts: Pt[], selected: boolean, s: DrawingStyle): Sc
  *  at the point ringed in the chart background. */
 export function scenePriceLabel(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null): Scene {
   const c = pts[0];
-  const pip = coords?.pipSize() ?? 0.01;
-  const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
-  const label = d.points[0].price.toFixed(digits);
+  const label = priceLabelText(d.points[0].price, coords);
   const fs = s.fontSize ?? 14;
   const b = priceLabelLayout(label, c, fs);
   const t = 100 - (s.transparency ?? 0);

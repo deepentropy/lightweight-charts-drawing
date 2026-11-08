@@ -6,6 +6,7 @@
  */
 import { dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import type { Drawing, DrawingStyle, LevelDef } from "../types";
 import {
   FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_TREND_LINE_DEFAULT, FIB_WEDGE_LEVEL_DEFAULTS,
@@ -13,7 +14,7 @@ import {
   TREND_FIB_TIME_LEVEL_DEFAULTS, TREND_FIB_TIME_TREND_DEFAULT,
 } from "../specs";
 import { tvTextLayout } from "../kinds/tv-text";
-import { fibCoeffText, fibLevelLabel } from "../kinds/fib-labels";
+import { fibCoeffText, fibLevelLabel, fibLevelText } from "../kinds/fib-labels";
 import { trendFibTimeLevels } from "../kinds/fib-time";
 import { extendRay, speedFanGeometry } from "../kinds/speed-fan";
 import { spiralSamples } from "../kinds/hit-tests";
@@ -44,13 +45,22 @@ export function fibTrendLineItems(a: Pt, b: Pt, s: DrawingStyle, wedge = false):
 
 /** A horizontal fib level with its TV label (value / price) and level text;
  *  the line is cut behind both (TV exclusion path). */
-export function fibHLevelItems(name: string, lvl: LevelDef, y: number, left: number, right: number, price: number, digits: number, s: DrawingStyle, paneW: number): SceneItem[] {
+export function fibHLevelItems(
+  name: string,
+  lvl: LevelDef,
+  y: number,
+  left: number,
+  right: number,
+  price: number,
+  digits: number,
+  s: DrawingStyle,
+  paneW: number,
+  coords?: Coords | null,
+): SceneItem[] {
   const base = { y, left, right, extendLeft: !!s.extendLeft, extendRight: !!s.extendRight, paneW, fs: s.labelFontSize ?? 12 };
   const showC = s.showCoeffs !== false;
   const showP = s.showPrices !== false;
-  let text = "";
-  if (showC) text += fibCoeffText(lvl.coeff, !!s.fibLevelsAsPercents);
-  if (showP) text += ` (${price.toFixed(digits)})`;
+  const text = fibLevelText(lvl.coeff, !!s.fibLevelsAsPercents, price, digits, showC, showP, coords);
   const label = fibLevelLabel({ ...base, text, horz: s.horzLabelsAlign ?? "left", vert: s.vertLabelsAlign ?? "middle" });
   const lvText = s.showText !== false && lvl.text ? fibLevelLabel({ ...base, text: lvl.text, horz: s.horzTextAlign ?? "center", vert: s.vertTextAlign ?? "middle" }) : null;
   const cut = clipOf(name, [label?.poly ?? null, lvText?.poly]);
@@ -166,7 +176,7 @@ export function sceneFib(d: Drawing, pts: Pt[], selected: boolean, w: number, s:
   const digits = digitsOf(coords);
   return [
     ...hBands(levels, yOf, left, right, levelFillOpacity(s)),
-    ...levels.flatMap((lvl, i) => fibHLevelItems(`l${i}`, lvl, yOf(lvl.coeff), left, right, priceOf(lvl.coeff), digits, s, w)),
+    ...levels.flatMap((lvl, i) => fibHLevelItems(`l${i}`, lvl, yOf(lvl.coeff), left, right, priceOf(lvl.coeff), digits, s, w, coords)),
     // TV draws the trend line after the levels, before the labels.
     ...fibTrendLineItems(a, b, s),
     ...anchorsIf(selected, pts),
@@ -198,7 +208,7 @@ export function sceneFibExtension(d: Drawing, pts: Pt[], selected: boolean, w: n
   const digits = digitsOf(coords);
   return [
     ...hBands(levels, yOf, left, right, levelFillOpacity(s)),
-    ...levels.flatMap((lvl, i) => fibHLevelItems(`l${i}`, lvl, yOf(lvl.coeff), left, right, priceOf(lvl.coeff), digits, s, w)),
+    ...levels.flatMap((lvl, i) => fibHLevelItems(`l${i}`, lvl, yOf(lvl.coeff), left, right, priceOf(lvl.coeff), digits, s, w, coords)),
     // TV trend line: the measured move and the projection leg.
     ...fibTrendLineItems(pts[0], pts[1], s),
     ...fibTrendLineItems(pts[1], pts[2], s),
@@ -233,9 +243,19 @@ export function sceneFibChannel(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     const showC = s.showCoeffs !== false;
     const showP = s.showPrices !== false;
     if (!showC && !showP) return null;
-    let text = "";
-    if (showC) text += s.fibLevelsAsPercents ? `${(100 * lvl.coeff).toFixed(2)}%` : fmtCoeff(lvl.coeff);
-    if (showP) text += ` (${priceAt(lvl.coeff, seg.l.y).toFixed(digits)})`;
+    const price = priceAt(lvl.coeff, seg.l.y);
+    const coeffText = s.fibLevelsAsPercents ? `${(100 * lvl.coeff).toFixed(2)}%` : fmtCoeff(lvl.coeff);
+    // fib channel keeps fmtCoeff defaults; hook here so scene/fib.ts calls labelOrDefault.
+    let raw = "";
+    if (showC) raw += coeffText;
+    if (showP) raw += ` (${price.toFixed(digits)})`;
+    const text = labelOrDefault(coords, {
+      id: "fib-level",
+      text: raw,
+      coeff: lvl.coeff,
+      price: showP ? price : null,
+      digits,
+    });
     const horz = s.horzLabelsAlign ?? "left";
     const pt = horz === "left" ? seg.l : horz === "right" ? seg.r : { x: (seg.l.x + seg.r.x) / 2, y: (seg.l.y + seg.r.y) / 2 };
     return tvTextLayout({ x: pt.x, y: pt.y, text, fs: s.labelFontSize ?? 12, vert: s.vertLabelsAlign ?? "middle", horz: horz === "left" ? "right" : horz === "right" ? "left" : "center", offsetX: 4 });

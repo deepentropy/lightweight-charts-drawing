@@ -8,14 +8,86 @@ Everything below is exported from `lightweight-charts-drawing` (`src/index.ts`).
 ```ts
 const dm = new DrawingManager(chart, series, {
   magnet: "off" | "weak" | "strong",   // OHLC snap while placing / dragging anchors
+  magnetSource: (time) => ({ time, values: [/* prices to snap to on that bar */] }),  // host candidates instead of OHLC; null / [] = no snap
   bars: () => OHLC[],                  // bars with volume (volume profiles, VWAP); default: series data
   interval: "1D",                      // per-interval visibility of drawings; unset = all shown
   timeInfo: () => ({ timeZone: "America/New_York", intraday: true }),  // date labels
   fontFamily: "...",                   // default: the chart font
   stayInDrawingMode: false,            // keep the tool armed after a placement
+  keyboard: true,                      // false: no window key listener (Escape / Delete off; pointer-event Shift / Ctrl stay)
+  formatLabel: (label) => string | undefined,  // host text for every on-canvas label; see DrawingLabel
   clampToPane: false,                  // pending placement + drags stop at the pane edge (else outside presses are ignored)
 });
 ```
+
+`DrawingLabel` (`src/core/labels.ts`) is a discriminated union on `id`. Each
+variant carries the default `text` plus raw fields the host can reformat:
+
+| `id` | Raw fields |
+|---|---|
+| `price-range` | `change`, `percent`, `pips`, `digits`, `price0`, `price1` |
+| `bars-range` | `bars` |
+| `time-span` | `seconds` |
+| `distance` | `distancePx` |
+| `angle` | `degrees` |
+| `volume` | `volume` |
+| `position-target` / `position-stop` | `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| `position-middle` | `pnl`, `closed`, `qty`, `ratio` |
+| `forecast` | `change`, `percent`, `seconds`, `digits` |
+| `forecast-date` | `time`, `timeZone`, `intraday` |
+| `price` | `price`, `digits` |
+| `fib-level` | `coeff`, `price`, `digits` |
+| `pearson` | `r` |
+| `gann-ratio` | `ratio` |
+| `stats-row` | `row`, `parts` (the row's piece labels) |
+
+Every label also carries `kind` (the drawing's tool, e.g. `"trend-line"`) and `drawingId`
+(the drawing's id; `"__preview__"` while the user is placing it), so a host can tell which
+drawing a label belongs to.
+
+### Composite labels
+
+One rule: a string the library joins from **several separately hooked pieces** also reaches the
+hook as one row-level `stats-row` label. The piece labels are still hooked first; `stats-row`
+gets `text` (the library join of the pieces as they will draw), `row` (0-based index in the
+stats box) and `parts` (the piece labels, each with the text it will draw and its own raw
+fields). Return `undefined` / `null` to keep the join, a string to replace the whole row. A
+string that already comes from **one label carrying every raw value it shows** stays one label.
+
+| Drawing | String | Outcome |
+|---|---|---|
+| trend line family, range tools (stats box) | price row | `stats-row`, `parts` = [`price-range`] |
+| trend line family, range tools | bars row ("N bars (span), distance") | `stats-row`, `parts` = [`bars-range`, `time-span`, `distance`] (those present) |
+| trend line family | angle row | `stats-row`, `parts` = [`angle`] |
+| range tools | volume row | `stats-row`, `parts` = [`volume`] |
+| long / short position | `position-target` / `position-stop` ("Target: 30.00 (25.000%) 3,000, Amount: 1500") | one label, already carries `distance`, `percent`, `ticks`, `amount`, `pnl`, `digits` |
+| long / short position | `position-middle` (PnL, qty, risk / reward on two lines) | one label, already carries `pnl`, `closed`, `qty`, `ratio` |
+| position forecast | `forecast` ("30.00 (27.27%) in 20d") | one label, already carries `change`, `percent`, `seconds`, `digits` |
+| position forecast | balloon price + clock + date | not a joined string: `price` and `forecast-date` are drawn as separate items |
+| position forecast | `SUCCESS` / `FAILURE` banner | status text, not hooked (not in the label inventory) |
+
+Rewriting a piece changes the join; rewriting `stats-row` replaces the join. A hook that returns
+text for every `id` will also replace the rows, so return `undefined` for `stats-row` unless you
+mean to.
+
+`time-span` can arrive with an empty `text` when a hook is set (the span is zero or suppressed).
+Return `undefined` to keep it empty; do not assume a non-empty default.
+
+`dm.setFormatLabel(fn)` replaces the hook on a live manager and repaints once (for example to switch
+the language); `dm.setFormatLabel(undefined)` restores the library defaults.
+
+### Strings the hook does not reach
+
+Text drawn on the canvas outside `formatLabel` (the hook does not reach these strings):
+
+| String | Where | Why |
+|---|---|---|
+| `SUCCESS` / `FAILURE` banner | position forecast | intentional: status text, not a label |
+| axis labels (price scale, time scale) | the chart | the chart's own `priceFormatter` / `localization.timeFormatter` |
+| pattern vertex letters / numbers (`A B C D`, `X A B C D`, `1 2 3 …`) and ratio pills | ABCD, XABCD, Cypher, three drives, head and shoulders, triangle, Elliott, polyline / path | intentional: fixed pattern notation |
+| angle arc text (`-59.04º`) | trend angle | the stats-box `angle` row is hooked, the text beside the arc is not |
+| level coefficients (`0.618`, `1.618`, level numbers) | fib time zone, trend-based fib time, fib circles, fib speed fan / arcs, fib wedge, Gann fan, Gann box side labels | numbers only; `fib-level` covers fib retracement / extension / channel, and Gann square goes through `price`, `bars-range`, `gann-ratio` |
+| user-typed text and the default `font-icon` glyph | text, note, callout, table, shape text, markers | author content, not generated text |
 
 One manager per series. It attaches one series primitive and listens to pointer and key events on
 the chart element. Call `dm.destroy()` before removing the chart or the series.
@@ -32,7 +104,9 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `bringToFront(id)`, `sendToBack(id)` | z-order |
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
+| `cancelPending()` | cancels a half-placed drawing and its preview, keeps the tool armed; no-op with nothing pending |
 | `setMagnet`, `setInterval`, `setStayInDrawingMode` | settings |
+| `setFormatLabel(fn \| undefined)` | swap the `formatLabel` hook and repaint; `undefined` = library defaults |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |
 | `setTableCellText`, `endTableEdit`, `tableOp`, `tableState` | table editing after `tableEdit` |
@@ -58,6 +132,10 @@ draw while the button is held. Drag anchors or the body of a selected drawing; C
 adds to the selection, Ctrl + body drag clones. Shift constrains (45 degree steps, squares, axis
 lock) and turns the magnet off; Ctrl / Cmd inverts the magnet. Escape drops pending points, then
 the tool, then the selection; Delete / Backspace removes the selected unlocked drawings.
+With `keyboard: false` the manager adds no key listener: no Escape cascade, no Delete / Backspace
+removal. Shift and Ctrl / Cmd are read from the pointer events of a gesture (`shiftKey`, `ctrlKey` / `metaKey`), so
+angle snap, axis lock, the magnet inversion, multi-select and clone keep working; the placement preview follows
+the modifiers of the latest `pointermove`.
 
 ## Creating from clicks
 

@@ -4,6 +4,7 @@
  */
 import { dashFor, type Pt } from "../_shared";
 import type { Coords } from "../coords";
+import { labelOrDefault } from "../labels";
 import type { Drawing, DrawingStyle, LevelDef } from "../types";
 import { PARALLEL_CHANNEL_LEVEL_DEFAULTS } from "../specs";
 import { tvTextLayout } from "../kinds/tv-text";
@@ -101,7 +102,8 @@ export function channelBodyItems(d: Drawing, a: Pt, b: Pt, A: Pt, P: Pt, priceB:
   const dash = dashFor(s);
   const cap = ((s.lineStyle ?? "solid") === "solid" ? "round" : "butt") as "round" | "butt";
   const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(coords?.pipSize() ?? 0.01))));
-  const fmt = (v: number) => v.toFixed(digits);
+  const fmt = (v: number) =>
+    labelOrDefault(coords, { id: "price", text: v.toFixed(digits), price: v, digits });
   const items: SceneItem[] = [];
   if (s.fillBackground !== false) items.push({ t: "polygon", pts: [l1.l, l1.r, l2.r, l2.l], fill: s.backgroundColor ?? s.color, fillOpacity: levelFillOpacity(s), stroke: "transparent" });
   items.push(
