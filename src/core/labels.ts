@@ -66,6 +66,9 @@ type DrawingLabelBody =
       digits: number;
     }
   | { id: "pearson"; text: string; r: number }
+  /** A fixed word the library draws: a pattern point name ("Head"), the forecast
+   *  status ("SUCCESS"), the faint placeholder of an empty text drawing ("Add text"). */
+  | { id: "caption"; text: string }
   | { id: "gann-ratio"; text: string; ratio: number }
   | {
       /** One row of a stats box (trend-line family, range tools). `text` is the

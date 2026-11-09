@@ -1164,7 +1164,7 @@ function hitTestKindOf(
     case "text": {
       // TV text: the box; with word wrap (selected) the right-middle anchor
       // (index 1) sets the wrap width.
-      const l = textToolLayout(drawing, pts[0]);
+      const l = textToolLayout(drawing, pts[0], coords);
       if (selected && drawing.style.wordWrap) {
         const h = endpointHit([pts[0], { x: l.box.left + l.box.width, y: l.box.top + l.box.height / 2 }], cursor);
         if (h && h.hit === "handle" && h.handleIndex === 1) return h;
@@ -1174,7 +1174,7 @@ function hitTestKindOf(
     case "comment": {
       const h = endpointHit(pts, cursor);
       if (h) return h;
-      return inBox(cursor, commentLayout(drawing, pts[0]).l.box) ? { hit: "body" } : null;
+      return inBox(cursor, commentLayout(drawing, pts[0], coords).l.box) ? { hit: "body" } : null;
     }
     case "pin": {
       // TV pin: the anchor (the marker tip, on the marker's bottom edge, so
@@ -1182,7 +1182,7 @@ function hitTestKindOf(
       // tooltip only while shown (hover / selection).
       const a = endpointHit(pts, cursor);
       if (a) return a;
-      const t = pinLayout(drawing, pts[0], width);
+      const t = pinLayout(drawing, pts[0], width, coords);
       const m = t.marker;
       if (cursor.x >= m.left && cursor.x <= m.right && cursor.y >= m.top && cursor.y <= m.bottom) return { hit: "body" };
       if (selected && inBox(cursor, { left: t.left, top: t.top, width: t.width, height: t.height })) return { hit: "body" };
@@ -1203,7 +1203,7 @@ function hitTestKindOf(
       if (h) return h;
       if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= HIT_TOLERANCE) return { hit: "body" };
       // The box as drawn (noteLayout); TV TextRenderer.hitTest: inside it.
-      if (pts[1] && inBox(cursor, noteLayout(drawing, drawing.style, pts[0], pts[1]).box)) return { hit: "body" };
+      if (pts[1] && inBox(cursor, noteLayout(drawing, drawing.style, pts[0], pts[1], coords).box)) return { hit: "body" };
       return null;
     }
     case "price-note":
@@ -1211,7 +1211,7 @@ function hitTestKindOf(
     case "callout": {
       // TV callout: p0 (3px), the wrap anchor (index 1, while wrapping), the
       // box.
-      const c = calloutLayout(drawing, pts[1]);
+      const c = calloutLayout(drawing, pts[1], coords);
       if (Math.hypot(pts[0].x - cursor.x, pts[0].y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 0 };
       if (selected && c.wrap != null && Math.hypot(pts[1].x + c.wrap / 2 + 10 - cursor.x, pts[1].y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 1 };
       return inBox(cursor, { left: c.x, top: c.y, width: c.w, height: c.h }) ? { hit: "body" } : null;

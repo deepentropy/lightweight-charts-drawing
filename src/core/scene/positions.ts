@@ -346,7 +346,7 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
         status === "waiting"
           ? undefined
           : {
-              text: status === "success" ? "SUCCESS" : "FAILURE",
+              text: labelOrDefault(coords, { id: "caption", text: status === "success" ? "SUCCESS" : "FAILURE" }),
               icon: status === "success" ? FORECAST_SUCCESS_ICON : FORECAST_FAILURE_ICON,
               bg: status === "success" ? s.successBackground ?? "#4caf50" : s.failureBackground ?? "#F23645",
               fg: status === "success" ? s.successTextColor ?? "#ffffff" : s.failureTextColor ?? "#ffffff",

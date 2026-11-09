@@ -62,7 +62,7 @@ export function signpostLayout(d: Drawing, p: Pt, coords: Coords, paneH: number)
     tvTextLayout({
       x: p.x,
       y,
-      text: toolText(d).text,
+      text: toolText(d, coords).text,
       fs,
       bold: s.bold,
       italic: s.italic,

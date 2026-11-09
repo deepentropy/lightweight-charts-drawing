@@ -353,8 +353,8 @@ describe("formatLabel hook (position-forecast)", () => {
     expect(texts.filter((t) => t === "\u00A7price")).toHaveLength(2);
     expect(texts.some((t) => t === "\u00A7forecast")).toBe(true);
     expect(texts.filter((t) => t === "\u00A7forecast-date")).toHaveLength(2);
-    // Status banner stays library English.
-    expect(texts).toContain("FAILURE");
+    // The status banner is a caption (#26).
+    expect(texts).toContain("§caption");
 
     const prices = seen.filter((l) => l.id === "price");
     expect(prices.map((l) => ("price" in l ? l.price : null))).toEqual([110, 140]);

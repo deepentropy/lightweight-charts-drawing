@@ -33,9 +33,9 @@ const faintColor = (c: string) => applyOpacity(parseColor(c).hex, 50);
  *  TextRenderer outlineBorder: 1.5px (2px on screen) ring outside the box and
  *  the border, tv-blue-500 when selected, at 40% when hovered); no anchor
  *  otherwise. Empty = "Add text" at 50%. */
-export function sceneTextTool(d: Drawing, p: Pt, selected: boolean, hovered: boolean): Scene {
+export function sceneTextTool(d: Drawing, p: Pt, selected: boolean, hovered: boolean, coords: Coords | null = null): Scene {
   const s = d.style;
-  const l = textToolLayout(d, p);
+  const l = textToolLayout(d, p, coords);
   const faint = toolText(d).faint;
   const bw = Math.max(1, Math.round(Math.max((s.fontSize ?? 14) / 12, 1)));
   const outline = selected ? "#2962ff" : hovered ? "rgba(41, 98, 255, 0.4)" : null;
@@ -68,11 +68,11 @@ export function sceneTextTool(d: Drawing, p: Pt, selected: boolean, hovered: boo
  *  point; on hover / selection the text tooltip (kinds/text-tools.ts
  *  pinLayout): background with its transparency and a drop shadow
  *  rgba(0,0,0,0.4) blur 4 offset 2, optional 1px border, text 12px in. */
-export function scenePin(d: Drawing, p: Pt, active: boolean, w: number): Scene {
+export function scenePin(d: Drawing, p: Pt, active: boolean, w: number, coords: Coords | null = null): Scene {
   const s = d.style;
   const out: Scene = [{ t: "path", d: PIN_MARKER_PATH, transform: `translate(${p.x - 12} ${p.y - 30})`, fill: s.color, fillRule: "evenodd" }];
   if (!active) return out;
-  const t = pinLayout(d, p, w);
+  const t = pinLayout(d, p, w, coords);
   const faint = toolText(d).faint;
   const textColor = s.textColor ?? "#dbdbdb";
   const tip: SceneItem[] = [];
@@ -94,10 +94,10 @@ export function scenePin(d: Drawing, p: Pt, active: boolean, w: number): Scene {
  *  line colour (#DBDBDB), a dot at P0 (radius 2, 1px #1f1f1f ring) and the
  *  text box at P1 (kinds/text-tools noteLayout): 14px #DBDBDB text on
  *  #2E2E2E, radius 4, shadow rgba(0,0,0,0.4) blur 4 offset 2. */
-export function sceneTextNote(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneTextNote(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   const [a, b] = pts;
   if (!b) return [];
-  const { txt, faint, fs, box } = noteLayout(d, s, a, b);
+  const { txt, faint, fs, box } = noteLayout(d, s, a, b, coords);
   const x = box.left;
   const y = box.top;
   const boxW = box.width;
@@ -128,9 +128,9 @@ export function sceneTextNote(d: Drawing, pts: Pt[], selected: boolean, s: Drawi
  *  1.3) x 12) drawn as a balloon: radius min(width, fs + 2 padV) / 2 with a
  *  2px corner at the point, background with its transparency, border 2px;
  *  white 16px text (factory); anchor at the point. */
-export function sceneComment(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneComment(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   const [c] = pts;
-  const { l, r } = commentLayout(d, c);
+  const { l, r } = commentLayout(d, c, coords);
   const faint = toolText(d).faint;
   const textColor = s.textColor ?? "#ffffff";
   const b = l.box;
@@ -218,9 +218,9 @@ export function scenePriceNote(d: Drawing, pts: Pt[], selected: boolean, s: Draw
  *  (kinds/text-tools.ts calloutPath), border = line width, background with
  *  its transparency, text 10px in; anchors at p0 (and the wrap handle at the
  *  right middle when wrapping). */
-export function sceneCallout(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneCallout(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   const [anchor, balloon] = pts;
-  const c = calloutLayout(d, balloon);
+  const c = calloutLayout(d, balloon, coords);
   const faint = toolText(d).faint;
   const textColor = s.textColor ?? "#ffffff";
   const out: Scene = [{

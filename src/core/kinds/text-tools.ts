@@ -11,6 +11,12 @@ import type { Pt } from "../_shared";
 import { labelOrDefault } from "../labels";
 import { measureTextStyled, tvTextLayout, tvWordWrap } from "./tv-text";
 
+/** The host's text hook (Coords.formatLabel) for the placeholders; optional, as in the layouts' callers. */
+type LabelHost = { formatLabel?: Coords["formatLabel"]; labelContext?: Coords["labelContext"] } | null;
+
+/** A placeholder through the host's `caption` label. */
+const caption = (coords: LabelHost | undefined, text: string) => labelOrDefault(coords, { id: "caption", text });
+
 /** TV placeholder of an empty text tool ("Add text", drawn at 50%). */
 export const TEXT_TOOL_PLACEHOLDER = "Add text";
 
@@ -21,9 +27,9 @@ export const TEXT_PLACEHOLDER: Record<string, string> = {
   signpost: "Signpost", callout: "Callout",
 };
 /** Resolved annotation text + whether it's the faint placeholder fallback. */
-export function annText(d: Drawing): { txt: string; faint: boolean } {
+export function annText(d: Drawing, coords?: LabelHost): { txt: string; faint: boolean } {
   const has = !!(d.text && d.text.length > 0);
-  return { txt: has ? d.text! : (TEXT_PLACEHOLDER[d.kind] ?? "Text"), faint: !has };
+  return { txt: has ? d.text! : caption(coords, TEXT_PLACEHOLDER[d.kind] ?? "Text"), faint: !has };
 }
 
 /** Note (TV LineToolTextNote) text box at P1: text width + 16 by fs + 12
@@ -31,8 +37,8 @@ export function annText(d: Drawing): { txt: string; faint: boolean } {
  *  alignByAngle): up → centred above P1, right → starts at P1, down →
  *  centred below P1, left → ends at P1. Shared by the scene and the hit
  *  test. */
-export function noteLayout(d: Drawing, s: DrawingStyle, a: Pt, b: Pt) {
-  const { txt, faint } = annText(d);
+export function noteLayout(d: Drawing, s: DrawingStyle, a: Pt, b: Pt, coords?: LabelHost) {
+  const { txt, faint } = annText(d, coords);
   const fs = s.fontSize ?? 14;
   const boxW = measureTextStyled(txt, fs, false, false) + 16;
   const boxH = fs + 12;
@@ -52,20 +58,20 @@ export function noteLayout(d: Drawing, s: DrawingStyle, a: Pt, b: Pt) {
   }
   return { txt, faint, fs, box: { left: x, top: y, width: boxW, height: boxH } };
 }
-export function toolText(d: Drawing): { text: string; faint: boolean } {
-  return d.text ? { text: d.text, faint: false } : { text: TEXT_TOOL_PLACEHOLDER, faint: true };
+export function toolText(d: Drawing, coords?: LabelHost): { text: string; faint: boolean } {
+  return d.text ? { text: d.text, faint: false } : { text: caption(coords, TEXT_TOOL_PLACEHOLDER), faint: true };
 }
 
 /** TV text (LineToolText): TextRenderer box with its top-left at the point,
  *  padding fs / 6, word wrap at wordWrapWidth (box = wrap width wide). */
-export function textToolLayout(d: Drawing, p: Pt) {
+export function textToolLayout(d: Drawing, p: Pt, coords?: LabelHost) {
   const s = d.style;
   const fs = s.fontSize ?? 14;
   const pad = fs / 6;
   return tvTextLayout({
     x: p.x,
     y: p.y,
-    text: toolText(d).text,
+    text: toolText(d, coords).text,
     fs,
     bold: s.bold,
     italic: s.italic,
@@ -81,11 +87,11 @@ export function textToolLayout(d: Drawing, p: Pt) {
 /** TV comment: text box above-right of the point (vert Bottom, horz Left),
  *  padding round(fs / 1.3) x 12; the balloon is that box as a rounded rect
  *  with radius min(width, fs + 2 padV) / 2 and a 2px corner at the point. */
-export function commentLayout(d: Drawing, p: Pt) {
+export function commentLayout(d: Drawing, p: Pt, coords?: LabelHost) {
   const s = d.style;
   const fs = s.fontSize ?? 16;
   const padV = Math.round(fs / 1.3);
-  const l = tvTextLayout({ x: p.x, y: p.y, text: toolText(d).text, fs, vert: "bottom", horz: "left", padV, padH: 12 });
+  const l = tvTextLayout({ x: p.x, y: p.y, text: toolText(d, coords).text, fs, vert: "bottom", horz: "left", padV, padH: 12 });
   const r = Math.min(l.box.width, fs + 2 * padV) / 2;
   return { l, r };
 }
@@ -100,11 +106,11 @@ export const PIN_MARKER_PATH = "m12 30 .88-.77C20.25 22.73 24 17.07 24 12.09 24 
  *  most) with 10px margins, 12px padding, 5px line spacing, 13px from the
  *  marker; above the marker with the caret at the bottom, else below with
  *  the caret on top; no caret within 24px of a pane side. */
-export function pinLayout(d: Drawing, p: Pt, paneW: number) {
+export function pinLayout(d: Drawing, p: Pt, paneW: number, coords?: LabelHost) {
   const s = d.style;
   const fs = s.fontSize ?? 14;
   const width = Math.min(236, paneW);
-  const lines = tvWordWrap(toolText(d).text, fs, !!s.bold, !!s.italic, width - 24);
+  const lines = tvWordWrap(toolText(d, coords).text, fs, !!s.bold, !!s.italic, width - 24);
   let height = lines.length * fs + 24;
   if (lines.length > 1) height += 5 * (lines.length - 1);
   let left = Math.round(p.x - width / 2);
@@ -162,11 +168,11 @@ export function priceLabelPath(b: ReturnType<typeof priceLabelLayout>): string {
 /** TV callout: box centred at p1, (text width + 20) x (fs x lines + 20),
  *  corner radius 8, the pointer to p0 drawn from the side / corner region
  *  p0 is in (TV `_drawImpl`), text lines from the top-left + 10. */
-export function calloutLayout(d: Drawing, p1: Pt) {
+export function calloutLayout(d: Drawing, p1: Pt, coords?: LabelHost) {
   const s = d.style;
   const fs = s.fontSize ?? 14;
   const wrap = s.wordWrap ? s.wordWrapWidth ?? 200 : undefined;
-  const lines = tvWordWrap(toolText(d).text, fs, !!s.bold, !!s.italic, wrap);
+  const lines = tvWordWrap(toolText(d, coords).text, fs, !!s.bold, !!s.italic, wrap);
   const textW = wrap ?? Math.max(0, ...lines.map((l) => measureTextStyled(l, fs, !!s.bold, !!s.italic)));
   const textH = fs * lines.length;
   const w = textW + 20;

@@ -42,6 +42,7 @@ variant carries the default `text` plus raw fields the host can reformat:
 | `pearson` | `r` |
 | `gann-ratio` | `ratio` |
 | `stats-row` | `row`, `parts` (the row's piece labels) |
+| `caption` | none: a fixed word (`Left Shoulder`, `Head`, `Right Shoulder`, `SUCCESS` / `FAILURE`, the faint placeholder of an empty text drawing: `Add text`, `Note`, …) |
 
 Every label also carries `kind` (the drawing's tool, e.g. `"trend-line"`) and `drawingId`
 (the drawing's id; `"__preview__"` while the user is placing it), so a host can tell which
@@ -66,7 +67,7 @@ string that already comes from **one label carrying every raw value it shows** s
 | long / short position | `position-middle` (PnL, qty, risk / reward on two lines) | one label, already carries `pnl`, `closed`, `qty`, `ratio` |
 | position forecast | `forecast` ("30.00 (27.27%) in 20d") | one label, already carries `change`, `percent`, `seconds`, `digits` |
 | position forecast | balloon price + clock + date | not a joined string: `price` and `forecast-date` are drawn as separate items |
-| position forecast | `SUCCESS` / `FAILURE` banner | status text, not hooked (not in the label inventory) |
+| position forecast | `SUCCESS` / `FAILURE` banner | one `caption` label |
 
 Rewriting a piece changes the join; rewriting `stats-row` replaces the join. A hook that returns
 text for every `id` will also replace the rows, so return `undefined` for `stats-row` unless you
@@ -84,7 +85,6 @@ Text drawn on the canvas outside `formatLabel` (the hook does not reach these st
 
 | String | Where | Why |
 |---|---|---|
-| `SUCCESS` / `FAILURE` banner | position forecast | intentional: status text, not a label |
 | axis labels (price scale, time scale) | the chart | the chart's own `priceFormatter` / `localization.timeFormatter` |
 | pattern vertex letters / numbers (`A B C D`, `X A B C D`, `1 2 3 …`) and ratio pills | ABCD, XABCD, Cypher, three drives, head and shoulders, triangle, Elliott, polyline / path | intentional: fixed pattern notation |
 | angle arc text (`-59.04º`) | trend angle | the stats-box `angle` row is hooked, the text beside the arc is not |

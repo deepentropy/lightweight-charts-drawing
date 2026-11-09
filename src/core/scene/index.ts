@@ -174,7 +174,7 @@ function buildScene(d: Drawing, pts: Pt[], c: SceneContext): Scene {
     case "path":
     case "brush":
     case "highlighter":
-      return sceneLabeledPolyline(d, pts, selected, s);
+      return sceneLabeledPolyline(d, pts, selected, s, coords);
     case "arrow-marker":
       return sceneArrowMarker(pts, selected, s);
     case "arrow-mark-up":
@@ -206,19 +206,19 @@ function buildScene(d: Drawing, pts: Pt[], c: SceneContext): Scene {
     case "anchored-volume-profile":
       return sceneAnchoredVolumeProfile(d, pts, selected, coords);
     case "text":
-      return sceneTextTool(d, pts[0], c.textSelected ?? selected, hovered);
+      return sceneTextTool(d, pts[0], c.textSelected ?? selected, hovered, coords);
     case "pin":
-      return scenePin(d, pts[0], selected, w);
+      return scenePin(d, pts[0], selected, w, coords);
     case "note":
-      return sceneTextNote(d, pts, selected, s);
+      return sceneTextNote(d, pts, selected, s, coords);
     case "comment":
-      return sceneComment(d, pts, selected, s);
+      return sceneComment(d, pts, selected, s, coords);
     case "price-note":
       return scenePriceNote(d, pts, selected, s, coords);
     case "signpost":
       return sceneSignpost(d, pts[0], coords, h, selected);
     case "callout":
-      return sceneCallout(d, pts, selected, s);
+      return sceneCallout(d, pts, selected, s, coords);
     case "table":
       return sceneTable(d, pts[0], selected, c.tableUi ?? null);
     case "image":

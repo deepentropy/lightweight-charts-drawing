@@ -6,7 +6,9 @@
  * highlighter.
  */
 import { dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
+import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle } from "../types";
+import { labelOrDefault } from "../labels";
 import { ELLIOTT_DEFAULT_DEGREE } from "../specs";
 import { measureTextStyled } from "../kinds/tv-text";
 import type { Scene, SceneItem } from "./types";
@@ -325,7 +327,7 @@ function lineSegmentHit(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
  *  and of the two shoulder triangles closed by the neckline; pill labels
  *  "Left Shoulder" / "Head" / "Right Shoulder" 5px above the peak (below for
  *  an inverted one). */
-export function sceneHeadAndShoulders(pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneHeadAndShoulders(pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   // Factory transparency 85 when unset; 100 % (opacity 0) draws no fill.
   const fillO = levelFillOpacity({ ...s, transparency: s.transparency ?? 85 });
   const fill = s.backgroundColor ?? s.color;
@@ -345,9 +347,9 @@ export function sceneHeadAndShoulders(pts: Pt[], selected: boolean, s: DrawingSt
   out.push(
     { t: "line", a: i1 ?? far(p4, p2), b: i2 ?? far(p2, p4), stroke: s.color, strokeWidth: s.width, dash: dashFor({ ...s, lineStyle: "dotted" }), inert: true },
     { t: "polyline", pts, fill: "none", stroke: s.color, strokeWidth: s.width, dash: dashFor(s), join: "round" },
-    hnsPill(p1, p1.y < p0.y, "Left Shoulder", p),
-    hnsPill(p3, p3.y < p2.y, "Head", p),
-    hnsPill(p5, p5.y < p4.y, "Right Shoulder", p),
+    hnsPill(p1, p1.y < p0.y, labelOrDefault(coords, { id: "caption", text: "Left Shoulder" }), p),
+    hnsPill(p3, p3.y < p2.y, labelOrDefault(coords, { id: "caption", text: "Head" }), p),
+    hnsPill(p5, p5.y < p4.y, labelOrDefault(coords, { id: "caption", text: "Right Shoulder" }), p),
   );
   if (selected) out.push({ t: "anchors", pts });
   return out;
@@ -390,9 +392,9 @@ export function smoothBrush(pts: Pt[], smooth = 5): Pt[] {
  *  once they have enough points), with a per-kind label at each vertex.
  *  Filled kinds close into a translucent polygon; the highlighter paints a
  *  wide semi-transparent marker stroke. */
-export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   if (d.kind === "triangle-pattern" && pts.length >= 4) return sceneTrianglePattern(pts, selected, s);
-  if (d.kind === "head-and-shoulders" && pts.length >= 7) return sceneHeadAndShoulders(pts, selected, s);
+  if (d.kind === "head-and-shoulders" && pts.length >= 7) return sceneHeadAndShoulders(pts, selected, s, coords);
   if (d.kind === "abcd-pattern" && pts.length >= 2) return sceneAbcdPattern(d, pts, selected, s);
   if ((d.kind === "xabcd-pattern" || d.kind === "cypher-pattern") && pts.length >= 2) return sceneXabcdPattern(d, pts, selected, s);
   if (d.kind === "three-drives-pattern" && pts.length >= 2) return sceneThreeDrives(d, pts, selected, s);

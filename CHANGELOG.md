@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 (09/11/2026)
+
+### Added
+
+- `formatLabel` label `caption` (#26): the fixed words the scenes draw reach the hook before they are measured:
+  the head and shoulders point names (`Left Shoulder`, `Head`, `Right Shoulder`), the position forecast's
+  `SUCCESS` / `FAILURE` banner and the faint placeholder of an empty text drawing (`Add text`, `Note`, …).
+  The text-tool layouts (`textToolLayout`, `noteLayout`, `pinLayout`, `commentLayout`, `calloutLayout`,
+  `toolText`, `annText`) and scenes (`sceneTextTool`, `scenePin`, `sceneTextNote`, `sceneComment`,
+  `sceneCallout`, `sceneHeadAndShoulders`, `sceneLabeledPolyline`) take an optional last `coords` argument for
+  it; hit tests pass theirs, so a translated placeholder is hit where it is drawn. Without a hook nothing changes.
+
 ## 0.7.0 (08/11/2026)
 
 ### Added
