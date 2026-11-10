@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `numberLocale` option (`DrawingManagerOptions`, a BCP-47 tag) and `DrawingManager.setNumberLocale(locale | undefined)`:
+  every number the library draws itself (prices, percents, level coefficients, ratios, quantities, bar counts, spans,
+  angles) follows that locale, including the trend-angle arc and the level coefficients the `formatLabel` hook does
+  not reach. Unset, an invalid tag or a tag without locale data keeps the EN text of earlier versions byte for byte;
+  the browser locale is never read. `formatLabel` still wins on hooked labels. `Coords` gets an optional
+  `numberLocale`; internal scene helpers (fib / Gann / pattern scenes, `fmtCoeff`, `fibCoeffText`, `signedFixed`,
+  `tvTimeSpan`, `tvVolume`) take an optional last `coords` argument for it.
+
 ## 0.8.0 (09/11/2026)
 
 ### Added

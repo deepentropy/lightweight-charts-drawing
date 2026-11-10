@@ -58,7 +58,8 @@ series OHLC; `null` or no values = no snap), `interval`
 (per-interval visibility, TV Visibility tab), `timeInfo` (time zone /
 intraday of date labels), `stayInDrawingMode` (TV Keep drawing),
 `keyboard` (default true; false adds no window key listener: the key actions are off, but Shift and Ctrl / Cmd of a pointer gesture are still read from the pointer events),
-`formatLabel` (optional host formatter for every on-canvas label), `dragToPlace`
+`formatLabel` (optional host formatter for every on-canvas label), `numberLocale`
+(BCP-47 tag for every number the library draws; unset = the fixed EN text), `dragToPlace`
 (place the first two points of a tool by press, drag, release; a movement under 3 px is a click,
 so click-click still works; default `false`), `clampToPane`
 (a pending placement accepts a press outside the pane and clamps it to the pane edge; the
@@ -78,6 +79,14 @@ chart's own `priceFormatter` / `localization.timeFormatter`.
 `setFormatLabel(fn)` replaces the hook on a live manager and repaints (switch
 the language without rebuilding); `setFormatLabel(undefined)` restores the
 library defaults.
+
+`numberLocale?: string` (for example `"uk-UA"`) formats every number the
+library draws itself with `Intl.NumberFormat` for that locale, also the ones the
+hook does not reach (the trend-angle arc, fib / Gann level coefficients).
+Unset, an invalid tag or one without locale data keeps the fixed EN text; any
+set locale groups thousands. `setNumberLocale(locale)` switches it live and
+repaints; `setNumberLocale(undefined)` restores the EN text. `formatLabel`
+still wins, and the default it receives is already formatted.
 
 | `id` | Raw fields |
 |---|---|
@@ -100,7 +109,7 @@ library defaults.
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
 | `cancelPending()` | cancel a half-placed drawing, the tool stays armed |
-| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)`, `setInteractive(on)` | settings |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)`, `setNumberLocale(locale \| undefined)`, `setInteractive(on)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
 | `setDrawingsVisible(visible)`, `drawingsVisible()` | hide / show every drawing at once (TV "Hide all drawings"; not saved, the drawings are untouched) |

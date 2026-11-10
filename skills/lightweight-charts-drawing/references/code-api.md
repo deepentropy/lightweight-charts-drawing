@@ -87,7 +87,12 @@ draws itself** follow that locale: decimal and group separators and digits of pr
 level coefficients, ratios, quantities, bar counts and spans, angles. It covers the hooked labels
 and the strings the hook does not reach (see below). Without it the text is the fixed EN text of
 earlier versions, character for character; the library never reads the browser locale. An invalid
-tag falls back to that EN text instead of throwing.
+tag, or a well-formed one the runtime has no locale data for (`"ua"`, `"zz"`), falls back to that EN
+text instead of throwing or using the runtime locale.
+
+Any set locale groups thousands, `"en"` included: `1234.56` is `1,234.56` under `"en"` but `1234.56`
+unset, so price text on a drawing can differ from an ungrouped price axis. Percent and degree signs
+(`%`, `º`) stay as in the EN text.
 
 `formatLabel` still wins: a hooked label that returns a string draws that string; `undefined` /
 `null` draws the default, which is now the `numberLocale` text. The `default` a hook receives in
@@ -95,12 +100,12 @@ tag falls back to that EN text instead of throwing.
 
 ```ts
 const dm = new DrawingManager(chart, series, { numberLocale: "uk-UA" });  // 0.618 -> 0,618; -59.04º -> -59,04º
-dm.setNumberLocale("en");        // switch live, repaints once
+dm.setNumberLocale("en");        // switch live, repaints once (EN digits with grouping)
 dm.setNumberLocale(undefined);   // back to the fixed EN text
 ```
 
 Fixed notation is not a number format and does not change: pattern letters (`A B C D`), the Elliott
-wave label tables, `1/8`-style Gann fan level names, user-typed text, ISO dates (`2026-01-15`) and the
+wave label tables and the vertex numbers past their end, `1/8`-style Gann fan level names, user-typed text, ISO dates (`2026-01-15`) and the
 chart's own axis labels.
 
 ### Strings the hook does not reach
