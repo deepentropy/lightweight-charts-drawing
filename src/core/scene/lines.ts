@@ -8,6 +8,7 @@
 import { dashFor, timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault, labelPart, type DrawingLabel } from "../labels";
+import { percentText, shortText } from "../numbers";
 import type { Drawing, DrawingStyle } from "../types";
 import { tvTextLayout } from "../kinds/tv-text";
 import type { Scene, SceneItem } from "./types";
@@ -56,7 +57,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
       const sub: string[] = [];
       if (s.showPriceRange) sub.push(signedFixed(dPrice, digits));
       if (s.showPercentPriceRange) {
-        const pct = percent != null ? `${signedFixed(percent, 2)}%` : "";
+        const pct = percent != null ? percentText(percent, 2) : "";
         if (pct) sub.push(s.showPriceRange ? `(${pct})` : pct);
       }
       parts.push(sub.join(" "));
@@ -75,7 +76,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
       const i0 = coords ? coords.timeToBarIndex(p0.time) : null;
       const i1 = coords ? coords.timeToBarIndex(p1.time) : null;
       const nBars = i0 != null && i1 != null ? i1 - i0 : 0;
-      const barsText = `${nBars} bars`;
+      const barsText = `${shortText(nBars)} bars`;
       bits.push({ kind: "bars", part: labelPart(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (showDate) {
@@ -91,7 +92,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
     }
     if (showDist) {
       const distancePx = Math.round(Math.hypot(b.x - a.x, b.y - a.y));
-      const distText = `distance: ${distancePx} px`;
+      const distText = `distance: ${shortText(distancePx)} px`;
       bits.push({ kind: "dist", part: labelPart(coords, { id: "distance", text: distText, distancePx }) });
     }
     if (bits.length) {
@@ -111,7 +112,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
   }
   if (withExtras && s.showAngle && Math.hypot(b.x - a.x, b.y - a.y) > 0) {
     const deg = (Math.atan2(-(b.y - a.y), b.x - a.x) * 180) / Math.PI;
-    const angleText = `${Math.round(deg * 100) / 100}º`;
+    const angleText = `${shortText(Math.round(deg * 100) / 100)}º`;
     const part = labelPart(coords, { id: "angle", text: angleText, degrees: deg });
     pushRow("angle", part.text, [part]);
   }
@@ -464,7 +465,7 @@ export function sceneTrendAngle(d: Drawing, pts: Pt[], selected: boolean, w: num
     ...(s.showMiddlePoint && active ? [{ t: "anchors" as const, pts: [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }] }] : []),
     { t: "path", d: arcPath, fill: "none", stroke: s.color, strokeWidth: 1, dash: "1 2", inert: true },
     {
-      t: "text", x: a.x + r + 5 + fs / 3, y: a.y, text: `${Math.round(angleDeg * 100) / 100}º`, size: fs,
+      t: "text", x: a.x + r + 5 + fs / 3, y: a.y, text: `${shortText(Math.round(angleDeg * 100) / 100)}º`, size: fs,
       anchor: "start", baseline: "central", weight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : "normal", fill: s.color, inert: true,
     },
     // TV TrendToolWithStatsPaneView: price / bars stats (factory off) at the

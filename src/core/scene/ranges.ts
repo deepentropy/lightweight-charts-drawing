@@ -14,6 +14,7 @@
 import { timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault, labelPart, type DrawingLabel } from "../labels";
+import { percentText, shortText } from "../numbers";
 import type { Drawing, DrawingStyle } from "../types";
 import { barsBetween } from "../kinds/data-series";
 import type { Scene, SceneItem, Shadow } from "./types";
@@ -74,7 +75,7 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
     if (pc) {
       const pct = percent ?? 0;
       if (v) c += " (";
-      c += `${signedFixed(Math.round(pct * 100) / 100, 2)}%`;
+      c += percentText(Math.round(pct * 100) / 100, 2);
       if (v) c += ")";
     }
     const pips = Math.round(change / pip);
@@ -97,7 +98,7 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
     const bits: { kind: "bars" | "span"; part: DrawingLabel }[] = [];
     if (g && i0 != null && i1 != null) {
       const nBars = i1 - i0;
-      const barsText = `${nBars} bars`;
+      const barsText = `${shortText(nBars)} bars`;
       bits.push({ kind: "bars", part: labelPart(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (f && t0 != null && t1 != null) {

@@ -8,6 +8,7 @@ import type { Pt } from "../_shared";
 import type { DrawingStyle } from "../types";
 import { measureTextStyled, type tvTextLayout } from "../kinds/tv-text";
 import type { SceneItem } from "./types";
+import { getNumberFormat, groupedText, signedText, volumeText } from "../numbers";
 
 let measureCtx: CanvasRenderingContext2D | null = null;
 let bodyFont: string | null = null;
@@ -39,10 +40,10 @@ export function measureTextFont(text: string, fontSize: number, fontFamily: stri
   return c.measureText(text).width;
 }
 
-/** Signed number with TV's minus sign (U+2212). */
+/** Signed number with TV's minus sign (U+2212); the host number format when
+ *  one is set (numbers.ts). */
 export function signedFixed(v: number, digits: number): string {
-  const t = Math.abs(v).toFixed(digits);
-  return v < 0 ? `−${t}` : t;
+  return signedText(v, digits);
 }
 
 /** TV TimeSpanFormatter: "1d 21h 30m", zero parts omitted. */
@@ -55,21 +56,17 @@ export function tvTimeSpan(seconds: number): string {
   t -= hh * 3600;
   const mm = Math.floor(t / 60);
   t -= mm * 60;
-  const parts: string[] = [];
-  if (dd) parts.push(`${dd.toLocaleString("en-US")}d`);
-  if (hh) parts.push(`${hh}h`);
-  if (mm) parts.push(`${mm}m`);
-  if (t) parts.push(`${t}s`);
-  const out = parts.join(" ");
+  const shown = ([[dd, "d"], [hh, "h"], [mm, "m"], [t, "s"]] as const).filter(([n]) => n);
+  // A host number format writes the numbers, the first one carrying the sign.
+  if (getNumberFormat()) return shown.map(([n, u], i) => `${groupedText(neg && i === 0 ? -n : n, 0)}${u}`).join(" ");
+  const out = shown.map(([n, u]) => `${u === "d" ? n.toLocaleString("en-US") : n}${u}`).join(" ");
   return neg ? `-${out}` : out;
 }
 
 /** TV volume formatter: up to 2 decimals, unit after a narrow no-break
- *  space (U+202F): "519.06 K", "1.5 M", "2 B". */
+ *  space (U+202F): "519.06 K", "1.5 M", "2 B"; the host's when set. */
 export function tvVolume(v: number): string {
-  const units: [number, string][] = [[1e9, " B"], [1e6, " M"], [1e3, " K"]];
-  for (const [div, u] of units) if (Math.abs(v) >= div) return `${Number((v / div).toFixed(2))}${u}`;
-  return String(Math.round(v));
+  return volumeText(v);
 }
 
 /** TV needTextExclusionPath: the line runs through the text only when the

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 (10/11/2026)
+
+### Added
+
+- `setNumberFormat({ formatNumber, formatPercent, formatVolume })` (#29): a host number format for
+  every number the drawings draw (ruler and range stats, position and forecast labels, price notes
+  and labels, channel / fib / Gann prices, coefficients, pattern ratios, Pearson's r, volumes), so a
+  host can write "1 234,56", "−5,81%", "103,47 M". `setNumberFormat(undefined)` restores the English
+  text; `getNumberFormat()`, `ENGLISH_NUMBER_FORMAT` and the `NumberFormat` type are exported.
+  Without a format nothing changes (tests pin the English text).
+
 ## 0.8.0 (09/11/2026)
 
 ### Added

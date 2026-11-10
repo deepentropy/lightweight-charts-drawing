@@ -5,6 +5,7 @@
 import { HANDLE_RADIUS, timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { fixedText, percentText } from "../numbers";
 import type { Drawing, DrawingStyle } from "../types";
 import { applyOpacity, parseColor } from "../color";
 import { isoDateTimeParts } from "../time";
@@ -288,7 +289,7 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   const tgtPrice = d.points[1].price;
   const forecastText = labelOrDefault(coords, {
     id: "forecast",
-    text: `${signedFixed(dPrice, digits)} (${signedFixed(Math.round(pct * 100) / 100, 2)}%)${span ? ` in ${span}` : ""}`,
+    text: `${signedFixed(dPrice, digits)} (${percentText(Math.round(pct * 100) / 100, 2)})${span ? ` in ${span}` : ""}`,
     change: dPrice,
     percent: pct,
     seconds,
@@ -296,13 +297,13 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   });
   const srcPriceText = labelOrDefault(coords, {
     id: "price",
-    text: srcPrice.toFixed(digits),
+    text: fixedText(srcPrice, digits),
     price: srcPrice,
     digits,
   });
   const tgtPriceText = labelOrDefault(coords, {
     id: "price",
-    text: tgtPrice.toFixed(digits),
+    text: fixedText(tgtPrice, digits),
     price: tgtPrice,
     digits,
   });

@@ -7,12 +7,13 @@
  */
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { fixedText, percentText, shortText } from "../numbers";
 import { tvTextLayout } from "./tv-text";
 
 /** Level value text (TV numeric / percentage formatter). */
 export function fibCoeffText(coeff: number, percents: boolean): string {
-  if (percents) return `${(100 * coeff).toFixed(2)}%`;
-  return String(Math.round(coeff * 1e4) / 1e4);
+  if (percents) return percentText(100 * coeff, 2, false);
+  return shortText(Math.round(coeff * 1e4) / 1e4);
 }
 
 /** Combined coeff / price label string, hooked before layout / measure. */
@@ -29,7 +30,7 @@ export function fibLevelText(
 ): string {
   let text = "";
   if (showC) text += coeffText ?? fibCoeffText(coeff, percents);
-  if (showP && price != null) text += ` (${price.toFixed(digits)})`;
+  if (showP && price != null) text += ` (${fixedText(price, digits)})`;
   if (!text) return text;
   return labelOrDefault(coords, {
     id: "fib-level",

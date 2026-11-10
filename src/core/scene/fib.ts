@@ -7,6 +7,7 @@
 import { dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { fixedText, percentText, shortText } from "../numbers";
 import type { Drawing, DrawingStyle, LevelDef } from "../types";
 import {
   FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_TREND_LINE_DEFAULT, FIB_WEDGE_LEVEL_DEFAULTS,
@@ -24,7 +25,8 @@ import { activeLevels, extendSeg, levelDash, levelFillOpacity, levelWidth } from
 
 /** "0.618" without trailing zeros. */
 export function fmtCoeff(c: number): string {
-  return c.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") || "0";
+  const english = c.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") || "0";
+  return shortText(Number(english), english);
 }
 
 const anchorsIf = (selected: boolean, pts: Pt[]): SceneItem[] => (selected ? [{ t: "anchors", pts }] : []);
@@ -244,11 +246,11 @@ export function sceneFibChannel(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     const showP = s.showPrices !== false;
     if (!showC && !showP) return null;
     const price = priceAt(lvl.coeff, seg.l.y);
-    const coeffText = s.fibLevelsAsPercents ? `${(100 * lvl.coeff).toFixed(2)}%` : fmtCoeff(lvl.coeff);
+    const coeffText = s.fibLevelsAsPercents ? percentText(100 * lvl.coeff, 2, false) : fmtCoeff(lvl.coeff);
     // fib channel keeps fmtCoeff defaults; hook here so scene/fib.ts calls labelOrDefault.
     let raw = "";
     if (showC) raw += coeffText;
-    if (showP) raw += ` (${price.toFixed(digits)})`;
+    if (showP) raw += ` (${fixedText(price, digits)})`;
     const text = labelOrDefault(coords, {
       id: "fib-level",
       text: raw,
@@ -306,7 +308,7 @@ export function sceneTrendBasedFibTime(d: Drawing, pts: Pt[], selected: boolean,
   const horzS = s.horzLabelsAlign ?? "right";
   const horz = horzS === "left" ? "right" : horzS === "right" ? "left" : "center";
   const labelAt = (x: number, coeff: number) =>
-    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: String(coeff), fs: 12, vert, horz, offsetX: 2 });
+    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: shortText(coeff), fs: 12, vert, horz, offsetX: 2 });
   const items: SceneItem[] = [];
   if (tl.visible) {
     items.push({ t: "line", a, b, stroke: tl.color, strokeWidth: tl.width, dash: tlDash });
@@ -335,7 +337,7 @@ export function sceneFibTimeZone(pts: Pt[], selected: boolean, h: number, s: Dra
   const horzS = s.horzLabelsAlign ?? "right";
   const horz = horzS === "left" ? "right" : horzS === "right" ? "left" : "center";
   const labelAt = (x: number, coeff: number) =>
-    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: String(coeff), fs: 12, vert, horz, offsetX: 2 });
+    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: shortText(coeff), fs: 12, vert, horz, offsetX: 2 });
   const unit = b.x - a.x;
   const levels = activeLevels(s, FIB_TIMEZONE_LEVEL_DEFAULTS);
   const fillO = levelFillOpacity(s);

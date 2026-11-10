@@ -79,6 +79,25 @@ Return `undefined` to keep it empty; do not assume a non-empty default.
 `dm.setFormatLabel(fn)` replaces the hook on a live manager and repaints once (for example to switch
 the language); `dm.setFormatLabel(undefined)` restores the library defaults.
 
+### Number format
+
+`setNumberFormat(format | undefined)` (package export, global to all managers) writes every number
+the drawings draw, including the strings below that `formatLabel` does not reach (ratio pills, the
+angle arc text, level coefficients). The labels reach `formatLabel` with these numbers.
+
+```ts
+setNumberFormat({
+  formatNumber: (value, digits, grouped) => string, // `digits` decimals; grouped = English groups thousands here
+  formatPercent: (value, digits) => string,         // value already x100: 5.814, 2 -> "5.81%"
+  formatVolume: (value) => string,                  // "519.06 K"
+});
+dm.redraw(); // after a change
+setNumberFormat(undefined); // the library's English text
+```
+
+`ENGLISH_NUMBER_FORMAT` is the library's own format (minus U+2212, a narrow no-break space before
+the volume unit), for a host changing only part of it.
+
 ### Strings the hook does not reach
 
 Text drawn on the canvas outside `formatLabel` (the hook does not reach these strings):

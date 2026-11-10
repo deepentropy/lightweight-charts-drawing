@@ -6,6 +6,7 @@
 import { bboxCorners, dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { shortText } from "../numbers";
 import type { Drawing, DrawingStyle } from "../types";
 import { GANN_ARC_DEFAULTS, GANN_BOX_LEVEL_DEFAULTS, GANN_FAN_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, GANN_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS } from "../specs";
 import { tvTextLayout } from "../kinds/tv-text";
@@ -47,7 +48,7 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
       tvTextLayout({ x, y, text, fs, bold: s.bold, italic: s.italic, horz, vert, offsetX: 10, offsetY: oy });
     const priceDefault = signedFixed(c, digits);
     const priceText = labelOrDefault(coords, { id: "price", text: priceDefault, price: c, digits });
-    const barsDefault = String(u);
+    const barsDefault = shortText(u);
     const barsText = labelOrDefault(coords, { id: "bars-range", text: barsDefault, bars: u });
     const out = [
       mk(f.start.x, f.end.y, priceText, u > 0 ? "right" : "left", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10),
@@ -55,7 +56,7 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     ];
     if (u !== 0) {
       const ratio = Math.abs(c / u);
-      const ratioDefault = String(Number(ratio.toFixed(7)));
+      const ratioDefault = shortText(Number(ratio.toFixed(7)));
       const ratioText = labelOrDefault(coords, { id: "gann-ratio", text: ratioDefault, ratio });
       out.push(mk(f.end.x, f.end.y, ratioText, u > 0 ? "left" : "right", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10));
     }

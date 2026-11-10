@@ -9,6 +9,7 @@ import { dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle } from "../types";
 import { labelOrDefault } from "../labels";
+import { shortText } from "../numbers";
 import { ELLIOTT_DEFAULT_DEGREE } from "../specs";
 import { measureTextStyled } from "../kinds/tv-text";
 import type { Scene, SceneItem } from "./types";
@@ -141,7 +142,7 @@ function retracement(a: number, b: number, c: number, decimals: number): string 
   const denom = b - a;
   if (Math.abs(denom) < 1e-12) return "∞";
   const f = Math.pow(10, decimals);
-  return String(Math.round((Math.abs((c - b) / denom)) * f) / f);
+  return shortText(Math.round((Math.abs((c - b) / denom)) * f) / f);
 }
 
 /** Dotted retracement connector (TV TrendLineRenderer, LINESTYLE_DOTTED). */

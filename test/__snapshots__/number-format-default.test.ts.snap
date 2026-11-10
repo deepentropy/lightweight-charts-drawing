@@ -1,0 +1,203 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`drawing numbers without a number format (English) > abcd pattern 1`] = `
+[
+  "0.6",
+  "1.5",
+  "A",
+  "B",
+  "C",
+  "D",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > date and price range 1`] = `
+[
+  "115.75 (9.57%) 11575",
+  "38 bars, 38d",
+  "Vol 1.96 B",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > disjoint channel with prices 1`] = `
+[
+  "1200.00",
+  "1250.00",
+  "1300.00",
+  "1350.00",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > fib channel 1`] = `
+[
+  "0 (1200.00)",
+  "0.236 (1223.60)",
+  "0.382 (1238.20)",
+  "0.5 (1250.00)",
+  "0.618 (1261.80)",
+  "0.786 (1278.60)",
+  "1 (1300.00)",
+  "1.618 (1361.80)",
+  "2.618 (1461.80)",
+  "3.618 (1561.80)",
+  "4.236 (1623.60)",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > fib retracement 1`] = `
+[
+  "0 (1350.00)",
+  "0.236 (1314.60)",
+  "0.382 (1292.70)",
+  "0.5 (1275.00)",
+  "0.618 (1257.30)",
+  "0.786 (1232.10)",
+  "1 (1200.00)",
+  "1.618 (1107.30)",
+  "2.618 (957.30)",
+  "3.618 (807.30)",
+  "4.236 (714.60)",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > fib retracement in percents 1`] = `
+[
+  "0.00% (1350.00)",
+  "23.60% (1314.60)",
+  "38.20% (1292.70)",
+  "50.00% (1275.00)",
+  "61.80% (1257.30)",
+  "78.60% (1232.10)",
+  "100.00% (1200.00)",
+  "161.80% (1107.30)",
+  "261.80% (957.30)",
+  "361.80% (807.30)",
+  "423.60% (714.60)",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > fib time zone 1`] = `
+[
+  "0",
+  "1",
+  "2",
+  "3",
+  "5",
+  "8",
+  "13",
+  "21",
+  "34",
+  "55",
+  "89",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > gann box 1`] = `
+[
+  "0",
+  "0",
+  "0.25",
+  "0.25",
+  "0.382",
+  "0.382",
+  "0.5",
+  "0.5",
+  "0.618",
+  "0.618",
+  "0.75",
+  "0.75",
+  "1",
+  "1",
+  "0",
+  "0",
+  "0.25",
+  "0.25",
+  "0.382",
+  "0.382",
+  "0.5",
+  "0.5",
+  "0.618",
+  "0.618",
+  "0.75",
+  "0.75",
+  "1",
+  "1",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > gann square 1`] = `
+[
+  "150.00",
+  "25",
+  "6",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > long position 1`] = `
+[
+  "Target: 150,000.00 (12000.000%) 15,000,000, Amount: 25193.55",
+  "Open PnL: 40.50, Qty: 0",
+  "Risk/reward ratio: 96.77",
+  "Stop: 1,550.00 (124.000%) 155,000, Amount: 750",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > position forecast 1`] = `
+[
+  "1250.00",
+  "2020-01-16",
+  "−19.50 (−1.56%) in 30d",
+  "1230.50",
+  "2020-02-15",
+  "FAILURE",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > price label 1`] = `
+[
+  "1234.50",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > price note 1`] = `
+[
+  "1234.50",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > regression trend 1`] = `
+[
+  "1",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > short position, compact 1`] = `
+[
+  "3,000.00 (240.000%) 300,000 1483.87",
+  "−40.50 ~ 0",
+  "1.94",
+  "1,550.00 (124.000%) 155,000 750",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > trend angle 1`] = `
+[
+  "26.57º",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > trend line, falling, 1,500 days 1`] = `
+[
+  "−266.25 (−17.74%), −26625",
+  "1500 bars (1,500d), distance: 15005 px",
+  "-1.53º",
+]
+`;
+
+exports[`drawing numbers without a number format (English) > trend line, right to left 1`] = `
+[
+  "50.00 (4.00%), 5000",
+  "-20 bars (-20d), distance: 214 px",
+  "159.44º",
+]
+`;

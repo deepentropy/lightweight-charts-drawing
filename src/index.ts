@@ -29,6 +29,7 @@ export {
 export { OVERLAY_SPECS, defaultStyleFor, factoryStyleFor, findOverlaySpec, setDefaultStyleOverride, volumeProfileDefaults, volumeProfileStyle, type OverlaySpec } from "./core/specs";
 export type { Coords, OHLC } from "./core/coords";
 export type { DrawingLabel, LabelContext, LabelFormatter } from "./core/labels";
+export { setNumberFormat, getNumberFormat, ENGLISH_NUMBER_FORMAT, type NumberFormat } from "./core/numbers";
 export type { Pt, HitResult } from "./core/_shared";
 export { parseDrawings, migrateDrawing } from "./core/serialize";
 

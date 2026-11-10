@@ -8,6 +8,7 @@
 import { dashFor, HANDLE_RADIUS, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { shortText, volumeText } from "../numbers";
 import type { Drawing, DrawingStyle, RegressionLine } from "../types";
 import { REGRESSION_LINE_DEFAULTS, volumeProfileStyle } from "../specs";
 import { anchoredVpBox, fixedVpBox, regressionScreenLines, vwapBandLine, vwapScreenSeries } from "../kinds/data-series";
@@ -58,7 +59,7 @@ export function sceneRegressionTrend(d: Drawing, pts: Pt[], selected: boolean, w
   if (s.showPearsons !== false && l) {
     const pearsonText = labelOrDefault(coords, {
       id: "pearson",
-      text: String(lines.pearsons),
+      text: shortText(lines.pearsons),
       r: lines.pearsons,
     });
     out.push({ t: "text", x: l[0].x, y: l[0].y + 4, text: pearsonText, anchor: "middle", baseline: "hanging", size: 12, fill: rl.down.color, inert: true });
@@ -113,8 +114,13 @@ export function sceneAnchoredVwap(d: Drawing, pts: Pt[], selected: boolean, w: n
 /** Line dash of a volume profile line style. */
 const vpDash = (s: RegressionLine["style"]) => (s === "dashed" ? "6 4" : s === "dotted" ? "2 3" : undefined);
 
-/** Compact volume text ("1.25M", "830K") for the histogram values. */
+/** Compact volume text ("1.25M", "830K") for the histogram values; the host
+ *  number format's volume when one is set. */
 function vpVolumeText(v: number): string {
+  return volumeText(v, vpEnglishVolume);
+}
+
+function vpEnglishVolume(v: number): string {
   const a = Math.abs(v);
   const f = (x: number, u: string) => `${(v < 0 ? -x : x).toFixed(x >= 100 ? 0 : x >= 10 ? 1 : 2)}${u}`;
   if (a >= 1e9) return f(a / 1e9, "B");

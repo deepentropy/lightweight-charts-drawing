@@ -79,6 +79,14 @@ chart's own `priceFormatter` / `localization.timeFormatter`.
 the language without rebuilding); `setFormatLabel(undefined)` restores the
 library defaults.
 
+`setNumberFormat({ formatNumber(value, digits, grouped), formatPercent(value, digits), formatVolume(value) })`
+writes every number the drawings draw (ruler and range stats, position and forecast labels, price
+notes and labels, channel / fib / Gann prices, coefficients, pattern ratios, volumes) in the host's
+marks, for example `"1 234,56"`, `"−5,81%"`, `"103,47 M"`. `grouped` tells where the library's
+English text groups thousands. It is global (all managers): call `redraw()` after a change.
+`setNumberFormat(undefined)` restores the English text; `ENGLISH_NUMBER_FORMAT` is that format,
+for a host changing only part of it. The labels then reach `formatLabel` with the host's numbers.
+
 | `id` | Raw fields |
 |---|---|
 | `price-range` | `change`, `percent`, `pips`, `digits`, `price0`, `price1` |
