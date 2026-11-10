@@ -433,3 +433,15 @@ describe("numberLocale: position, forecast, price note and price label numbers",
     expect(textsOf(label, baseCoords({ ...UK, formatLabel: hook }))).toEqual(["P"]);
   });
 });
+
+describe("numberLocale: vertex ordinals beyond the label table", () => {
+  it("elliott fallback index follows the locale digits; the fixed wave labels stay", () => {
+    const d = drawing("elliott-impulse", [0, 3, 6, 9, 12, 15, 18, 21].map((i) => pt(i, 100 + (i % 2) * 10)));
+    const en = textsOf(d, baseCoords());
+    expect(en.slice(-2)).toEqual(["(6)", "(7)"]);
+    const ar = new Intl.NumberFormat("ar-EG");
+    const loc = textsOf(d, baseCoords({ numberLocale: "ar-EG" }));
+    expect(loc.slice(-2)).toEqual([`(${ar.format(6)})`, `(${ar.format(7)})`]);
+    expect(loc.slice(0, -2)).toEqual(en.slice(0, -2));
+  });
+});
