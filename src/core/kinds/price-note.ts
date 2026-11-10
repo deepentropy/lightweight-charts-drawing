@@ -10,6 +10,7 @@ import type { Coords } from "../coords";
 import type { Drawing } from "../types";
 import type { Pt } from "../_shared";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import { tvTextLayout } from "./tv-text";
 
 export function priceNoteLabel(d: Drawing, pts: Pt[], digits: number, coords?: Coords | null) {
@@ -26,7 +27,7 @@ export function priceNoteLabel(d: Drawing, pts: Pt[], digits: number, coords?: C
           ? (["center", "top"] as const)
           : (["right", "middle"] as const);
   const s = d.style;
-  const defaultText = p0.price.toFixed(digits);
+  const defaultText = formatNumber(coords, p0.price, { min: digits, max: digits }, p0.price.toFixed(digits));
   const text = labelOrDefault(coords, {
     id: "price",
     text: defaultText,

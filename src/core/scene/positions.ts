@@ -5,6 +5,7 @@
 import { HANDLE_RADIUS, timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import type { Drawing, DrawingStyle } from "../types";
 import { applyOpacity, parseColor } from "../color";
 import { isoDateTimeParts } from "../time";
@@ -280,7 +281,7 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   // TV line-tool-prediction texts: target "1.74 (7.04%) in 1d 21h 30m" /
   // "26.40 [clock] 2026-09-02  11:30"; source "24.67" / "2026-08-31 14:00".
   const seconds = t0 != null && t1 != null ? t1 - t0 : null;
-  const span = seconds != null ? tvTimeSpan(seconds) : "";
+  const span = seconds != null ? tvTimeSpan(seconds, coords) : "";
   const pip = coords?.pipSize() ?? 0.01;
   const digits = Math.max(0, Math.min(8, Math.round(-Math.log10(pip))));
   const status = forecastStatus(d, coords);
@@ -288,7 +289,7 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   const tgtPrice = d.points[1].price;
   const forecastText = labelOrDefault(coords, {
     id: "forecast",
-    text: `${signedFixed(dPrice, digits)} (${signedFixed(Math.round(pct * 100) / 100, 2)}%)${span ? ` in ${span}` : ""}`,
+    text: `${signedFixed(dPrice, digits, coords)} (${signedFixed(Math.round(pct * 100) / 100, 2, coords)}%)${span ? ` in ${span}` : ""}`,
     change: dPrice,
     percent: pct,
     seconds,
@@ -296,13 +297,13 @@ export function sceneForecast(d: Drawing, pts: Pt[], selected: boolean, w: numbe
   });
   const srcPriceText = labelOrDefault(coords, {
     id: "price",
-    text: srcPrice.toFixed(digits),
+    text: formatNumber(coords, srcPrice, { min: digits, max: digits }, srcPrice.toFixed(digits)),
     price: srcPrice,
     digits,
   });
   const tgtPriceText = labelOrDefault(coords, {
     id: "price",
-    text: tgtPrice.toFixed(digits),
+    text: formatNumber(coords, tgtPrice, { min: digits, max: digits }, tgtPrice.toFixed(digits)),
     price: tgtPrice,
     digits,
   });

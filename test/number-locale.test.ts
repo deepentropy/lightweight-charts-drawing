@@ -369,3 +369,67 @@ describe("numberLocale: fib, Gann and pattern numbers", () => {
     expect(textsOf(abcd, baseCoords(UK)).slice(0, 2)).toEqual(["0,5", "1,5"]);
   });
 });
+
+describe("numberLocale: position, forecast, price note and price label numbers", () => {
+  const POS = [pt(10, 120), pt(25, 120)] as Drawing["points"];
+  const LEVELS = { showStats: true, stopLevel: 15, profitLevel: 30 };
+  const MINUS = "\u2212";
+  const long = (compactStats: boolean) => drawing("long-position", POS, { ...LEVELS, compactStats });
+  const short = (compactStats: boolean) => drawing("short-position", POS, { ...LEVELS, compactStats });
+
+  it("unset keeps the v0.8.0 position text", () => {
+    expect(textsOf(long(false), baseCoords())).toEqual([
+      "Target: 30.00 (25.000%) 3,000, Amount: 1500",
+      "Open PnL: 0.50, Qty: 16",
+      "Risk/reward ratio: 2",
+      "Stop: 15.00 (12.500%) 1,500, Amount: 750",
+    ]);
+  });
+
+  it("uk-UA: prices, percents, ticks, amounts and PnL use the locale (full and compact)", () => {
+    expect(textsOf(long(false), baseCoords(UK))).toEqual([
+      `Target: 30,00 (25,000%) ${uk(3000)}, Amount: ${uk(1500)}`,
+      "Open PnL: 0,50, Qty: 16",
+      "Risk/reward ratio: 2",
+      `Stop: 15,00 (12,500%) ${uk(1500)}, Amount: 750`,
+    ]);
+    expect(textsOf(long(true), baseCoords(UK))).toEqual([
+      `30,00 (25,000%) ${uk(3000)} ${uk(1500)}`,
+      "0,50 ~ 16",
+      "2",
+      `15,00 (12,500%) ${uk(1500)} 750`,
+    ]);
+    expect(textsOf(short(false), baseCoords(UK))[1]).toBe(`Open PnL: ${MINUS}0,50, Qty: 16`);
+  });
+
+  it("a fractional ratio and quantity read with a comma", () => {
+    const d = drawing("long-position", POS, { ...LEVELS, stopLevel: 20, profitLevel: 30, riskPercent: 3, qtyPrecision: "2" });
+    const en = textsOf(d, baseCoords());
+    expect(en.join("|")).toMatch(/Risk\/reward ratio: 1\.5/);
+    expect(textsOf(d, baseCoords(UK)).join("|")).toMatch(/Risk\/reward ratio: 1,5/);
+  });
+
+  it("formatLabel wins on position-target; undefined gives the locale default", () => {
+    const hook = (ret: string | undefined): LabelFormatter => (l) => (l.id === "position-target" ? ret : undefined);
+    expect(textsOf(long(false), baseCoords({ ...UK, formatLabel: hook("T") }))[0]).toBe("T");
+    expect(textsOf(long(false), baseCoords({ ...UK, formatLabel: hook(undefined) }))[0]).toBe(`Target: 30,00 (25,000%) ${uk(3000)}, Amount: ${uk(1500)}`);
+  });
+
+  it("position forecast prices, change and percent", () => {
+    const d = drawing("position-forecast", [pt(10, 110), pt(30, 140)]);
+    expect(textsOf(d, baseCoords())).toEqual(["110.00", "2026-01-15", "30.00 (27.27%) in 20d", "140.00", "2026-02-04", "FAILURE"]);
+    expect(textsOf(d, baseCoords(UK))).toEqual(["110,00", "2026-01-15", "30,00 (27,27%) in 20d", "140,00", "2026-02-04", "FAILURE"]);
+  });
+
+  it("price note and price label default price text", () => {
+    const grouped = new Intl.NumberFormat("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(1234.56);
+    const note = drawing("price-note", [pt(20, 1234.56), pt(25, 1300)], { text: "" });
+    const label = drawing("price-label", [pt(20, 1234.56)]);
+    expect(textsOf(note, baseCoords())).toEqual(["1234.56"]);
+    expect(textsOf(label, baseCoords())).toEqual(["1234.56"]);
+    expect(textsOf(note, baseCoords(UK))).toEqual([grouped]);
+    expect(textsOf(label, baseCoords(UK))).toEqual([grouped]);
+    const hook: LabelFormatter = (l) => (l.id === "price" ? "P" : undefined);
+    expect(textsOf(label, baseCoords({ ...UK, formatLabel: hook }))).toEqual(["P"]);
+  });
+});

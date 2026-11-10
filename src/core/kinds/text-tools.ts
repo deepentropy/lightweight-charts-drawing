@@ -9,6 +9,7 @@ import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle } from "../types";
 import type { Pt } from "../_shared";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import { measureTextStyled, tvTextLayout, tvWordWrap } from "./tv-text";
 
 /** The host's text hook (Coords.formatLabel) for the placeholders; optional, as in the layouts' callers. */
@@ -146,7 +147,7 @@ export function priceLabelDigits(coords: Coords | null | undefined): number {
 /** Default `toFixed` text through `formatLabel` (id `price`) — paint and hit share this. */
 export function priceLabelText(price: number, coords: Coords | null | undefined): string {
   const digits = priceLabelDigits(coords);
-  const text = price.toFixed(digits);
+  const text = formatNumber(coords, price, { min: digits, max: digits }, price.toFixed(digits));
   return labelOrDefault(coords, { id: "price", text, price, digits });
 }
 

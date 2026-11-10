@@ -15,6 +15,9 @@ import type { Drawing, DrawingStyle, PositionStatKey } from "../types";
 import type { Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
+
+type NumberHost = Pick<Coords, "formatLabel" | "numberLocale">;
 
 /** TV infoBlocks in the Stats list order, with their titles and factory
  *  visibility (all on except TP PL / SL PL). */
@@ -41,15 +44,17 @@ export function positionStatOn(s: DrawingStyle, k: PositionStatKey): boolean {
 /** TV number formatting in the position labels: price values with the
  *  price precision and thousands commas ("1,000.00", minus U+2212), ticks
  *  with thousands commas ("5,108"), amounts as plain numbers. */
-function fmtGrouped(v: number, digits: number): string {
-  const t = Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+function fmtGrouped(v: number, digits: number, coords?: NumberHost | null): string {
+  const a = Math.abs(v);
+  const t = formatNumber(coords, a, { min: digits, max: digits }, a.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }));
   return v < 0 ? `\u2212${t}` : t;
 }
 
 /** Signed number with TV's minus sign (U+2212) — kept local so kinds/ does
  *  not import from scene/. */
-function signedFixed(v: number, digits: number): string {
-  const t = Math.abs(v).toFixed(digits);
+function signedFixed(v: number, digits: number, coords?: NumberHost | null): string {
+  const a = Math.abs(v);
+  const t = formatNumber(coords, a, { min: digits, max: digits }, a.toFixed(digits));
   return v < 0 ? `\u2212${t}` : t;
 }
 
@@ -66,20 +71,22 @@ export function positionLegText(
   digits: number,
   amount: number,
   pl: number,
-  coords?: { formatLabel?: Coords["formatLabel"] } | null,
+  coords?: NumberHost | null,
 ): string {
   const on = (k: string) => positionStatOn(s, (leg + k) as PositionStatKey);
   const compact = !!s.compactStats;
-  const price = fmtGrouped(dist, digits);
+  const price = fmtGrouped(dist, digits, coords);
   const percent = entry !== 0 ? (100 * dist) / entry : 0;
-  const pct = `${(entry !== 0 ? Math.round((100 * 1000 * dist) / entry) / 1000 : 0).toFixed(3)}%`;
+  const pctValue = entry !== 0 ? Math.round((100 * 1000 * dist) / entry) / 1000 : 0;
+  const pct = `${formatNumber(coords, pctValue, { min: 3, max: 3 }, pctValue.toFixed(3))}%`;
   const ticks = Math.round(dist / pip);
+  const amountText = formatNumber(coords, amount, { min: 0, max: 2 }, String(amount));
   let t = "";
   if (on("PriceOffset")) t += compact ? price : `${leg === "tp" ? "Target" : "Stop"}: ${price}`;
   if (on("PercentOffset")) t += t !== "" ? ` (${pct})` : pct;
-  if (on("TickOffset")) t += (t !== "" ? " " : "") + fmtGrouped(ticks, 0);
-  if (on("Amount")) t += compact ? (t !== "" ? " " : "") + String(amount) : (t !== "" ? ", " : "") + `Amount: ${amount}`;
-  if (on("PL")) t += compact ? (t !== "" ? " " : "") + fmtGrouped(pl, digits) : (t !== "" ? ", " : "") + `PnL: ${fmtGrouped(pl, digits)}`;
+  if (on("TickOffset")) t += (t !== "" ? " " : "") + fmtGrouped(ticks, 0, coords);
+  if (on("Amount")) t += compact ? (t !== "" ? " " : "") + amountText : (t !== "" ? ", " : "") + `Amount: ${amountText}`;
+  if (on("PL")) t += compact ? (t !== "" ? " " : "") + fmtGrouped(pl, digits, coords) : (t !== "" ? ", " : "") + `PnL: ${fmtGrouped(pl, digits, coords)}`;
   if (!t) return t;
   return labelOrDefault(coords, {
     id: leg === "tp" ? "position-target" : "position-stop",
@@ -103,14 +110,16 @@ export function positionMiddleText(
   qty: number,
   ratio: number,
   digits: number,
-  coords?: { formatLabel?: Coords["formatLabel"] } | null,
+  coords?: NumberHost | null,
 ): string {
   const compact = !!s.compactStats;
-  const pnlText = pnl != null ? signedFixed(pnl, digits) : null;
+  const pnlText = pnl != null ? signedFixed(pnl, digits, coords) : null;
+  const qtyText = formatNumber(coords, qty, { min: 0, max: 8 }, String(qty));
+  const ratioText = formatNumber(coords, ratio, { min: 0, max: 2 }, String(ratio));
   let t = "";
   if (positionStatOn(s, "openClosePL") && pnlText) t += compact ? pnlText : `${closed ? "Closed" : "Open"} PnL: ${pnlText}`;
-  if (positionStatOn(s, "qty")) t += (t !== "" ? (compact ? " ~ " : ", ") : "") + (compact ? String(qty) : `Qty: ${qty}`);
-  if (positionStatOn(s, "riskRewardRatio")) t += (t !== "" ? "\n" : "") + (compact ? String(ratio) : `Risk/reward ratio: ${ratio}`);
+  if (positionStatOn(s, "qty")) t += (t !== "" ? (compact ? " ~ " : ", ") : "") + (compact ? qtyText : `Qty: ${qtyText}`);
+  if (positionStatOn(s, "riskRewardRatio")) t += (t !== "" ? "\n" : "") + (compact ? ratioText : `Risk/reward ratio: ${ratioText}`);
   if (!t) return t;
   return labelOrDefault(coords, {
     id: "position-middle",
