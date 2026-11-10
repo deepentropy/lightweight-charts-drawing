@@ -16,6 +16,7 @@ const dm = new DrawingManager(chart, series, {
   stayInDrawingMode: false,            // keep the tool armed after a placement
   keyboard: true,                      // false: no window key listener (Escape / Delete off; pointer-event Shift / Ctrl stay)
   formatLabel: (label) => string | undefined,  // host text for every on-canvas label; see DrawingLabel
+  numberLocale: "uk-UA",               // BCP-47 tag for every number the library draws; unset = fixed EN text (see Number locale)
   dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
   clampToPane: false,                  // pending press / preview / drag pointer kept inside the pane (else outside presses are ignored)
   interactive: true,                   // false = view-only: paints, no pointer input, no key action, stops no event
@@ -79,6 +80,29 @@ Return `undefined` to keep it empty; do not assume a non-empty default.
 `dm.setFormatLabel(fn)` replaces the hook on a live manager and repaints once (for example to switch
 the language); `dm.setFormatLabel(undefined)` restores the library defaults.
 
+### Number locale
+
+`numberLocale` (a BCP-47 tag such as `"uk-UA"`, `"en"`, `"de-DE"`) makes **every number the library
+draws itself** follow that locale: decimal and group separators and digits of prices, percents,
+level coefficients, ratios, quantities, bar counts and spans, angles. It covers the hooked labels
+and the strings the hook does not reach (see below). Without it the text is the fixed EN text of
+earlier versions, character for character; the library never reads the browser locale. An invalid
+tag falls back to that EN text instead of throwing.
+
+`formatLabel` still wins: a hooked label that returns a string draws that string; `undefined` /
+`null` draws the default, which is now the `numberLocale` text. The `default` a hook receives in
+`label.text` is already formatted with `numberLocale`.
+
+```ts
+const dm = new DrawingManager(chart, series, { numberLocale: "uk-UA" });  // 0.618 -> 0,618; -59.04º -> -59,04º
+dm.setNumberLocale("en");        // switch live, repaints once
+dm.setNumberLocale(undefined);   // back to the fixed EN text
+```
+
+Fixed notation is not a number format and does not change: pattern letters (`A B C D`), the Elliott
+wave label tables, `1/8`-style Gann fan level names, user-typed text, ISO dates (`2026-01-15`) and the
+chart's own axis labels.
+
 ### Strings the hook does not reach
 
 Text drawn on the canvas outside `formatLabel` (the hook does not reach these strings):
@@ -86,9 +110,9 @@ Text drawn on the canvas outside `formatLabel` (the hook does not reach these st
 | String | Where | Why |
 |---|---|---|
 | axis labels (price scale, time scale) | the chart | the chart's own `priceFormatter` / `localization.timeFormatter` |
-| pattern vertex letters / numbers (`A B C D`, `X A B C D`, `1 2 3 …`) and ratio pills | ABCD, XABCD, Cypher, three drives, head and shoulders, triangle, Elliott, polyline / path | intentional: fixed pattern notation |
-| angle arc text (`-59.04º`) | trend angle | the stats-box `angle` row is hooked, the text beside the arc is not |
-| level coefficients (`0.618`, `1.618`, level numbers) | fib time zone, trend-based fib time, fib circles, fib speed fan / arcs, fib wedge, Gann fan, Gann box side labels | numbers only; `fib-level` covers fib retracement / extension / channel, and Gann square goes through `price`, `bars-range`, `gann-ratio` |
+| pattern vertex letters / numbers (`A B C D`, `X A B C D`, `1 2 3 …`) and ratio pills | ABCD, XABCD, Cypher, three drives, head and shoulders, triangle, Elliott, polyline / path | intentional: fixed pattern notation; the ratio pills still follow `numberLocale` |
+| angle arc text (`-59.04º`) | trend angle | the stats-box `angle` row is hooked, the text beside the arc is not; it bypasses `formatLabel` but follows `numberLocale` (`-59,04º` under `uk-UA`) |
+| level coefficients (`0.618`, `1.618`, level numbers) | fib time zone, trend-based fib time, fib circles, fib speed fan / arcs, fib wedge, Gann fan, Gann box side labels | numbers only; these strings still bypass `formatLabel` but follow `numberLocale` (`0,618` under `uk-UA`); `fib-level` covers fib retracement / extension / channel, and Gann square goes through `price`, `bars-range`, `gann-ratio` |
 | user-typed text and the default `font-icon` glyph | text, note, callout, table, shape text, markers | author content, not generated text |
 
 One manager per series. It attaches one series primitive and listens to pointer and key events on
@@ -109,6 +133,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `cancelPending()` | cancels a half-placed drawing and its preview, keeps the tool armed; no-op with nothing pending |
 | `setMagnet`, `setInterval`, `setStayInDrawingMode`, `setInteractive` | settings |
 | `setFormatLabel(fn \| undefined)` | swap the `formatLabel` hook and repaint; `undefined` = library defaults |
+| `setNumberLocale(locale \| undefined)` | swap the `numberLocale` and repaint; `undefined` = the fixed EN number text |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |
 | `setTableCellText`, `endTableEdit`, `tableOp`, `tableState` | table editing after `tableEdit` |
