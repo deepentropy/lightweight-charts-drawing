@@ -8,6 +8,7 @@
 import { dashFor, timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault, labelPart, type DrawingLabel } from "../labels";
+import { formatNumber } from "../number-format";
 import type { Drawing, DrawingStyle } from "../types";
 import { tvTextLayout } from "../kinds/tv-text";
 import type { Scene, SceneItem } from "./types";
@@ -464,7 +465,7 @@ export function sceneTrendAngle(d: Drawing, pts: Pt[], selected: boolean, w: num
     ...(s.showMiddlePoint && active ? [{ t: "anchors" as const, pts: [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }] }] : []),
     { t: "path", d: arcPath, fill: "none", stroke: s.color, strokeWidth: 1, dash: "1 2", inert: true },
     {
-      t: "text", x: a.x + r + 5 + fs / 3, y: a.y, text: `${Math.round(angleDeg * 100) / 100}º`, size: fs,
+      t: "text", x: a.x + r + 5 + fs / 3, y: a.y, text: `${formatNumber(coords, angleDeg, { min: 0, max: 2 }, String(Math.round(angleDeg * 100) / 100))}º`, size: fs,
       anchor: "start", baseline: "central", weight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : "normal", fill: s.color, inert: true,
     },
     // TV TrendToolWithStatsPaneView: price / bars stats (factory off) at the

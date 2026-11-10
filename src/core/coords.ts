@@ -85,6 +85,8 @@ export type Coords = {
   /** Label text hook: called for every label with its default text and raw
    *  numbers; return the text to draw (undefined / null = the default, "" = empty). */
   formatLabel?: LabelFormatter;
+  /** BCP-47 locale for numbers the library draws itself; unset = the library's fixed EN text. */
+  numberLocale?: string;
   /** Kind and id of the drawing being built / hit-tested, set by sceneOf and
    *  hitTestKind (withLabelContext) so every label carries them. */
   labelContext?: LabelContext;

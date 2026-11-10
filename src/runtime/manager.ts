@@ -59,6 +59,9 @@ export type DrawingManagerOptions = {
   keyboard?: boolean;
   /** Label text hook: called for every label with its default text and raw numbers; return the text to draw (undefined / null = the default, "" = empty). */
   formatLabel?: LabelFormatter;
+  /** Locale for every number the library draws on the canvas (angles, coefficients, prices, percents, counts), e.g. "uk-UA".
+   *  Unset = the fixed EN text (the browser locale is never read). `formatLabel` still wins on hooked labels. */
+  numberLocale?: string;
   /** Place the first two points of a tool with two or more fixed points by
    *  press, drag and release (TV). A movement under 3 px is a click, so
    *  click-click still works. Default false (click placement only). */
@@ -154,6 +157,7 @@ export class DrawingManager {
     const bars = opts.bars ?? (() => seriesBars(series));
     this.coords = makeCoords(chart, series, bars, () => [], opts.timeInfo);
     if (opts.formatLabel) this.coords.formatLabel = opts.formatLabel;
+    if (opts.numberLocale) this.coords.numberLocale = opts.numberLocale;
     this.primitive = new DrawingsPrimitive(this);
     series.attachPrimitive(this.primitive as ISeriesPrimitive<Time>);
     this.el = chart.chartElement();
@@ -263,6 +267,13 @@ export class DrawingManager {
    *  repaint; `undefined` restores the library defaults. */
   setFormatLabel(fn: LabelFormatter | undefined): void {
     this.coords.formatLabel = fn;
+    this.redraw();
+  }
+
+  /** Change the number locale after construction (e.g. a live language switch)
+   *  and repaint; `undefined` restores the fixed EN text. */
+  setNumberLocale(locale: string | undefined): void {
+    this.coords.numberLocale = locale;
     this.redraw();
   }
 
