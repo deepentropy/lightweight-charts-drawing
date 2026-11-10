@@ -110,17 +110,17 @@ function buildScene(d: Drawing, pts: Pt[], c: SceneContext): Scene {
     case "trend-based-fib-time":
       return sceneTrendBasedFibTime(d, pts, selected, h, s, coords);
     case "fib-time-zone":
-      return sceneFibTimeZone(pts, selected, h, s);
+      return sceneFibTimeZone(pts, selected, h, s, coords);
     case "fib-circles":
-      return sceneFibCircles(d, pts, selected, s);
+      return sceneFibCircles(d, pts, selected, s, coords);
     case "fib-speed-resistance-fan":
       return sceneFibSpeedFan(d, pts, selected, w, h, s, coords);
     case "fib-speed-resistance-arcs":
-      return sceneFibSpeedArcs(pts, selected, s);
+      return sceneFibSpeedArcs(pts, selected, s, coords);
     case "fib-spiral":
       return sceneFibSpiral(pts, selected, w, h, s);
     case "fib-wedge":
-      return sceneFibWedge(pts, selected, s);
+      return sceneFibWedge(pts, selected, s, coords);
     case "pitchfan":
       return scenePitchfan(pts, selected, w, s);
     case "pitchfork":
@@ -129,7 +129,7 @@ function buildScene(d: Drawing, pts: Pt[], c: SceneContext): Scene {
     case "inside-pitchfork":
       return scenePitchfork(d.kind, pts, selected, w, s);
     case "gann-fan":
-      return sceneGannFan(pts, selected, w, h, s);
+      return sceneGannFan(pts, selected, w, h, s, coords);
     case "gann-box":
       return sceneGannBox(d, pts, selected, s, coords);
     case "gann-square-fixed":

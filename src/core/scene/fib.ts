@@ -7,6 +7,7 @@
 import { dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import type { Drawing, DrawingStyle, LevelDef } from "../types";
 import {
   FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_TREND_LINE_DEFAULT, FIB_WEDGE_LEVEL_DEFAULTS,
@@ -22,10 +23,13 @@ import type { Scene, SceneItem } from "./types";
 import { textCrossesLine, tvTextItems } from "./text";
 import { activeLevels, extendSeg, levelDash, levelFillOpacity, levelWidth } from "./levels";
 
-/** "0.618" without trailing zeros. */
-export function fmtCoeff(c: number): string {
-  return c.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") || "0";
+/** "0.618" without trailing zeros; `coords.numberLocale` sets the locale of the digits. */
+export function fmtCoeff(c: number, coords?: Pick<Coords, "numberLocale"> | null): string {
+  return formatNumber(coords, c, { min: 0, max: 3 }, c.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") || "0");
 }
+
+/** Level number of the time families (`String(coeff)`); up to 4 decimals under a locale. */
+const levelNumber = (coeff: number, coords?: Pick<Coords, "numberLocale"> | null) => formatNumber(coords, coeff, { min: 0, max: 4 }, String(coeff));
 
 const anchorsIf = (selected: boolean, pts: Pt[]): SceneItem[] => (selected ? [{ t: "anchors", pts }] : []);
 const digitsOf = (coords: Coords | null) => Math.max(0, Math.min(8, Math.round(-Math.log10(coords?.pipSize() ?? 0.01))));
@@ -244,11 +248,13 @@ export function sceneFibChannel(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     const showP = s.showPrices !== false;
     if (!showC && !showP) return null;
     const price = priceAt(lvl.coeff, seg.l.y);
-    const coeffText = s.fibLevelsAsPercents ? `${(100 * lvl.coeff).toFixed(2)}%` : fmtCoeff(lvl.coeff);
+    const coeffText = s.fibLevelsAsPercents
+      ? `${formatNumber(coords, 100 * lvl.coeff, { min: 2, max: 2 }, (100 * lvl.coeff).toFixed(2))}%`
+      : fmtCoeff(lvl.coeff, coords);
     // fib channel keeps fmtCoeff defaults; hook here so scene/fib.ts calls labelOrDefault.
     let raw = "";
     if (showC) raw += coeffText;
-    if (showP) raw += ` (${price.toFixed(digits)})`;
+    if (showP) raw += ` (${formatNumber(coords, price, { min: digits, max: digits }, price.toFixed(digits))})`;
     const text = labelOrDefault(coords, {
       id: "fib-level",
       text: raw,
@@ -306,7 +312,7 @@ export function sceneTrendBasedFibTime(d: Drawing, pts: Pt[], selected: boolean,
   const horzS = s.horzLabelsAlign ?? "right";
   const horz = horzS === "left" ? "right" : horzS === "right" ? "left" : "center";
   const labelAt = (x: number, coeff: number) =>
-    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: String(coeff), fs: 12, vert, horz, offsetX: 2 });
+    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: levelNumber(coeff, coords), fs: 12, vert, horz, offsetX: 2 });
   const items: SceneItem[] = [];
   if (tl.visible) {
     items.push({ t: "line", a, b, stroke: tl.color, strokeWidth: tl.width, dash: tlDash });
@@ -329,13 +335,13 @@ export function sceneTrendBasedFibTime(d: Drawing, pts: Pt[], selected: boolean,
 /** Fib time zone (TV): vertical level lines at p0 + coeff·(p1 − p0) in x,
  *  labels (level number, 12px, 2px from the line, pane top / middle /
  *  bottom, horizontal side inverted), a Middle label cuts the line. */
-export function sceneFibTimeZone(pts: Pt[], selected: boolean, h: number, s: DrawingStyle): Scene {
+export function sceneFibTimeZone(pts: Pt[], selected: boolean, h: number, s: DrawingStyle, coords?: Coords | null): Scene {
   const [a, b] = pts;
   const vert = s.vertLabelsAlign ?? "bottom";
   const horzS = s.horzLabelsAlign ?? "right";
   const horz = horzS === "left" ? "right" : horzS === "right" ? "left" : "center";
   const labelAt = (x: number, coeff: number) =>
-    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: String(coeff), fs: 12, vert, horz, offsetX: 2 });
+    s.showLabels === false ? null : tvTextLayout({ x, y: vert === "top" ? 0 : vert === "middle" ? 0.5 * h : h, text: levelNumber(coeff, coords), fs: 12, vert, horz, offsetX: 2 });
   const unit = b.x - a.x;
   const levels = activeLevels(s, FIB_TIMEZONE_LEVEL_DEFAULTS);
   const fillO = levelFillOpacity(s);
@@ -362,7 +368,7 @@ const FIB_CIRCLE_LEVELS = [0.236, 0.382, 0.5, 0.618, 1];
 /** Fib circles (TV line-tool-fib-circles): axis-aligned ellipses centred on
  *  the p0-p1 midpoint, half-axes 0.5·|dx|·coeff × 0.5·|dy|·coeff, ring
  *  fills, the value label at each ellipse bottom, dashed trend line. */
-export function sceneFibCircles(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneFibCircles(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
   const [a, b] = pts;
   if (d.fmt !== 2) {
     // Legacy entries (before 24/09/2026): circles centred on p0, radius |p1 − p0|.
@@ -388,7 +394,7 @@ export function sceneFibCircles(d: Drawing, pts: Pt[], selected: boolean, s: Dra
   for (const lvl of levels) {
     // TV: the value label at the ellipse bottom, Left / Middle (box ending
     // 4px before the point); "Levels" / "Coeffs as percents".
-    const l = s.showCoeffs !== false ? fibLevelLabel({ text: fibCoeffText(lvl.coeff, !!s.fibLevelsAsPercents), y: cy + hy * lvl.coeff, left: cx, right: cx, extendLeft: false, extendRight: false, paneW: 0, horz: "left", vert: "middle", fs: 12 }) : null;
+    const l = s.showCoeffs !== false ? fibLevelLabel({ text: fibCoeffText(lvl.coeff, !!s.fibLevelsAsPercents, coords), y: cy + hy * lvl.coeff, left: cx, right: cx, extendLeft: false, extendRight: false, paneW: 0, horz: "left", vert: "middle", fs: 12 }) : null;
     items.push({ t: "ellipse", cx, cy, rx: hx * lvl.coeff, ry: hy * lvl.coeff, fill: "none", stroke: lvl.color, strokeWidth: levelWidth(lvl, s), dash: levelDash(lvl, s) });
     if (l) items.push(tvTextItems(l, lvl.color));
   }
@@ -411,7 +417,7 @@ export function sceneFibSpeedFan(d: Drawing, pts: Pt[], selected: boolean, w: nu
   const grid = s.fanGrid ?? SPEED_FAN_GRID_DEFAULT;
   const gridDash = dashFor({ ...s, lineStyle: grid.style, width: grid.width });
   const lab = (x: number, y: number, coeff: number, vert: "top" | "middle" | "bottom", horz: "left" | "center" | "right", ox: number, oy: number) =>
-    tvTextLayout({ x, y, text: fmtCoeff(coeff), fs: 12, vert, horz, offsetX: ox, offsetY: oy });
+    tvTextLayout({ x, y, text: fmtCoeff(coeff, coords), fs: 12, vert, horz, offsetX: ox, offsetY: oy });
   const items: SceneItem[] = [];
   if (fillO > 0) {
     for (const band of [...wedges(hRays), ...wedges(vRays)]) items.push({ t: "polygon", pts: band.pts, fill: band.color, fillOpacity: fillO, stroke: "none", inert: true });
@@ -437,7 +443,7 @@ export function sceneFibSpeedFan(d: Drawing, pts: Pt[], selected: boolean, w: nu
 /** Fib speed resistance arcs (TV module 49463): half circles (full circles
  *  with fullCircles) of radius coeff·|p0p1| round p0, bulging toward p1;
  *  fills between arcs; the value label at the arc apex; the trend line. */
-export function sceneFibSpeedArcs(pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneFibSpeedArcs(pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
   const [c, edge] = pts;
   const unit = Math.hypot(edge.x - c.x, edge.y - c.y);
   const dir = edge.y >= c.y ? 1 : -1;
@@ -467,7 +473,7 @@ export function sceneFibSpeedArcs(pts: Pt[], selected: boolean, s: DrawingStyle)
       items.push({ t: "hitPath", d: arc(r), width: HIT_TOLERANCE * 2 });
       items.push({ t: "path", d: arc(r), fill: "none", stroke: lvl.color, strokeWidth: levelWidth(lvl, s), dash: levelDash(lvl, s) ?? dash });
       if (s.showCoeffs !== false) {
-        const l = fibLevelLabel({ text: fibCoeffText(lvl.coeff, false), y: c.y + dir * r, left: c.x, right: c.x, extendLeft: false, extendRight: false, paneW: 0, horz: "left", vert: "middle", fs: 12 });
+        const l = fibLevelLabel({ text: fibCoeffText(lvl.coeff, false, coords), y: c.y + dir * r, left: c.x, right: c.x, extendLeft: false, extendRight: false, paneW: 0, horz: "left", vert: "middle", fs: 12 });
         if (l) items.push(tvTextItems(l, lvl.color));
       }
     }
@@ -502,7 +508,7 @@ export function sceneFibSpiral(pts: Pt[], selected: boolean, w: number, h: numbe
 /** Fib wedge (TV): p0 = apex, p0→p1 / p0→p2 the edges (the second clamped
  *  to the first's length); level arcs at radius coeff·edge length between
  *  the edge angles, fills between them, the edges as the trend line. */
-export function sceneFibWedge(pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneFibWedge(pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
   const [p0, p1, p2raw] = pts;
   const len1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   if (len1 < 1e-6) return anchorsIf(selected, pts);
@@ -542,7 +548,7 @@ export function sceneFibWedge(pts: Pt[], selected: boolean, s: DrawingStyle): Sc
     const midAng = a1 + sweep / 2;
     items.push({ t: "polyline", pts: arcPts(r), fill: "none", stroke: lvl.color, strokeWidth: levelWidth(lvl, s), dash: levelDash(lvl, s) ?? dash });
     if (s.showCoeffs !== false) {
-      items.push({ t: "text", x: p0.x + Math.cos(midAng) * (r + 8), y: p0.y + Math.sin(midAng) * (r + 8), text: fmtCoeff(lvl.coeff), size: 11, fill: lvl.color, anchor: "middle", inert: true });
+      items.push({ t: "text", x: p0.x + Math.cos(midAng) * (r + 8), y: p0.y + Math.sin(midAng) * (r + 8), text: fmtCoeff(lvl.coeff, coords), size: 11, fill: lvl.color, anchor: "middle", inert: true });
     }
   }
   items.push(...anchorsIf(selected, pts));

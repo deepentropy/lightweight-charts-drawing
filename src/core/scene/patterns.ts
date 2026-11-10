@@ -9,6 +9,7 @@ import { dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import type { Drawing, DrawingStyle } from "../types";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import { ELLIOTT_DEFAULT_DEGREE } from "../specs";
 import { measureTextStyled } from "../kinds/tv-text";
 import type { Scene, SceneItem } from "./types";
@@ -137,11 +138,12 @@ function patternPill(x: number, y: number, dy: number, text: string, p: PillText
 
 /** "0.618"-style retracement value: |(c−b)/(b−a)| by price, rounded to
  *  `decimals` (TV rounds abcd/xabcd to 3, three-drives to 2). */
-function retracement(a: number, b: number, c: number, decimals: number): string {
+function retracement(a: number, b: number, c: number, decimals: number, coords?: Coords | null): string {
   const denom = b - a;
   if (Math.abs(denom) < 1e-12) return "∞";
   const f = Math.pow(10, decimals);
-  return String(Math.round((Math.abs((c - b) / denom)) * f) / f);
+  const ratio = Math.abs((c - b) / denom);
+  return formatNumber(coords, ratio, { min: 0, max: decimals }, String(Math.round(ratio * f) / f));
 }
 
 /** Dotted retracement connector (TV TrendLineRenderer, LINESTYLE_DOTTED). */
@@ -180,15 +182,15 @@ const hitPolyline = (pts: Pt[]): SceneItem => ({ t: "polyline", pts, fill: "none
  *  A→C and B→D carrying the retracement ratio at their midpoints —
  *  |(C−B)/(B−A)| and |(D−C)/(C−B)| by price, 3 decimals — plus letter pills.
  *  No polygon fill (TV renders it unfilled). */
-export function sceneAbcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneAbcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
   const p = pillText(s);
   const prices = d.points.map((q) => q.price);
   const out: Scene = [
     hitPolyline(pts),
     { t: "polyline", pts, fill: "none", stroke: s.color, strokeWidth: s.width, dash: dashFor(s), join: "round" },
   ];
-  if (pts.length >= 3) out.push(...ratioLeg(pts, 0, 2, s.width, retracement(prices[0], prices[1], prices[2], 3), p));
-  if (pts.length >= 4) out.push(...ratioLeg(pts, 1, 3, s.width, retracement(prices[1], prices[2], prices[3], 3), p));
+  if (pts.length >= 3) out.push(...ratioLeg(pts, 0, 2, s.width, retracement(prices[0], prices[1], prices[2], 3, coords), p));
+  if (pts.length >= 4) out.push(...ratioLeg(pts, 1, 3, s.width, retracement(prices[1], prices[2], prices[3], 3, coords), p));
   out.push(...patternLetterPills(pts, KIND_LABELS[d.kind]!, s));
   if (selected) out.push({ t: "anchors", pts });
   return out;
@@ -199,7 +201,7 @@ export function sceneAbcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: Dr
  *  X-A-B-C-D polyline stays solid, and four DOTTED connectors (X→B, A→C, X→D,
  *  B→D, 1px) carry midpoint ratio pills. Ratio formulas per chunk (cypher
  *  overrides the bc/xd legs — LineToolCypherPattern `_updateBaseData`). */
-export function sceneXabcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneXabcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
   const cypher = d.kind === "cypher-pattern";
   const p = pillText(s);
   const fill = s.backgroundColor ?? s.color;
@@ -211,15 +213,15 @@ export function sceneXabcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: D
   out.push(hitPolyline(pts), { t: "polyline", pts, fill: "none", stroke: s.color, strokeWidth: s.width, dash: dashFor(s), join: "round" });
   // Ratio legs: xabcd vs cypher formulas from the decompiled `_updateBaseData`
   // pairs (X A B C D = points 0..4).
-  if (pts.length >= 3) out.push(...ratioLeg(pts, 0, 2, 1, retracement(pr[0], pr[1], pr[2], 3), p));
-  if (pts.length >= 4) out.push(...ratioLeg(pts, 1, 3, 1, cypher ? retracement(pr[1], pr[0], pr[3], 3) : retracement(pr[1], pr[2], pr[3], 3), p));
+  if (pts.length >= 3) out.push(...ratioLeg(pts, 0, 2, 1, retracement(pr[0], pr[1], pr[2], 3, coords), p));
+  if (pts.length >= 4) out.push(...ratioLeg(pts, 1, 3, 1, cypher ? retracement(pr[1], pr[0], pr[3], 3, coords) : retracement(pr[1], pr[2], pr[3], 3, coords), p));
   if (pts.length >= 5) {
     // cypher xd leg = |(D−C)/(X−C)|; xabcd xd = |(D−A)/(A−X)|.
-    const xd = cypher ? retracement(pr[0], pr[2], pr[4], 3) : retracement(pr[0], pr[1], pr[4], 3);
+    const xd = cypher ? retracement(pr[0], pr[2], pr[4], 3, coords) : retracement(pr[0], pr[1], pr[4], 3, coords);
     out.push(
       ...patternConnector(pts[0], pts[4], s.color, 1),
       ...patternConnector(pts[2], pts[4], s.color, 1),
-      patternPill((pts[2].x + pts[4].x) / 2, (pts[2].y + pts[4].y) / 2, 0, retracement(pr[2], pr[3], pr[4], 3), p),
+      patternPill((pts[2].x + pts[4].x) / 2, (pts[2].y + pts[4].y) / 2, 0, retracement(pr[2], pr[3], pr[4], 3, coords), p),
       patternPill((pts[0].x + pts[4].x) / 2, (pts[0].y + pts[4].y) / 2, 0, xd, p),
     );
   }
@@ -232,15 +234,15 @@ export function sceneXabcdPattern(d: Drawing, pts: Pt[], selected: boolean, s: D
  *  connectors p1→p3 and p3→p5 with the retracements |(p3−p2)/(p2−p1)| and
  *  |(p5−p4)/(p4−p3)| (2 decimals) at their midpoints. TV renders no vertex
  *  letters on this tool. */
-export function sceneThreeDrives(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
+export function sceneThreeDrives(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
   const p = pillText(s);
   const pr = d.points.map((q) => q.price);
   const out: Scene = [
     hitPolyline(pts),
     { t: "polyline", pts, fill: "none", stroke: s.color, strokeWidth: s.width, dash: dashFor(s), join: "round" },
   ];
-  if (pts.length >= 4) out.push(...ratioLeg(pts, 1, 3, s.width, retracement(pr[1], pr[2], pr[3], 2), p));
-  if (pts.length >= 6) out.push(...ratioLeg(pts, 3, 5, s.width, retracement(pr[3], pr[4], pr[5], 2), p));
+  if (pts.length >= 4) out.push(...ratioLeg(pts, 1, 3, s.width, retracement(pr[1], pr[2], pr[3], 2, coords), p));
+  if (pts.length >= 6) out.push(...ratioLeg(pts, 3, 5, s.width, retracement(pr[3], pr[4], pr[5], 2, coords), p));
   if (selected) out.push({ t: "anchors", pts });
   return out;
 }
@@ -395,9 +397,9 @@ export function smoothBrush(pts: Pt[], smooth = 5): Pt[] {
 export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   if (d.kind === "triangle-pattern" && pts.length >= 4) return sceneTrianglePattern(pts, selected, s);
   if (d.kind === "head-and-shoulders" && pts.length >= 7) return sceneHeadAndShoulders(pts, selected, s, coords);
-  if (d.kind === "abcd-pattern" && pts.length >= 2) return sceneAbcdPattern(d, pts, selected, s);
-  if ((d.kind === "xabcd-pattern" || d.kind === "cypher-pattern") && pts.length >= 2) return sceneXabcdPattern(d, pts, selected, s);
-  if (d.kind === "three-drives-pattern" && pts.length >= 2) return sceneThreeDrives(d, pts, selected, s);
+  if (d.kind === "abcd-pattern" && pts.length >= 2) return sceneAbcdPattern(d, pts, selected, s, coords);
+  if ((d.kind === "xabcd-pattern" || d.kind === "cypher-pattern") && pts.length >= 2) return sceneXabcdPattern(d, pts, selected, s, coords);
+  if (d.kind === "three-drives-pattern" && pts.length >= 2) return sceneThreeDrives(d, pts, selected, s, coords);
   if (d.kind.startsWith("elliott-")) return sceneElliott(d, pts, selected, s);
   const labels = KIND_LABELS[d.kind];
   // TV polyline: the closing side and the fill only once closed (`filled`).

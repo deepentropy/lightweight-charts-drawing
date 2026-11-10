@@ -7,12 +7,15 @@
  */
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import { tvTextLayout } from "./tv-text";
 
+type NumberHost = Pick<Coords, "formatLabel" | "numberLocale">;
+
 /** Level value text (TV numeric / percentage formatter). */
-export function fibCoeffText(coeff: number, percents: boolean): string {
-  if (percents) return `${(100 * coeff).toFixed(2)}%`;
-  return String(Math.round(coeff * 1e4) / 1e4);
+export function fibCoeffText(coeff: number, percents: boolean, coords?: Pick<Coords, "numberLocale"> | null): string {
+  if (percents) return `${formatNumber(coords, 100 * coeff, { min: 2, max: 2 }, (100 * coeff).toFixed(2))}%`;
+  return formatNumber(coords, coeff, { min: 0, max: 4 }, String(Math.round(coeff * 1e4) / 1e4));
 }
 
 /** Combined coeff / price label string, hooked before layout / measure. */
@@ -23,13 +26,13 @@ export function fibLevelText(
   digits: number,
   showC: boolean,
   showP: boolean,
-  coords?: { formatLabel?: Coords["formatLabel"] } | null,
+  coords?: NumberHost | null,
   /** Override the coeff piece (fib channel uses trimmed toFixed(3)). */
   coeffText?: string,
 ): string {
   let text = "";
-  if (showC) text += coeffText ?? fibCoeffText(coeff, percents);
-  if (showP && price != null) text += ` (${price.toFixed(digits)})`;
+  if (showC) text += coeffText ?? fibCoeffText(coeff, percents, coords);
+  if (showP && price != null) text += ` (${formatNumber(coords, price, { min: digits, max: digits }, price.toFixed(digits))})`;
   if (!text) return text;
   return labelOrDefault(coords, {
     id: "fib-level",

@@ -290,3 +290,82 @@ describe("DrawingManager numberLocale option and setter", () => {
     expect(m.paint()).toEqual(["12.35\u00ba"]);
   });
 });
+
+const lv = (coeff: number, label?: string) => ({ coeff, color: "#2962ff", visible: true, ...(label ? { label } : {}) });
+const DECIMAL = /\d\.\d/;
+
+describe("numberLocale: fib, Gann and pattern numbers", () => {
+  it("fib time zone gets coords from the dispatcher: a 1.5 level reads 1,5 under uk-UA", () => {
+    const d = drawing("fib-time-zone", [pt(5, 100), pt(10, 110)], { levels: [lv(0), lv(1.5), lv(2)] });
+    expect(textsOf(d, baseCoords())).toEqual(["0", "1.5", "2"]);
+    expect(textsOf(d, baseCoords(UK))).toEqual(["0", "1,5", "2"]);
+    expect(textsOf(d, baseCoords({ numberLocale: "en" }))).toEqual(["0", "1.5", "2"]);
+  });
+
+  it("trend-based fib time: default 0.382 level", () => {
+    const d = drawing("trend-based-fib-time", [pt(5, 100), pt(15, 120), pt(25, 110)]);
+    const en = textsOf(d, baseCoords());
+    expect(en).toContain("0.382");
+    expect(textsOf(d, baseCoords(UK))).toEqual(comma(en));
+  });
+
+  it("fib retracement: coefficient and price in parentheses, percent mode, hook precedence", () => {
+    const d = drawing("fib-retracement", [pt(5, 100), pt(30, 140)]);
+    const en = textsOf(d, baseCoords());
+    expect(en).toContain("0.618 (115.28)");
+    expect(textsOf(d, baseCoords(UK))).toContain("0,618 (115,28)");
+    const pct = drawing("fib-retracement", [pt(5, 100), pt(30, 140)], { fibLevelsAsPercents: true });
+    expect(textsOf(pct, baseCoords())).toContain("61.80% (115.28)");
+    expect(textsOf(pct, baseCoords(UK))).toContain("61,80% (115,28)");
+    const hook: LabelFormatter = (l) => (l.id === "fib-level" ? "X" : undefined);
+    expect(new Set(textsOf(d, baseCoords({ ...UK, formatLabel: hook })))).toEqual(new Set(["X"]));
+    expect(textsOf(d, baseCoords({ ...UK, formatLabel: () => undefined }))).toContain("0,618 (115,28)");
+  });
+
+  const FAMILY: [Drawing["kind"], Drawing["points"], Partial<DrawingStyle>?][] = [
+    ["trend-based-fib-extension", [pt(5, 100), pt(20, 140), pt(30, 120)]],
+    ["fib-channel", [pt(5, 100), pt(30, 130), pt(5, 110)]],
+    ["fib-speed-resistance-fan", [pt(5, 100), pt(30, 140)]],
+    ["fib-speed-resistance-arcs", [pt(5, 100), pt(30, 140)]],
+    ["fib-circles", [pt(5, 100), pt(30, 140)]],
+    ["fib-wedge", [pt(5, 100), pt(30, 140), pt(30, 100)]],
+    ["gann-box", [pt(5, 100), pt(30, 140)]],
+    ["gann-square", [pt(5, 100), pt(30, 140)]],
+    ["gann-fan", [pt(5, 100), pt(30, 140)], { levels: [lv(0.25), lv(0.5), lv(2)] }],
+    ["abcd-pattern", [pt(5, 100), pt(15, 140), pt(25, 120), pt(35, 150)]],
+    ["xabcd-pattern", [pt(5, 100), pt(12, 140), pt(20, 115), pt(28, 135), pt(36, 120)]],
+    ["cypher-pattern", [pt(5, 100), pt(12, 140), pt(20, 115), pt(28, 135), pt(36, 120)]],
+    ["three-drives-pattern", [pt(2, 100), pt(8, 130), pt(14, 112), pt(20, 140), pt(26, 123), pt(32, 150), pt(38, 130)]],
+  ];
+
+  it.each(FAMILY)("%s: a decimal reads with a comma under uk-UA, EN text unchanged when unset", (kind, points, style) => {
+    const d = { ...drawing(kind, points, style), fmt: 2 } as Drawing;
+    const en = textsOf(d, baseCoords());
+    expect(en.some((t) => DECIMAL.test(t))).toBe(true);
+    expect(textsOf(d, baseCoords({ numberLocale: "en" }))).toEqual(en);
+    expect(textsOf(d, baseCoords({ numberLocale: "not a locale!" }))).toEqual(en);
+    const uk = textsOf(d, baseCoords(UK));
+    expect(uk.some((t) => DECIMAL.test(t))).toBe(false);
+    expect(uk).toEqual(comma(en));
+  });
+
+  it("gann fan keeps the typed / default level text and only routes the coefficient fallback", () => {
+    const labelled = drawing("gann-fan", [pt(5, 100), pt(30, 140)], { levels: [lv(0.25, "1/4"), lv(0.5)] });
+    expect(textsOf(labelled, baseCoords(UK))).toEqual(["1/4", "0,5"]);
+    expect(textsOf(labelled, baseCoords())).toEqual(["1/4", "0.5"]);
+  });
+
+  it("gann square bars and ratio follow the locale", () => {
+    const d = drawing("gann-square", [pt(5, 100), pt(30, 140)]);
+    const en = textsOf(d, baseCoords());
+    expect(en).toContain("25");
+    expect(en).toContain("1.6");
+    expect(textsOf(d, baseCoords(UK))).toContain("1,6");
+  });
+
+  it("pattern ratios keep the full rounding (3 decimals; three drives 2)", () => {
+    const abcd = drawing("abcd-pattern", [pt(5, 100), pt(15, 140), pt(25, 120), pt(35, 150)]);
+    expect(textsOf(abcd, baseCoords()).slice(0, 2)).toEqual(["0.5", "1.5"]);
+    expect(textsOf(abcd, baseCoords(UK)).slice(0, 2)).toEqual(["0,5", "1,5"]);
+  });
+});

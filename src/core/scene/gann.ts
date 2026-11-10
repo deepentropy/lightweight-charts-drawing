@@ -6,6 +6,7 @@
 import { bboxCorners, dashFor, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import type { Drawing, DrawingStyle } from "../types";
 import { GANN_ARC_DEFAULTS, GANN_BOX_LEVEL_DEFAULTS, GANN_FAN_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, GANN_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS } from "../specs";
 import { tvTextLayout } from "../kinds/tv-text";
@@ -45,9 +46,9 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     const fs = s.labelFontSize ?? 12;
     const mk = (x: number, y: number, text: string, horz: "left" | "right", vert: "top" | "bottom", oy: number) =>
       tvTextLayout({ x, y, text, fs, bold: s.bold, italic: s.italic, horz, vert, offsetX: 10, offsetY: oy });
-    const priceDefault = signedFixed(c, digits);
+    const priceDefault = signedFixed(c, digits, coords);
     const priceText = labelOrDefault(coords, { id: "price", text: priceDefault, price: c, digits });
-    const barsDefault = String(u);
+    const barsDefault = formatNumber(coords, u, { min: 0, max: 0 }, String(u));
     const barsText = labelOrDefault(coords, { id: "bars-range", text: barsDefault, bars: u });
     const out = [
       mk(f.start.x, f.end.y, priceText, u > 0 ? "right" : "left", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10),
@@ -55,7 +56,7 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
     ];
     if (u !== 0) {
       const ratio = Math.abs(c / u);
-      const ratioDefault = String(Number(ratio.toFixed(7)));
+      const ratioDefault = formatNumber(coords, ratio, { min: 0, max: 7 }, String(Number(ratio.toFixed(7))));
       const ratioText = labelOrDefault(coords, { id: "gann-ratio", text: ratioDefault, ratio });
       out.push(mk(f.end.x, f.end.y, ratioText, u > 0 ? "left" : "right", c > 0 ? "bottom" : "top", c > 0 ? 8 : 10));
     }
@@ -89,7 +90,7 @@ export function sceneGannSquare(d: Drawing, pts: Pt[], selected: boolean, s: Dra
  *  (on p1's vertical for c1 > c2, else on p1's horizontal); levels 1-3 fill
  *  toward the next visible ray, levels 5-9 toward the previous one, level 4
  *  (1/2) has no own fill; labels at the level points. */
-export function sceneGannFan(pts: Pt[], selected: boolean, w: number, h: number, s: DrawingStyle): Scene {
+export function sceneGannFan(pts: Pt[], selected: boolean, w: number, h: number, s: DrawingStyle, coords?: Coords | null): Scene {
   const [a, b] = pts;
   const big = (w + h) * 2;
   const dx = b.x - a.x;
@@ -115,7 +116,7 @@ export function sceneGannFan(pts: Pt[], selected: boolean, w: number, h: number,
     const e = farOf(lvl.coeff);
     const t = pointOf(lvl.coeff);
     items.push({ t: "line", a, b: e, stroke: lvl.color, strokeWidth: levelWidth(lvl, s), dash: levelDash(lvl, s) });
-    if (s.showLabels !== false) items.push({ t: "text", x: t.x + pad, y: t.y, text: lvl.label ?? fmtCoeff(lvl.coeff), size: 12, fill: lvl.color, anchor: "start", baseline: "central", inert: true });
+    if (s.showLabels !== false) items.push({ t: "text", x: t.x + pad, y: t.y, text: lvl.label ?? fmtCoeff(lvl.coeff, coords), size: 12, fill: lvl.color, anchor: "start", baseline: "central", inert: true });
   }
   items.push(...anchorsIf(selected, pts));
   return items;
@@ -181,14 +182,14 @@ export function sceneGannBox(d: Drawing, pts: Pt[], selected: boolean, s: Drawin
   h.forEach((lv, i) => {
     if (i > 0 && hO > 0) items.push({ t: "rect", x: left, y: Math.min(lv.y, h[i - 1].y), w: right - left, h: Math.abs(lv.y - h[i - 1].y), fill: lv.color, fillOpacity: hO, inert: true });
     items.push({ t: "line", a: { x: left, y: lv.y }, b: { x: right, y: lv.y }, stroke: lv.color, strokeWidth: s.width, dash });
-    if (s.showLeftLabels !== false) items.push(label(left, lv.y, fmtCoeff(lv.coeff), lv.color, "right", "middle", 5, 0));
-    if (s.showRightLabels !== false) items.push(label(right, lv.y, fmtCoeff(lv.coeff), lv.color, "left", "middle", 5, 0));
+    if (s.showLeftLabels !== false) items.push(label(left, lv.y, fmtCoeff(lv.coeff, coords), lv.color, "right", "middle", 5, 0));
+    if (s.showRightLabels !== false) items.push(label(right, lv.y, fmtCoeff(lv.coeff, coords), lv.color, "left", "middle", 5, 0));
   });
   v.forEach((lv, i) => {
     if (i > 0 && vO > 0) items.push({ t: "rect", x: Math.min(lv.x, v[i - 1].x), y: top, w: Math.abs(lv.x - v[i - 1].x), h: bottom - top, fill: lv.color, fillOpacity: vO, inert: true });
     items.push({ t: "line", a: { x: lv.x, y: top }, b: { x: lv.x, y: bottom }, stroke: lv.color, strokeWidth: s.width, dash });
-    if (s.showTopLabels !== false) items.push(label(lv.x, top, fmtCoeff(lv.coeff), lv.color, "center", "bottom", 0, 3));
-    if (s.showBottomLabels !== false) items.push(label(lv.x, bottom, fmtCoeff(lv.coeff), lv.color, "center", "top", 0, 5));
+    if (s.showTopLabels !== false) items.push(label(lv.x, top, fmtCoeff(lv.coeff, coords), lv.color, "center", "bottom", 0, 3));
+    if (s.showBottomLabels !== false) items.push(label(lv.x, bottom, fmtCoeff(lv.coeff, coords), lv.color, "center", "top", 0, 5));
   });
   for (const [p, q] of fanLines) items.push({ t: "line", a: p, b: q, stroke: fans.color, strokeWidth: s.width, dash, inert: true });
   items.push(...anchorsIf(selected, corners));
