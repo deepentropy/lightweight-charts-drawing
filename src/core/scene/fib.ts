@@ -28,8 +28,8 @@ export function fmtCoeff(c: number, coords?: Pick<Coords, "numberLocale"> | null
   return formatNumber(coords, c, { min: 0, max: 3 }, c.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") || "0");
 }
 
-/** Level number of the time families (`String(coeff)`); up to 4 decimals under a locale. */
-const levelNumber = (coeff: number, coords?: Pick<Coords, "numberLocale"> | null) => formatNumber(coords, coeff, { min: 0, max: 4 }, String(coeff));
+/** Level number of the time families (`String(coeff)`); under a locale the same digits (no extra rounding). */
+const levelNumber = (coeff: number, coords?: Pick<Coords, "numberLocale"> | null) => formatNumber(coords, coeff, { min: 0, max: 20 }, String(coeff));
 
 const anchorsIf = (selected: boolean, pts: Pt[]): SceneItem[] => (selected ? [{ t: "anchors", pts }] : []);
 const digitsOf = (coords: Coords | null) => Math.max(0, Math.min(8, Math.round(-Math.log10(coords?.pipSize() ?? 0.01))));

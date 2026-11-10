@@ -138,6 +138,11 @@ describe("formatNumber", () => {
     expect(formatNumber({ numberLocale: "not a locale!" }, 1.5, { min: 0, max: 2 }, "1.5")).toBe("1.5");
   });
 
+  it("a well-formed tag with no locale data falls back too (never the runtime locale)", () => {
+    expect(formatNumber({ numberLocale: "zz" }, 1234.5, { min: 2, max: 2 }, "1234.50")).toBe("1234.50");
+    expect(formatNumber({ numberLocale: "ua" }, 1234.5, { min: 2, max: 2 }, "1234.50")).toBe("1234.50");
+  });
+
   it("a set locale formats with the digit bounds", () => {
     expect(formatNumber({ numberLocale: "uk-UA" }, 12.3, { min: 2, max: 2 }, "12.30")).toBe("12,30");
     expect(formatNumber({ numberLocale: "en" }, 12.3456, { min: 0, max: 2 }, "x")).toBe("12.35");
@@ -302,6 +307,12 @@ describe("numberLocale: fib, Gann and pattern numbers", () => {
     expect(textsOf(d, baseCoords({ numberLocale: "en" }))).toEqual(["0", "1.5", "2"]);
   });
 
+  it("fib time zone keeps every digit of a level under a locale (no extra rounding)", () => {
+    const d = drawing("fib-time-zone", [pt(5, 100), pt(10, 110)], { levels: [lv(0), lv(0.23606)] });
+    expect(textsOf(d, baseCoords())).toEqual(["0", "0.23606"]);
+    expect(textsOf(d, baseCoords(UK))).toEqual(["0", "0,23606"]);
+  });
+
   it("trend-based fib time: default 0.382 level", () => {
     const d = drawing("trend-based-fib-time", [pt(5, 100), pt(15, 120), pt(25, 110)]);
     const en = textsOf(d, baseCoords());
@@ -409,6 +420,14 @@ describe("numberLocale: position, forecast, price note and price label numbers",
     expect(textsOf(d, baseCoords(UK)).join("|")).toMatch(/Risk\/reward ratio: 1,5/);
   });
 
+  it("quantity keeps all qtyPrecision 10 digits under a locale", () => {
+    const d = drawing("long-position", POS, { ...LEVELS, stopLevel: 30, profitLevel: 30, riskPercent: 1, qtyPrecision: "10" });
+    const qty = (t: string[]) => t.join("|").match(/Qty: (\S+?)(?:, |\||$)/)?.[1];
+    const en = qty(textsOf(d, baseCoords()));
+    expect(en).toBe("0.3333333333");
+    expect(qty(textsOf(d, baseCoords(UK)))).toBe(en!.replace(".", ","));
+  });
+
   it("formatLabel wins on position-target; undefined gives the locale default", () => {
     const hook = (ret: string | undefined): LabelFormatter => (l) => (l.id === "position-target" ? ret : undefined);
     expect(textsOf(long(false), baseCoords({ ...UK, formatLabel: hook("T") }))[0]).toBe("T");
@@ -435,13 +454,10 @@ describe("numberLocale: position, forecast, price note and price label numbers",
 });
 
 describe("numberLocale: vertex ordinals beyond the label table", () => {
-  it("elliott fallback index follows the locale digits; the fixed wave labels stay", () => {
+  it("elliott fallback index stays fixed notation, like the wave label table", () => {
     const d = drawing("elliott-impulse", [0, 3, 6, 9, 12, 15, 18, 21].map((i) => pt(i, 100 + (i % 2) * 10)));
     const en = textsOf(d, baseCoords());
     expect(en.slice(-2)).toEqual(["(6)", "(7)"]);
-    const ar = new Intl.NumberFormat("ar-EG");
-    const loc = textsOf(d, baseCoords({ numberLocale: "ar-EG" }));
-    expect(loc.slice(-2)).toEqual([`(${ar.format(6)})`, `(${ar.format(7)})`]);
-    expect(loc.slice(0, -2)).toEqual(en.slice(0, -2));
+    expect(textsOf(d, baseCoords({ numberLocale: "ar-EG" }))).toEqual(en);
   });
 });

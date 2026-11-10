@@ -114,7 +114,7 @@ export function positionMiddleText(
 ): string {
   const compact = !!s.compactStats;
   const pnlText = pnl != null ? signedFixed(pnl, digits, coords) : null;
-  const qtyText = formatNumber(coords, qty, { min: 0, max: 8 }, String(qty));
+  const qtyText = formatNumber(coords, qty, { min: 0, max: 10 }, String(qty));
   const ratioText = formatNumber(coords, ratio, { min: 0, max: 2 }, String(ratio));
   let t = "";
   if (positionStatOn(s, "openClosePL") && pnlText) t += compact ? pnlText : `${closed ? "Closed" : "Open"} PnL: ${pnlText}`;

@@ -77,7 +77,7 @@ function elliottLabels(kind: string, group: number): string[] {
   return group % 2 === 1 ? base.map((l) => l.toLowerCase()) : base;
 }
 
-export function sceneElliott(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords?: Coords | null): Scene {
+export function sceneElliott(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
   const degree = Math.max(0, Math.min(14, Math.round(s.elliottDegree ?? ELLIOTT_DEFAULT_DEGREE)));
   const t = 14 - degree;
   const group = Math.floor(t / 3);
@@ -94,7 +94,7 @@ export function sceneElliott(d: Drawing, pts: Pt[], selected: boolean, s: Drawin
   pts.forEach((pt, i) => {
     if (i === 0 && !selected) return;
     const cy = pt.y + (side(i) === 1 ? offset : -offset);
-    const l = labels[i] ?? formatNumber(coords, i, { min: 0, max: 0 }, String(i));
+    const l = labels[i] ?? String(i);
     if (deco === "circle") out.push({ t: "circle", cx: pt.x, cy, r: gs.circle / 2 - 0.5, fill: "none", stroke: s.color, strokeWidth: 1, inert: true });
     out.push({
       t: "text", x: pt.x, y: cy + 0.05 * gs.font, text: deco === "brackets" ? `(${l})` : l, size: gs.font,
@@ -400,7 +400,7 @@ export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s
   if (d.kind === "abcd-pattern" && pts.length >= 2) return sceneAbcdPattern(d, pts, selected, s, coords);
   if ((d.kind === "xabcd-pattern" || d.kind === "cypher-pattern") && pts.length >= 2) return sceneXabcdPattern(d, pts, selected, s, coords);
   if (d.kind === "three-drives-pattern" && pts.length >= 2) return sceneThreeDrives(d, pts, selected, s, coords);
-  if (d.kind.startsWith("elliott-")) return sceneElliott(d, pts, selected, s, coords);
+  if (d.kind.startsWith("elliott-")) return sceneElliott(d, pts, selected, s);
   const labels = KIND_LABELS[d.kind];
   // TV polyline: the closing side and the fill only once closed (`filled`).
   const isFilled = FILLED_KINDS.has(d.kind) && d.closed === true;
@@ -449,7 +449,7 @@ export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s
   }
   if (labels) {
     pts.forEach((pt, i) => {
-      out.push({ t: "text", x: pt.x, y: pt.y + labelOffsetY(pts, i), text: labels[i] ?? formatNumber(coords, i + 1, { min: 0, max: 0 }, String(i + 1)), size: 11, fill: s.color, anchor: "middle" });
+      out.push({ t: "text", x: pt.x, y: pt.y + labelOffsetY(pts, i), text: labels[i] ?? String(i + 1), size: 11, fill: s.color, anchor: "middle" });
     });
   }
   if (selected) out.push({ t: "anchors", pts: handlePts });

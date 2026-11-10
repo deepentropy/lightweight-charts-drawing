@@ -26,14 +26,19 @@ export function formatNumber(
   let nf = formatters.get(key);
   if (nf === undefined) {
     try {
-      nf = new Intl.NumberFormat(locale, { minimumFractionDigits: digits.min, maximumFractionDigits: digits.max });
+      // A well-formed tag ICU has no data for ("ua", "zz") does not throw: Intl would
+      // silently use the runtime (browser) locale, so treat it as invalid too.
+      nf = Intl.NumberFormat.supportedLocalesOf(locale).length
+        ? new Intl.NumberFormat(locale, { minimumFractionDigits: digits.min, maximumFractionDigits: digits.max })
+        : null;
     } catch {
       nf = null;
     }
     formatters.set(key, nf);
   }
   if (!nf) return fallback;
-  // Pre-round like `toFixed` (what the EN fallbacks use) so a tie rounds the
-  // same in every locale; `|| 0` turns a rounded -0 into 0 (no "-0").
+  // Pre-round with `toFixed` so a tie rounds the same in every locale (a few EN
+  // fallbacks use `Math.round`, which differs on negative exact ties); `|| 0`
+  // turns a rounded -0 into 0 (no "-0").
   return nf.format(Number(value.toFixed(digits.max)) || 0);
 }
