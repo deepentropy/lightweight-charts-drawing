@@ -8,6 +8,7 @@
 import { dashFor, HANDLE_RADIUS, HIT_TOLERANCE, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault } from "../labels";
+import { formatNumber } from "../number-format";
 import type { Drawing, DrawingStyle, RegressionLine } from "../types";
 import { REGRESSION_LINE_DEFAULTS, volumeProfileStyle } from "../specs";
 import { anchoredVpBox, fixedVpBox, regressionScreenLines, vwapBandLine, vwapScreenSeries } from "../kinds/data-series";
@@ -58,7 +59,8 @@ export function sceneRegressionTrend(d: Drawing, pts: Pt[], selected: boolean, w
   if (s.showPearsons !== false && l) {
     const pearsonText = labelOrDefault(coords, {
       id: "pearson",
-      text: String(lines.pearsons),
+      // Full precision: up to 20 fraction digits (the Intl maximum of older engines).
+      text: formatNumber(coords, lines.pearsons, { min: 0, max: 20 }, String(lines.pearsons)),
       r: lines.pearsons,
     });
     out.push({ t: "text", x: l[0].x, y: l[0].y + 4, text: pearsonText, anchor: "middle", baseline: "hanging", size: 12, fill: rl.down.color, inert: true });
@@ -114,13 +116,17 @@ export function sceneAnchoredVwap(d: Drawing, pts: Pt[], selected: boolean, w: n
 const vpDash = (s: RegressionLine["style"]) => (s === "dashed" ? "6 4" : s === "dotted" ? "2 3" : undefined);
 
 /** Compact volume text ("1.25M", "830K") for the histogram values. */
-function vpVolumeText(v: number): string {
+function vpVolumeText(v: number, coords: Coords): string {
   const a = Math.abs(v);
-  const f = (x: number, u: string) => `${(v < 0 ? -x : x).toFixed(x >= 100 ? 0 : x >= 10 ? 1 : 2)}${u}`;
+  const f = (x: number, u: string) => {
+    const d = x >= 100 ? 0 : x >= 10 ? 1 : 2;
+    const sv = v < 0 ? -x : x;
+    return `${formatNumber(coords, sv, { min: d, max: d }, sv.toFixed(d))}${u}`;
+  };
   if (a >= 1e9) return f(a / 1e9, "B");
   if (a >= 1e6) return f(a / 1e6, "M");
   if (a >= 1e3) return f(a / 1e3, "K");
-  return String(Math.round(v));
+  return formatNumber(coords, v, { min: 0, max: 0 }, String(Math.round(v)));
 }
 
 /** Volume profile (reference VbP study graphics, settings `vp`): the
@@ -163,7 +169,7 @@ function volumeProfileScene(box: NonNullable<ReturnType<typeof fixedVpBox>>, coo
       }
       if (s.showValues && r.h >= valueSize - 2) {
         const v = s.volume === "delta" ? row.up - row.down : row.up + row.down;
-        const defaultText = vpVolumeText(v);
+        const defaultText = vpVolumeText(v, coords);
         const text = labelOrDefault(coords, { id: "volume", text: defaultText, volume: v });
         items.push({
           t: "text", x: fromRight ? right - offset - 4 : left + offset + 4, y: r.y + r.h / 2, text,

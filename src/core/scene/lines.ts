@@ -55,15 +55,15 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
     const percent = p0.price !== 0 ? (dPrice / Math.abs(p0.price)) * 100 : null;
     if (s.showPriceRange || s.showPercentPriceRange) {
       const sub: string[] = [];
-      if (s.showPriceRange) sub.push(signedFixed(dPrice, digits));
+      if (s.showPriceRange) sub.push(signedFixed(dPrice, digits, coords));
       if (s.showPercentPriceRange) {
-        const pct = percent != null ? `${signedFixed(percent, 2)}%` : "";
+        const pct = percent != null ? `${signedFixed(percent, 2, coords)}%` : "";
         if (pct) sub.push(s.showPriceRange ? `(${pct})` : pct);
       }
       parts.push(sub.join(" "));
     }
     const pips = Math.round(dPrice / pip);
-    if (s.showPipsPriceRange) parts.push(signedFixed(pips, 0));
+    if (s.showPipsPriceRange) parts.push(signedFixed(pips, 0, coords));
     const text = parts.join(", ");
     const part = labelPart(coords, { id: "price-range", text, change: dPrice, percent, pips, digits, price0: p0.price, price1: p1.price });
     pushRow("price", part.text, [part]);
@@ -76,7 +76,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
       const i0 = coords ? coords.timeToBarIndex(p0.time) : null;
       const i1 = coords ? coords.timeToBarIndex(p1.time) : null;
       const nBars = i0 != null && i1 != null ? i1 - i0 : 0;
-      const barsText = `${nBars} bars`;
+      const barsText = `${formatNumber(coords, nBars, { min: 0, max: 0 }, String(nBars))} bars`;
       bits.push({ kind: "bars", part: labelPart(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (showDate) {
@@ -84,7 +84,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
       const bSec = timeToSec(p1.time);
       const seconds = aSec != null && bSec != null ? bSec - aSec : null;
       if (seconds != null) {
-        const span = tvTimeSpan(seconds);
+        const span = tvTimeSpan(seconds, coords);
         if (span || coords?.formatLabel) {
           bits.push({ kind: "span", part: labelPart(coords, { id: "time-span", text: span, seconds }) });
         }
@@ -92,7 +92,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
     }
     if (showDist) {
       const distancePx = Math.round(Math.hypot(b.x - a.x, b.y - a.y));
-      const distText = `distance: ${distancePx} px`;
+      const distText = `distance: ${formatNumber(coords, distancePx, { min: 0, max: 0 }, String(distancePx))} px`;
       bits.push({ kind: "dist", part: labelPart(coords, { id: "distance", text: distText, distancePx }) });
     }
     if (bits.length) {
@@ -112,7 +112,7 @@ export function tvStatRows(d: Drawing, a: Pt, b: Pt, s: DrawingStyle, coords: Co
   }
   if (withExtras && s.showAngle && Math.hypot(b.x - a.x, b.y - a.y) > 0) {
     const deg = (Math.atan2(-(b.y - a.y), b.x - a.x) * 180) / Math.PI;
-    const angleText = `${Math.round(deg * 100) / 100}º`;
+    const angleText = `${formatNumber(coords, deg, { min: 0, max: 2 }, String(Math.round(deg * 100) / 100))}º`;
     const part = labelPart(coords, { id: "angle", text: angleText, degrees: deg });
     pushRow("angle", part.text, [part]);
   }

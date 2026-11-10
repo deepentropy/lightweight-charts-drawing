@@ -18,6 +18,7 @@ import {
   type SceneItem,
 } from "lightweight-charts-drawing";
 import { formatNumber } from "../src/core/number-format";
+import { tvTimeSpan, tvVolume } from "../src/core/scene/text";
 
 (globalThis as { document?: unknown }).document ??= {
   createElement: () => ({ getContext: () => null }),
@@ -152,6 +153,94 @@ describe("numberLocale: trend angle arc", () => {
   it("uk-UA uses a comma, en keeps the period", () => {
     expect(textsOf(angleLine(12.3456), baseCoords({ numberLocale: "uk-UA" }))).toEqual(["12,35\u00ba"]);
     expect(textsOf(angleLine(12.3456), baseCoords({ numberLocale: "en" }))).toEqual(["12.35\u00ba"]);
+  });
+});
+
+const UK = { numberLocale: "uk-UA" };
+const uk = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
+/** EN text -> the same text with a comma decimal (only valid for texts with no thousands group). */
+const comma = (texts: string[]) => texts.map((t) => t.replace(/\./g, ","));
+
+const ALL_STATS: Partial<DrawingStyle> = {
+  showStats: true,
+  showPriceRange: true,
+  showPercentPriceRange: true,
+  showPipsPriceRange: true,
+  showBarsRange: true,
+  showDateTimeRange: true,
+  showDistance: true,
+  showAngle: true,
+};
+
+describe("numberLocale: line, channel, data and stats numbers", () => {
+  const trend = () => drawing("trend-line", [pt(5, 1500), pt(20, 1000)], ALL_STATS);
+
+  it("unset keeps the v0.8.0 trend-line stats strings", () => {
+    expect(textsOf(trend(), baseCoords())).toEqual([
+      "\u2212500.00 (\u221233.33%), \u221250000",
+      "15 bars (15d), distance: 2504 px",
+      "-86.57\u00ba",
+    ]);
+  });
+
+  it("uk-UA: price range, percent, pips, distance and the stats-row angle", () => {
+    expect(textsOf(trend(), baseCoords(UK))).toEqual([
+      `\u2212500,00 (\u221233,33%), \u2212${uk(50000)}`,
+      `15 bars (15d), distance: ${uk(2504)} px`,
+      `${uk(-86.57)}\u00ba`,
+    ]);
+  });
+
+  it("time span and volume text group like the locale (days, K / M / B)", () => {
+    expect(tvTimeSpan(1500 * 86400 + 3600)).toBe("1,500d 1h");
+    expect(tvTimeSpan(1500 * 86400 + 3600, UK)).toBe(`${uk(1500)}d 1h`);
+    expect(tvVolume(1_234_567)).toBe("1.23\u202fM");
+    expect(tvVolume(1_234_567, UK)).toBe("1,23\u202fM");
+    expect(tvVolume(-12_345, UK)).toBe(`${uk(-12.35)}\u202fK`);
+  });
+
+  it("price-range / date-and-price-range tools follow the locale", () => {
+    for (const kind of ["price-range", "date-and-price-range"] as const) {
+      const d = drawing(kind, [pt(5, 100), pt(20, 101.5)]);
+      const en = textsOf(d, baseCoords());
+      expect(en.join("|")).toMatch(/\d\.\d/);
+      expect(textsOf(d, baseCoords(UK))).toEqual(comma(en));
+    }
+  });
+
+  it("disjoint-channel prices use the locale", () => {
+    const d = drawing("disjoint-channel", [pt(5, 100), pt(30, 130), pt(5, 110)], { showPrices: true });
+    const en = textsOf(d, baseCoords());
+    expect(en.length).toBe(4);
+    expect(textsOf(d, baseCoords(UK))).toEqual(comma(en));
+  });
+
+  it("regression Pearson default keeps full precision with a comma", () => {
+    const d = drawing("regression-trend", [pt(5, 100), pt(40, 140)], { showPearsons: true });
+    expect(textsOf(d, baseCoords())).toEqual(["0.9028568950984005"]);
+    expect(textsOf(d, baseCoords(UK))).toEqual(["0,9028568950984005"]);
+  });
+
+  it("volume profile row values use the locale", () => {
+    const d = drawing("fixed-range-volume-profile", [pt(5, 90), pt(40, 160)], {
+      vp: { showValues: true, rows: 8 },
+    } as Partial<DrawingStyle>);
+    const en = textsOf(d, baseCoords());
+    expect(en.length).toBeGreaterThan(0);
+    expect(textsOf(d, baseCoords(UK))).toEqual(comma(en));
+  });
+
+  it("formatLabel wins over the locale default; undefined / null gives the locale default", () => {
+    const hook = (ret: string | null | undefined): LabelFormatter => (l) => (l.id === "price-range" ? ret : undefined);
+    const win = textsOf(trend(), baseCoords({ ...UK, formatLabel: hook("X") }));
+    expect(win[0]).toBe("X");
+    for (const ret of [undefined, null]) {
+      expect(textsOf(trend(), baseCoords({ ...UK, formatLabel: hook(ret) }))[0]).toBe(`\u2212500,00 (\u221233,33%), \u2212${uk(50000)}`);
+    }
+  });
+
+  it("an invalid locale tag paints the EN text", () => {
+    expect(textsOf(trend(), baseCoords({ numberLocale: "not a locale!" }))).toEqual(textsOf(trend(), baseCoords()));
   });
 });
 

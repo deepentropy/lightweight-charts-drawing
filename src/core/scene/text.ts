@@ -5,6 +5,8 @@
  * label (geometry + scene items).
  */
 import type { Pt } from "../_shared";
+import type { Coords } from "../coords";
+import { formatNumber } from "../number-format";
 import type { DrawingStyle } from "../types";
 import { measureTextStyled, type tvTextLayout } from "../kinds/tv-text";
 import type { SceneItem } from "./types";
@@ -39,14 +41,15 @@ export function measureTextFont(text: string, fontSize: number, fontFamily: stri
   return c.measureText(text).width;
 }
 
-/** Signed number with TV's minus sign (U+2212). */
-export function signedFixed(v: number, digits: number): string {
-  const t = Math.abs(v).toFixed(digits);
+/** Signed number with TV's minus sign (U+2212); `coords.numberLocale` sets the digits' locale. */
+export function signedFixed(v: number, digits: number, coords?: Pick<Coords, "numberLocale"> | null): string {
+  const a = Math.abs(v);
+  const t = formatNumber(coords, a, { min: digits, max: digits }, a.toFixed(digits));
   return v < 0 ? `−${t}` : t;
 }
 
 /** TV TimeSpanFormatter: "1d 21h 30m", zero parts omitted. */
-export function tvTimeSpan(seconds: number): string {
+export function tvTimeSpan(seconds: number, coords?: Pick<Coords, "numberLocale"> | null): string {
   const neg = seconds < 0;
   let t = Math.abs(Math.round(seconds));
   const dd = Math.floor(t / 86400);
@@ -55,21 +58,22 @@ export function tvTimeSpan(seconds: number): string {
   t -= hh * 3600;
   const mm = Math.floor(t / 60);
   t -= mm * 60;
+  const n = (v: number, fallback: string) => formatNumber(coords, v, { min: 0, max: 0 }, fallback);
   const parts: string[] = [];
-  if (dd) parts.push(`${dd.toLocaleString("en-US")}d`);
-  if (hh) parts.push(`${hh}h`);
-  if (mm) parts.push(`${mm}m`);
-  if (t) parts.push(`${t}s`);
+  if (dd) parts.push(`${n(dd, dd.toLocaleString("en-US"))}d`);
+  if (hh) parts.push(`${n(hh, String(hh))}h`);
+  if (mm) parts.push(`${n(mm, String(mm))}m`);
+  if (t) parts.push(`${n(t, String(t))}s`);
   const out = parts.join(" ");
   return neg ? `-${out}` : out;
 }
 
 /** TV volume formatter: up to 2 decimals, unit after a narrow no-break
  *  space (U+202F): "519.06 K", "1.5 M", "2 B". */
-export function tvVolume(v: number): string {
+export function tvVolume(v: number, coords?: Pick<Coords, "numberLocale"> | null): string {
   const units: [number, string][] = [[1e9, " B"], [1e6, " M"], [1e3, " K"]];
-  for (const [div, u] of units) if (Math.abs(v) >= div) return `${Number((v / div).toFixed(2))}${u}`;
-  return String(Math.round(v));
+  for (const [div, u] of units) if (Math.abs(v) >= div) return `${formatNumber(coords, v / div, { min: 0, max: 2 }, String(Number((v / div).toFixed(2))))}${u}`;
+  return formatNumber(coords, v, { min: 0, max: 0 }, String(Math.round(v)));
 }
 
 /** TV needTextExclusionPath: the line runs through the text only when the

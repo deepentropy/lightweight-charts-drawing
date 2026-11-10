@@ -14,6 +14,7 @@
 import { timeToSec, type Pt } from "../_shared";
 import type { Coords } from "../coords";
 import { labelOrDefault, labelPart, type DrawingLabel } from "../labels";
+import { formatNumber } from "../number-format";
 import type { Drawing, DrawingStyle } from "../types";
 import { barsBetween } from "../kinds/data-series";
 import type { Scene, SceneItem, Shadow } from "./types";
@@ -70,18 +71,18 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
     const v = on(s.showPriceRange), pc = on(s.showPercentPriceRange), pp = on(s.showPipsPriceRange);
     let c = "";
     const percent = p0 !== 0 ? (100 * change) / Math.abs(p0) : null;
-    if (v) c += signedFixed(change, digits);
+    if (v) c += signedFixed(change, digits, coords);
     if (pc) {
       const pct = percent ?? 0;
       if (v) c += " (";
-      c += `${signedFixed(Math.round(pct * 100) / 100, 2)}%`;
+      c += `${signedFixed(Math.round(pct * 100) / 100, 2, coords)}%`;
       if (v) c += ")";
     }
     const pips = Math.round(change / pip);
     if (pp) {
       if (v) c += pc ? " " : ", ";
       else if (pc) c += ", ";
-      c += signedFixed(pips, 0);
+      c += signedFixed(pips, 0, coords);
     }
     if (c) {
       const part = labelPart(coords, { id: "price-range", text: c, change, percent, pips, digits, price0: p0, price1: p1 });
@@ -97,12 +98,12 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
     const bits: { kind: "bars" | "span"; part: DrawingLabel }[] = [];
     if (g && i0 != null && i1 != null) {
       const nBars = i1 - i0;
-      const barsText = `${nBars} bars`;
+      const barsText = `${formatNumber(coords, nBars, { min: 0, max: 0 }, String(nBars))} bars`;
       bits.push({ kind: "bars", part: labelPart(coords, { id: "bars-range", text: barsText, bars: nBars }) });
     }
     if (f && t0 != null && t1 != null) {
       const seconds = t1 - t0;
-      const span = tvTimeSpan(seconds);
+      const span = tvTimeSpan(seconds, coords);
       bits.push({ kind: "span", part: labelPart(coords, { id: "time-span", text: span, seconds }) });
     }
     if (bits.length) {
@@ -129,7 +130,7 @@ export function rangeLabelLines(d: Drawing, s: DrawingStyle, coords: Coords | nu
         }
       }
       if (any) {
-        const volText = `Vol ${tvVolume(vol)}`;
+        const volText = `Vol ${tvVolume(vol, coords)}`;
         const part = labelPart(coords, { id: "volume", text: volText, volume: vol });
         row(part.text, [part]);
       }
