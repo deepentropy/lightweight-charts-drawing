@@ -37,7 +37,7 @@ export { parseDrawings, migrateDrawing } from "./core/serialize";
 export { sceneOf, sceneLockedAnchors, type SceneContext } from "./core/scene";
 export { fibLevelAt } from "./core/scene/fib";
 export type { Scene, SceneItem, Paint, Shadow } from "./core/scene/types";
-export { hitTestKind } from "./core/kinds/hit-tests";
+export { hitTestKind, pickTopmostHit } from "./core/kinds/hit-tests";
 export { drawingAxisLabels, type PriceAxisLabel, type TimeAxisLabel } from "./core/kinds/axis-labels";
 
 // ============ Host hooks: images, tables ============

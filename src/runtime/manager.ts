@@ -17,7 +17,7 @@ import type { Coords, OHLC } from "../core/coords";
 import type { LabelFormatter } from "../core/labels";
 import { isVisibleOnInterval, type DataPoint, type Drawing, type DrawingKind, type NewDrawing } from "../core/types";
 import { defaultStyleFor, findOverlaySpec, type OverlaySpec } from "../core/specs";
-import { hitTestKind } from "../core/kinds/hit-tests";
+import { hitTestKind, pickTopmostHit } from "../core/kinds/hit-tests";
 import { signpostPositionFor } from "../core/kinds/signpost";
 import { drawingAxisLabels } from "../core/kinds/axis-labels";
 import { tableCanRemove, tableEdgeOf, tableInsert, tableLayout, tableRemove, tableWithText, type TableCellRef, type TableUi } from "../core/kinds/table";
@@ -590,15 +590,14 @@ export class DrawingManager {
     const { w, h } = this.paneSize();
     // Drawings are clipped to the pane (TV): nothing hits over the axes.
     if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) return null;
-    for (let i = this.list.length - 1; i >= 0; i--) {
-      const d = this.list[i];
-      if (!this.shown(d)) continue;
+    // Strokes, handles and text of every drawing before any fill (TV).
+    const pick = pickTopmostHit(this.list, (d) => {
+      if (!this.shown(d)) return null;
       const pts = screenPoints(this.coords, d, { w, h });
-      if (!pts) continue;
-      const r = hitTestKind(d, pts, sp, w, h, this.coords, this.selected.includes(d.id));
-      if (r) return { drawing: d, mode: r, pts };
-    }
-    return null;
+      return pts ? hitTestKind(d, pts, sp, w, h, this.coords, this.selected.includes(d.id)) : null;
+    });
+    const pts = pick && screenPoints(this.coords, pick.item, { w, h });
+    return pick && pts ? { drawing: pick.item, mode: pick.hit, pts } : null;
   }
 
   private setHover(h: { id: string; anchor: number } | null): void {

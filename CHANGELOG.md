@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Filled areas (#30): a press inside a fill is a background hit (`{ hit: "body", background: true }`, TV
+  MOVEPOINT_BACKGROUND). It ranks below the handles, strokes and text of every drawing, so a filled
+  rectangle on top no longer hides the trend line under it; `pickTopmostHit(items, test)` (exported)
+  applies that order for hosts that hit-test themselves. Background hits: rectangle, circle, ellipse,
+  triangle, rotated rectangle, sector, parallel channel, pitchforks, fib channel, closed polyline,
+  XABCD / cypher / triangle pattern fills.
+
+### Fixed
+
+- Rectangle, circle, ellipse, triangle, rotated rectangle, sector and the XABCD / cypher / triangle
+  pattern fills (#30): with Background off the interior no longer hits (a press passes through to the
+  chart); the border still hits. The outline of these shapes now hits with the stroke tolerance.
+
 ## 0.9.0 (10/11/2026)
 
 ### Added

@@ -43,6 +43,41 @@ import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, 
 
 const HANDLE_R = HANDLE_RADIUS + HIT_TOLERANCE;
 
+/** A press on a fill, off the strokes (see HitResult `background`). */
+const background = (): HitResult => ({ hit: "body", background: true });
+
+/** The fill of a filled shape hits only while it is drawn. */
+const filled = (d: Drawing): boolean => d.style.fillBackground !== false;
+
+/** Cursor within `tol` of a closed polygon's sides. */
+function onOutline(cursor: Pt, poly: Pt[], tol: number): boolean {
+  for (let i = 0; i < poly.length; i++) {
+    if (distToSegment(cursor.x, cursor.y, poly[i], poly[(i + 1) % poly.length]) <= tol) return true;
+  }
+  return false;
+}
+
+/** The hit under the cursor in a z-ordered list (last = topmost): the topmost
+ *  handle / stroke / text hit of any drawing, else the topmost background
+ *  (fill) hit. TV ranks background hits last, so a filled shape on top never
+ *  hides the lines of the drawings under it. */
+export function pickTopmostHit<T>(
+  items: readonly T[],
+  test: (item: T) => HitResult | null,
+): { item: T; hit: HitResult } | null {
+  let bg: { item: T; hit: HitResult } | null = null;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const hit = test(items[i]);
+    if (!hit) continue;
+    if (hit.hit === "body" && hit.background) {
+      bg ??= { item: items[i], hit };
+      continue;
+    }
+    return { item: items[i], hit };
+  }
+  return bg;
+}
+
 function inBox(c: Pt, b: { left: number; top: number; width: number; height: number }): boolean {
   return c.x >= b.left && c.x <= b.left + b.width && c.y >= b.top && c.y <= b.top + b.height;
 }
@@ -242,7 +277,7 @@ function pitchforkHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, he
   if (s.fillBackground !== false && levels.length > 0) {
     const kmax = Math.max(...levels.map((l) => l.coeff));
     const b = { x: g.mid.x + g.dir.x, y: g.mid.y + g.dir.y };
-    if (inBand(cursor, g.mid, b, g.half, -kmax, kmax, !!s.extendLines, true)) return { hit: "body" };
+    if (inBand(cursor, g.mid, b, g.half, -kmax, kmax, !!s.extendLines, true)) return background();
   }
   return null;
 }
@@ -345,7 +380,7 @@ function parallelChannelHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number
     const [p, q] = extendHitSeg({ x: a.x, y: a.y + o }, { x: b.x, y: b.y + o }, !!s.extendLeft, !!s.extendRight, big);
     if (distToSegment(cursor.x, cursor.y, p, q) <= tol) return { hit: "body" };
   }
-  if (s.fillBackground !== false && inBand(cursor, a, b, { x: 0, y: dy }, vis[0].coeff, vis[vis.length - 1].coeff, !!s.extendLeft, !!s.extendRight)) return { hit: "body" };
+  if (s.fillBackground !== false && inBand(cursor, a, b, { x: 0, y: dy }, vis[0].coeff, vis[vis.length - 1].coeff, !!s.extendLeft, !!s.extendRight)) return background();
   return null;
 }
 
@@ -407,12 +442,12 @@ function fibChannelHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number, wid
   // TV ParallelChannelRenderer: the band between the lowest and highest
   // visible level when the background is on.
   if (s.fillBackground === false) return null;
-  return inBand(cursor, a, b, n, Math.min(...coeffs), Math.max(...coeffs), !!s.extendLeft, !!s.extendRight) ? { hit: "body" } : null;
+  return inBand(cursor, a, b, n, Math.min(...coeffs), Math.max(...coeffs), !!s.extendLeft, !!s.extendRight) ? background() : null;
 }
 
 /** Rotated ellipse (TV): p0/p1 = major axis, p2 = half-height point. Cursor is
  *  transformed into the ellipse frame for the containment test. */
-function ellipse3Hit(pts: Pt[], cursor: Pt): HitResult | null {
+function ellipse3Hit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   const [a, b, c] = pts;
@@ -429,9 +464,12 @@ function ellipse3Hit(pts: Pt[], cursor: Pt): HitResult | null {
   const dy = cursor.y - cy;
   const lx = dx * Math.cos(-ang) - dy * Math.sin(-ang);
   const ly = dx * Math.sin(-ang) + dy * Math.cos(-ang);
-  const q = (lx / (rx + HIT_TOLERANCE)) ** 2 + (ly / (ry + HIT_TOLERANCE)) ** 2;
-  if (q <= 1) return { hit: "body" };
-  return null;
+  // The outline: inside the ellipse grown by tol, outside the one shrunk by
+  // tol (a thin ellipse is all outline); the fill inside that.
+  if ((lx / (rx + tol)) ** 2 + (ly / (ry + tol)) ** 2 > 1) return null;
+  const inner = rx > tol && ry > tol && (lx / (rx - tol)) ** 2 + (ly / (ry - tol)) ** 2 < 1;
+  if (!inner) return { hit: "body" };
+  return filled(drawing) ? background() : null;
 }
 
 /** Rectangle edge midpoints (TV's 8-anchor rectangle): indices 4-7 continue
@@ -474,16 +512,37 @@ function rectangleHit(pts: Pt[], cursor: Pt, withMidpoints = false): HitResult |
   return null;
 }
 
-/** TV circle: center = p0, radius = screen distance to p1. Anything within
- *  radius + tolerance hits (ring or filled interior — TV treats both as the
- *  movable body; the two stored points are the anchors). */
-function circleHit(pts: Pt[], cursor: Pt): HitResult | null {
+/** The rectangle tool (TV): 8 anchors (4 corners + 4 edge midpoints), the
+ *  border (with the extend flags the box runs past the pane edge on that
+ *  side), the text box (TV TextRenderer, also outside the box), then the fill. */
+function rectangleToolHit(drawing: Drawing, pts: Pt[], cursor: Pt, paneW: number, tol: number): HitResult | null {
+  const h = rectangleHit(pts, cursor, true);
+  if (h?.hit === "handle") return h;
+  const s = drawing.style;
+  const [a, b] = pts;
+  const lw = s.width ?? 1;
+  const left = s.extendLeft ? -lw : Math.min(a.x, b.x);
+  const right = s.extendRight ? paneW + lw : Math.max(a.x, b.x);
+  const top = Math.min(a.y, b.y);
+  const bottom = Math.max(a.y, b.y);
+  const box: Pt[] = [{ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }];
+  if (onOutline(cursor, box, tol)) return { hit: "body" };
+  const text = rectangleTextLayout(drawing, pts, paneW)?.box;
+  if (text && inBox(cursor, text)) return { hit: "body" };
+  if (filled(drawing) && cursor.x >= left && cursor.x <= right && cursor.y >= top && cursor.y <= bottom) return background();
+  return null;
+}
+
+/** TV circle: center = p0, radius = screen distance to p1 (the two stored
+ *  points are the anchors). The ring, then the fill inside it. */
+function circleHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   const [c, e] = pts;
   const r = Math.hypot(e.x - c.x, e.y - c.y);
-  if (Math.hypot(cursor.x - c.x, cursor.y - c.y) <= r + HIT_TOLERANCE) return { hit: "body" };
-  return null;
+  const d = Math.hypot(cursor.x - c.x, cursor.y - c.y);
+  if (Math.abs(d - r) <= tol) return { hit: "body" };
+  return d < r && filled(drawing) ? background() : null;
 }
 
 function priceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number): HitResult | null {
@@ -516,22 +575,22 @@ function dateRangeHit(pts: Pt[], cursor: Pt): HitResult | null {
 }
 
 /** Rotated rectangle: pts 0-1 are one edge; pt2 sets the perpendicular width. */
-function rotatedRectHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
+function rotatedRectHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const fmt2 = drawing.fmt === 2;
   const corners = rotatedRectCorners(pts, fmt2);
   // fmt 2 (TV): anchors p0, p1 + the 4 corners; a corner drags p2 (index 2+).
   const anchors = fmt2 ? [pts[0], pts[1], ...corners] : pts;
   const h = endpointHit(anchors, cursor);
   if (h) return h;
-  if (pointInPolygon(cursor.x, cursor.y, corners)) return { hit: "body" };
-  return null;
+  if (onOutline(cursor, corners, tol)) return { hit: "body" };
+  return filled(drawing) && pointInPolygon(cursor.x, cursor.y, corners) ? background() : null;
 }
 
-function triangleHit(pts: Pt[], cursor: Pt): HitResult | null {
+function triangleHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  if (pointInPolygon(cursor.x, cursor.y, pts)) return { hit: "body" };
-  return null;
+  if (onOutline(cursor, pts, tol)) return { hit: "body" };
+  return filled(drawing) && pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, pts) ? background() : null;
 }
 
 /* ---------- fib-fan / cycle / curve family (mirror DrawingsOverlay renderers) ---------- */
@@ -662,16 +721,18 @@ function gannSquareHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | nul
     : null;
 }
 
-/** Sector: the anchors, the edges, the arc and the filled wedge. */
-function sectorHit(pts: Pt[], cursor: Pt): HitResult | null {
+/** Sector: the anchors, the edges, the arc, then the filled wedge. */
+function sectorHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   const [p0, p1, p2raw] = pts;
-  if (!p2raw) return null;
+  if (!p2raw) return distToSegment(cursor.x, cursor.y, p0, p1) <= tol ? { hit: "body" } : null;
   const len1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   if (len1 < 1e-6) return null;
   const a1 = Math.atan2(p1.y - p0.y, p1.x - p0.x);
   const a2 = Math.atan2(p2raw.y - p0.y, p2raw.x - p0.x);
+  const p2 = { x: p0.x + Math.cos(a2) * len1, y: p0.y + Math.sin(a2) * len1 };
+  if (distToSegment(cursor.x, cursor.y, p0, p1) <= tol || distToSegment(cursor.x, cursor.y, p0, p2) <= tol) return { hit: "body" };
   let sweep = a2 - a1;
   while (sweep > Math.PI) sweep -= 2 * Math.PI;
   while (sweep < -Math.PI) sweep += 2 * Math.PI;
@@ -680,7 +741,9 @@ function sectorHit(pts: Pt[], cursor: Pt): HitResult | null {
   while (ang > Math.PI) ang -= 2 * Math.PI;
   while (ang < -Math.PI) ang += 2 * Math.PI;
   const inSweep = sweep >= 0 ? ang >= -0.05 && ang <= sweep + 0.05 : ang <= 0.05 && ang >= sweep - 0.05;
-  return inSweep && r <= len1 + HIT_TOLERANCE ? { hit: "body" } : null;
+  if (!inSweep) return null;
+  if (Math.abs(r - len1) <= tol) return { hit: "body" };
+  return r < len1 && filled(drawing) ? background() : null;
 }
 
 function wedgeHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
@@ -857,18 +920,19 @@ function labeledPolylineHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult 
     if (distToSegment(cursor.x, cursor.y, pts[i - 1], pts[i]) <= tol) return { hit: "body" };
   }
   if (drawing.kind === "xabcd-pattern" || drawing.kind === "cypher-pattern") {
-    if (pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, [pts[0], pts[1], pts[2]])) return { hit: "body" };
-    if (pts.length >= 5 && pointInPolygon(cursor.x, cursor.y, [pts[2], pts[3], pts[4]])) return { hit: "body" };
+    if (!filled(drawing)) return null;
+    if (pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, [pts[0], pts[1], pts[2]])) return background();
+    if (pts.length >= 5 && pointInPolygon(cursor.x, cursor.y, [pts[2], pts[3], pts[4]])) return background();
     return null;
   }
-  if (FILLED_PATTERN_KINDS.has(drawing.kind) && pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, pts)) {
-    return { hit: "body" };
+  if (FILLED_PATTERN_KINDS.has(drawing.kind) && filled(drawing) && pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, pts)) {
+    return background();
   }
   // TV PolygonRenderer.hitTest: a closed + filled polyline also hits on its
   // closing side and inside.
-  if (drawing.kind === "polyline" && drawing.closed === true && drawing.style.fillBackground !== false && pts.length >= 2) {
+  if (drawing.kind === "polyline" && drawing.closed === true && filled(drawing) && pts.length >= 2) {
     if (distToSegment(cursor.x, cursor.y, pts[pts.length - 1], pts[0]) <= tol) return { hit: "body" };
-    if (pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, pts)) return { hit: "body" };
+    if (pts.length >= 3 && pointInPolygon(cursor.x, cursor.y, pts)) return background();
   }
   return null;
 }
@@ -1129,7 +1193,7 @@ function hitTestKindOf(
     case "gann-square":
       return gannSquareHit(drawing, pts, cursor);
     case "sector":
-      return sectorHit(pts, cursor);
+      return sectorHit(drawing, pts, cursor, tol);
     case "fib-speed-resistance-arcs":
       return arcsHit(drawing, pts, cursor);
     case "fib-spiral":
@@ -1265,32 +1329,17 @@ function hitTestKindOf(
     case "fib-channel":
       return fibChannelHit(drawing, pts, cursor, tol, width, height);
     case "rotated-rectangle":
-      return rotatedRectHit(drawing, pts, cursor);
+      return rotatedRectHit(drawing, pts, cursor, tol);
     case "trend-based-fib-extension":
       return fibExtHit(drawing, pts, cursor);
     case "fib-retracement":
       return fibHit(drawing, pts, cursor);
-    case "rectangle": {
-      // TV rectangles carry 8 anchors: 4 corners + 4 edge midpoints; the
-      // text box hits too (TV TextRenderer), also outside the box.
-      const pw = coords?.timeAxis().width || width;
-      const r = rectangleHit(pts, cursor, true);
-      if (r) return r;
-      // TV extend: the box runs to the pane edge on the extended side.
-      if (drawing.style.extendLeft || drawing.style.extendRight) {
-        const top = Math.min(pts[0].y, pts[1].y);
-        const bottom = Math.max(pts[0].y, pts[1].y);
-        const l = drawing.style.extendLeft ? 0 : Math.min(pts[0].x, pts[1].x);
-        const rr = drawing.style.extendRight ? pw : Math.max(pts[0].x, pts[1].x);
-        if (cursor.x >= l && cursor.x <= rr && cursor.y >= top - HIT_TOLERANCE && cursor.y <= bottom + HIT_TOLERANCE) return { hit: "body" };
-      }
-      const box = rectangleTextLayout(drawing, pts, pw)?.box;
-      return box && cursor.x >= box.left && cursor.x <= box.left + box.width && cursor.y >= box.top && cursor.y <= box.top + box.height ? { hit: "body" } : null;
-    }
+    case "rectangle":
+      return rectangleToolHit(drawing, pts, cursor, coords?.timeAxis().width || width, tol);
     case "circle":
-      return circleHit(pts, cursor);
+      return circleHit(drawing, pts, cursor, tol);
     case "ellipse":
-      return ellipse3Hit(pts, cursor);
+      return ellipse3Hit(drawing, pts, cursor, tol);
     case "price-range":
       return priceRangeHit(drawing, pts, cursor, width);
     case "date-range":
@@ -1299,6 +1348,6 @@ function hitTestKindOf(
       // TV: 2 anchors (P0, P1) + the box.
       return dateRangeHit(pts, cursor);
     case "triangle":
-      return triangleHit(pts, cursor);
+      return triangleHit(drawing, pts, cursor, tol);
   }
 }

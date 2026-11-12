@@ -18,7 +18,14 @@ export const GLYPH_HALF = 9;
 
 export type HitResult =
   | { hit: "handle"; handleIndex: number }
-  | { hit: "body"; cell?: [number, number] };
+  | {
+      hit: "body";
+      cell?: [number, number];
+      /** Inside a filled area, off every stroke, handle and text (TV
+       *  MOVEPOINT_BACKGROUND): it ranks below the other hits of every
+       *  drawing (pickTopmostHit), so a fill never hides a line under it. */
+      background?: true;
+    };
 
 /** Translate a line-style enum into an SVG stroke-dasharray. */
 export function dashFor(style: DrawingStyle): string | undefined {

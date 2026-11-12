@@ -51,7 +51,8 @@ The core never imports lightweight-charts at runtime (types only) and has no UI.
    nothing.
 6. **Hit test** (`hit-tests.ts`): return anchors first (`{ hit: "handle", handleIndex }`, radius
    `HANDLE_RADIUS + HIT_TOLERANCE`), then the body (`{ hit: "body" }`, stroke tolerance
-   `strokeTolerance(style)`), else null. Compute the shape with the same function as the scene
+   `strokeTolerance(style)`), then the inside of a fill as `{ hit: "body", background: true }`
+   only while `fillBackground !== false`, else null. Compute the shape with the same function as the scene
    (put it in `kinds/<tool>.ts`) so what is drawn is what is hit.
 7. **Drag** (`drag.ts`): the default moves point `handleIndex` to the cursor (magnet applied) and
    translates every point on a body drag. Add a case only for other semantics (an anchor that is not
