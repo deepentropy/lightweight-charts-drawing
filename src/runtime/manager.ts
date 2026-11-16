@@ -145,6 +145,8 @@ export class DrawingManager {
   private readonly gestureOff: (() => void)[] = [];
   /** Remover of the touchmove guard of a touch / pen hold. */
   private touchGuardOff: (() => void) | null = null;
+  /** The last press was a touch: the double-click that follows it hits fills. */
+  private lastTouch = false;
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -586,7 +588,9 @@ export class DrawingManager {
     return (snapped && projectPoint(this.coords, snapped)) || cur;
   }
 
-  private hitTopmost(sp: Pt): { drawing: Drawing; mode: HitResult; pts: Pt[] } | null {
+  /** `touch`: a fill counts as the drawing's body; a mouse or pen press on
+   *  a fill passes through to the chart (TV MOVEPOINT_BACKGROUND). */
+  private hitTopmost(sp: Pt, touch: boolean): { drawing: Drawing; mode: HitResult; pts: Pt[] } | null {
     const { w, h } = this.paneSize();
     // Drawings are clipped to the pane (TV): nothing hits over the axes.
     if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) return null;
@@ -595,7 +599,7 @@ export class DrawingManager {
       if (!this.shown(d)) return null;
       const pts = screenPoints(this.coords, d, { w, h });
       return pts ? hitTestKind(d, pts, sp, w, h, this.coords, this.selected.includes(d.id)) : null;
-    });
+    }, { fills: touch });
     const pts = pick && screenPoints(this.coords, pick.item, { w, h });
     return pick && pts ? { drawing: pick.item, mode: pick.hit, pts } : null;
   }
@@ -698,7 +702,7 @@ export class DrawingManager {
       this.redraw();
       return;
     }
-    const hit = this.hitTopmost(sp);
+    const hit = this.hitTopmost(sp, e.pointerType === "touch");
     this.setHover(hit ? { id: hit.drawing.id, anchor: hit.mode.hit === "handle" ? hit.mode.handleIndex : -1 } : null);
     // TV table: the hovered row / column edge of the selected table.
     const edge = hit?.drawing.kind === "table" && hit.mode.hit === "handle" ? tableEdgeOf(hit.mode.handleIndex) : null;
@@ -728,6 +732,7 @@ export class DrawingManager {
     // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) return;
+    this.lastTouch = e.pointerType === "touch";
     this.pointerMods(e);
     let sp = this.panePoint(e);
     const { w, h } = this.paneSize();
@@ -762,7 +767,7 @@ export class DrawingManager {
       return;
     }
     if (this.spec) return;
-    const hit = this.hitTopmost(this.panePoint(e));
+    const hit = this.hitTopmost(this.panePoint(e), this.lastTouch);
     if (hit && findOverlaySpec(hit.drawing.kind)?.textEditable) {
       e.stopPropagation();
       this.emit("textEdit", hit.drawing, textAnchor(hit.drawing, hit.pts));
@@ -900,7 +905,7 @@ export class DrawingManager {
   }
 
   private selectionDown(e: PointerEvent, sp: Pt): void {
-    const hit = this.hitTopmost(sp);
+    const hit = this.hitTopmost(sp, e.pointerType === "touch");
     const multiKey = e.ctrlKey || e.metaKey;
     if (!hit) {
       // Ctrl+click on empty space keeps the selection (TV); a plain click

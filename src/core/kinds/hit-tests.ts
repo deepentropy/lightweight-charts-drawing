@@ -60,17 +60,21 @@ function onOutline(cursor: Pt, poly: Pt[], tol: number): boolean {
 /** The hit under the cursor in a z-ordered list (last = topmost): the topmost
  *  handle / stroke / text hit of any drawing, else the topmost background
  *  (fill) hit. TV ranks background hits last, so a filled shape on top never
- *  hides the lines of the drawings under it. */
+ *  hides the lines of the drawings under it. `fills: false` drops the
+ *  background hits: TV ignores a mouse press on a fill (the chart pans) and
+ *  counts it only for touch. */
 export function pickTopmostHit<T>(
   items: readonly T[],
   test: (item: T) => HitResult | null,
+  opts: { fills?: boolean } = {},
 ): { item: T; hit: HitResult } | null {
+  const fills = opts.fills !== false;
   let bg: { item: T; hit: HitResult } | null = null;
   for (let i = items.length - 1; i >= 0; i--) {
     const hit = test(items[i]);
     if (!hit) continue;
     if (hit.hit === "body" && hit.background) {
-      bg ??= { item: items[i], hit };
+      if (fills) bg ??= { item: items[i], hit };
       continue;
     }
     return { item: items[i], hit };

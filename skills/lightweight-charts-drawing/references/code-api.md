@@ -212,7 +212,8 @@ Without the manager (SVG, another canvas, server-side rendering), use the core d
 - `drawScene(ctx2d, scene, { fontFamily, anchors: { fillAt, selected } })` paints it on a canvas.
 - `hitTestKind(drawing, screenPoints, cursor, w, h, coords, selected)` returns
   `{ hit: "handle", handleIndex }`, `{ hit: "body" }` (`background: true` inside a fill) or null.
-  `pickTopmostHit(drawings, test)` picks over the z-order: the topmost handle / stroke hit of any
-  drawing, else the topmost fill.
+  `pickTopmostHit(drawings, test, { fills })` picks over the z-order: the topmost handle / stroke
+  hit of any drawing, else the topmost fill; `fills: false` (a mouse press) drops the fill hits so
+  the press pans the chart, as the `DrawingManager` does for a mouse or pen.
 - `applyDrag(state, cursor, coords, snap, shift)` returns the dragged drawing.
 - `drawingAxisLabels(drawing, screenPoints, coords)` returns the price / time axis labels.

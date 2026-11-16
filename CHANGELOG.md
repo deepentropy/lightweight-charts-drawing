@@ -1,9 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (16/11/2026)
 
 ### Changed
 
+- Filled areas, mouse (#31): the `DrawingManager` ignores a mouse or pen press on a fill (no hover,
+  selection, drag or double-click), so a drag inside a filled rectangle, circle, channel or pattern
+  pans the chart; the outline, text and handles still select and move the drawing, also when it is
+  selected. A touch on a fill still counts as the drawing's body. `pickTopmostHit(items, test,
+  { fills: false })` drops the fill hits for hosts that hit-test themselves (the default keeps them).
 - Filled areas (#30): a press inside a fill is a background hit (`{ hit: "body", background: true }`, TV
   MOVEPOINT_BACKGROUND). It ranks below the handles, strokes and text of every drawing, so a filled
   rectangle on top no longer hides the trend line under it; `pickTopmostHit(items, test)` (exported)
