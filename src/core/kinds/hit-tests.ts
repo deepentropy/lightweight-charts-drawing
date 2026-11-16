@@ -46,6 +46,12 @@ const HANDLE_R = HANDLE_RADIUS + HIT_TOLERANCE;
 /** A press on a fill, off the strokes (see HitResult `background`). */
 const background = (): HitResult => ({ hit: "body", background: true });
 
+/** Rectangle, circle and ellipse (TV backgroundHitTarget = MovePoint while
+ *  selected): the fill of the selected shape is its body, so a press there
+ *  keeps the selection and drags it; unselected it stays a background hit. */
+const grabbedWhenSelected = (hit: HitResult | null, selected: boolean): HitResult | null =>
+  selected && hit?.hit === "body" && hit.background ? { hit: "body" } : hit;
+
 /** The fill of a filled shape hits only while it is drawn. */
 const filled = (d: Drawing): boolean => d.style.fillBackground !== false;
 
@@ -1339,11 +1345,11 @@ function hitTestKindOf(
     case "fib-retracement":
       return fibHit(drawing, pts, cursor);
     case "rectangle":
-      return rectangleToolHit(drawing, pts, cursor, coords?.timeAxis().width || width, tol);
+      return grabbedWhenSelected(rectangleToolHit(drawing, pts, cursor, coords?.timeAxis().width || width, tol), selected);
     case "circle":
-      return circleHit(drawing, pts, cursor, tol);
+      return grabbedWhenSelected(circleHit(drawing, pts, cursor, tol), selected);
     case "ellipse":
-      return ellipse3Hit(drawing, pts, cursor, tol);
+      return grabbedWhenSelected(ellipse3Hit(drawing, pts, cursor, tol), selected);
     case "price-range":
       return priceRangeHit(drawing, pts, cursor, width);
     case "date-range":

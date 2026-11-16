@@ -2,6 +2,7 @@
 // handles and text of every drawing (TV background hits), so a filled shape on top never hides
 // the lines under it. The outline still hits with the fill off.
 // #31: the manager counts a fill only for touch; a mouse press on it passes through to the chart.
+// #32: a selected rectangle, circle or ellipse is grabbed by its fill.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultStyleFor, hitTestKind, pickTopmostHit, type Drawing, type DrawingStyle, type HitResult, type Pt } from "../src";
 import { OFF, ptr, setup } from "./pointer-harness";
@@ -37,6 +38,15 @@ describe("filled shapes (#30)", () => {
       expect(hit(d(s.kind, { fillBackground: false }), s.pts, s.inside)).toBeNull();
     });
   }
+
+  it("selected rectangle, circle and ellipse: the fill is the body; the other shapes keep a background fill (#32)", () => {
+    const sel = (dr: Drawing, pts: Pt[], c: Pt) => hitTestKind(dr, pts, c, W, H, null, true);
+    for (const s of SHAPES) {
+      const grabbed = s.kind === "rectangle" || s.kind === "circle" || s.kind === "ellipse";
+      expect(sel(d(s.kind), s.pts, s.inside)).toEqual(grabbed ? BODY : BG);
+      expect(sel(d(s.kind, { fillBackground: false }), s.pts, s.inside)).toBeNull();
+    }
+  });
 
   it("rectangle: anchors still win, the extended box hits up to the pane edge", () => {
     const pts = [{ x: 100, y: 100 }, { x: 300, y: 300 }];
@@ -109,23 +119,19 @@ describe("DrawingManager (#30)", () => {
     expect(s.chart.applyOptions).not.toHaveBeenCalled();
     expect(s.dm.selection()).toEqual([]);
   });
-  it("a selected rectangle is not dragged from its fill by a mouse; its border drags it (#31)", () => {
+  it("a selected rectangle takes a mouse press on its fill: it stays selected and the gesture is its drag (#32)", () => {
     const { s, rect } = scene();
     s.el.dispatchEvent(ptr("pointerdown", "mouse", 150, 350));
     s.doc.dispatchEvent(ptr("pointerup", "mouse", 150, 350));
     expect(s.dm.selection()).toEqual([rect]);
-    const before = s.dm.get(rect)?.points;
     s.chart.applyOptions.mockClear();
     const down = ptr("pointerdown", "mouse", 100, 300);
+    const stop = vi.spyOn(down, "stopPropagation");
     s.el.dispatchEvent(down);
-    s.doc.dispatchEvent(ptr("pointermove", "mouse", 160, 320));
-    s.doc.dispatchEvent(ptr("pointerup", "mouse", 160, 320));
-    expect(s.dm.get(rect)?.points).toEqual(before);
-    expect(s.chart.applyOptions).not.toHaveBeenCalled();
-    // A press on the border takes the gesture from the chart (the drag).
-    s.el.dispatchEvent(ptr("pointerdown", "mouse", 150, 350));
+    expect(stop).toHaveBeenCalled();
     expect(s.chart.applyOptions.mock.calls).toEqual([[OFF]]);
-    s.doc.dispatchEvent(ptr("pointerup", "mouse", 150, 350));
+    s.doc.dispatchEvent(ptr("pointerup", "mouse", 100, 300));
+    expect(s.dm.selection()).toEqual([rect]);
   });
   it("a touch on the rectangle's fill selects it (#31)", () => {
     const { s, rect } = scene();

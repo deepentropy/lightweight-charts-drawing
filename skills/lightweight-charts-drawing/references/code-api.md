@@ -211,7 +211,8 @@ Without the manager (SVG, another canvas, server-side rendering), use the core d
   the pane size).
 - `drawScene(ctx2d, scene, { fontFamily, anchors: { fillAt, selected } })` paints it on a canvas.
 - `hitTestKind(drawing, screenPoints, cursor, w, h, coords, selected)` returns
-  `{ hit: "handle", handleIndex }`, `{ hit: "body" }` (`background: true` inside a fill) or null.
+  `{ hit: "handle", handleIndex }`, `{ hit: "body" }` (`background: true` inside a fill; inside a
+  selected rectangle, circle or ellipse the fill is the body) or null.
   `pickTopmostHit(drawings, test, { fills })` picks over the z-order: the topmost handle / stroke
   hit of any drawing, else the topmost fill; `fills: false` (a mouse press) drops the fill hits so
   the press pans the chart, as the `DrawingManager` does for a mouse or pen.

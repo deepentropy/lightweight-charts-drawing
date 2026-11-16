@@ -1,13 +1,21 @@
 # Changelog
 
+## 0.10.1 (16/11/2026)
+
+### Fixed
+
+- Selected rectangle, circle and ellipse (#32): the fill of the selected shape is its body
+  (`{ hit: "body" }`), so a mouse press inside it keeps the selection and drags it, and a right-click
+  there is the drawing's. Unselected, the fill still lets a mouse press through to the chart (#31).
+  The other filled tools keep a background-only fill.
+
 ## 0.10.0 (16/11/2026)
 
 ### Changed
 
 - Filled areas, mouse (#31): the `DrawingManager` ignores a mouse or pen press on a fill (no hover,
   selection, drag or double-click), so a drag inside a filled rectangle, circle, channel or pattern
-  pans the chart; the outline, text and handles still select and move the drawing, also when it is
-  selected. A touch on a fill still counts as the drawing's body. `pickTopmostHit(items, test,
+  pans the chart; the outline, text and handles select and move the drawing. A touch on a fill still counts as the drawing's body. `pickTopmostHit(items, test,
   { fills: false })` drops the fill hits for hosts that hit-test themselves (the default keeps them).
 - Filled areas (#30): a press inside a fill is a background hit (`{ hit: "body", background: true }`, TV
   MOVEPOINT_BACKGROUND). It ranks below the handles, strokes and text of every drawing, so a filled
