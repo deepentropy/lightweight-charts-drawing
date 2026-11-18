@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `touchHitSlop` on `DrawingManagerOptions`: CSS px added to the stroke / body hit tolerance and the
+  handle grab radius for touch and pen presses only (mouse hit testing is unchanged; default `0`).
+  The painted handle size is unchanged — only hit testing reads the slop.
+
 ## 0.10.1 (16/11/2026)
 
 ### Fixed

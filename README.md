@@ -65,7 +65,9 @@ so click-click still works; default `false`), `clampToPane`
 pointer of a drag and the placement preview are kept inside the pane; default `false`), `interactive`
 (default `true`; `false` = view-only: drawings paint but take no pointer input and no key action
 (Escape, Delete / Backspace), and no event is stopped, so the chart pans over them;
-`setInteractive(false)` also clears the selection and a half-placed drawing).
+`setInteractive(false)` also clears the selection and a half-placed drawing), `touchHitSlop`
+(CSS px added to the stroke / body hit tolerance and the handle grab radius for touch and pen
+presses only; mouse is unchanged; default `0`; the painted handle size is unchanged).
 
 ### Labels and number format
 

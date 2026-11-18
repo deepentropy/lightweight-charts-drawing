@@ -19,6 +19,7 @@ const dm = new DrawingManager(chart, series, {
   dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
   clampToPane: false,                  // pending press / preview / drag pointer kept inside the pane (else outside presses are ignored)
   interactive: true,                   // false = view-only: paints, no pointer input, no key action, stops no event
+  touchHitSlop: 0,                     // CSS px added to stroke tolerance + handle grab radius for touch/pen only; mouse unchanged; handles look the same
 });
 ```
 
