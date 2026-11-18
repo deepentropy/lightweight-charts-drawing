@@ -147,6 +147,8 @@ export class DrawingManager {
   private touchGuardOff: (() => void) | null = null;
   /** The last press was a touch: the double-click that follows it hits fills. */
   private lastTouch = false;
+  /** A touch/pen placement press or freehand stroke is live (waiting for lift or a second-finger cancel). */
+  private touchPress = false;
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -729,9 +731,12 @@ export class DrawingManager {
 
   private onPointerDown(e: PointerEvent): void {
     if (this.opts.interactive === false || e.button !== 0) return;
-    // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
-    // isPrimary false or missing and stays on the old path.
-    if (isTouchLike(e) && e.isPrimary === false) return;
+    // A second touch/pen finger: cancel an unfinished placement or stroke and keep the tool (F3); otherwise
+    // leave the pinch to the chart. Mouse with isPrimary false stays on the old path.
+    if (isTouchLike(e) && e.isPrimary === false) {
+      if (this.spec && (this.pending.length || this.touchPress)) this.cancelTouchPlacement();
+      return;
+    }
     this.lastTouch = e.pointerType === "touch";
     this.pointerMods(e);
     let sp = this.panePoint(e);
@@ -760,6 +765,29 @@ export class DrawingManager {
       return;
     }
     this.selectionDown(e, sp);
+  }
+
+  /** Drop an unfinished touch/pen placement or freehand stroke; keep the tool; hold the chart until both
+   *  fingers lift so a pinch cannot zoom. Emits gestureEnd once. Does not call afterPlacement (that disarms). */
+  private cancelTouchPlacement(): void {
+    while (this.gestureOff.length) this.gestureOff[0]!();
+    this.pending = [];
+    this.cursor = null;
+    this.touchPress = false;
+    this.redraw();
+    this.emit("gestureEnd");
+    // Primary + this second finger are still down; release only after both have ended.
+    let left = 2;
+    const end = (ev: Event) => {
+      if (!isTouchLike(ev as PointerEvent)) return;
+      left -= 1;
+      if (left > 0) return;
+      rmUp();
+      rmCancel();
+      this.releaseChart();
+    };
+    const rmUp = this.gestureListen(document, "pointerup", end);
+    const rmCancel = this.gestureListen(document, "pointercancel", end);
   }
 
   private onDoubleClick(e: MouseEvent): void {
@@ -829,6 +857,7 @@ export class DrawingManager {
 
   /** Touch / pen: place the next point (or finish) where the finger lifts; pointercancel places nothing. */
   private touchReleasePlace(spec: OverlaySpec): void {
+    this.touchPress = true;
     const rmMove = this.gestureListen(document, "pointermove", (ev) => {
       this.pointerMods(ev as PointerEvent);
       this.cursor = this.placementPoint(this.panePoint(ev as PointerEvent));
@@ -836,6 +865,7 @@ export class DrawingManager {
     });
     this.onRelease(document, (ev) => {
       rmMove();
+      this.touchPress = false;
       this.releaseChart();
       if (ev.type === "pointercancel" || this.spec !== spec) return;
       this.pointerMods(ev as PointerEvent);
@@ -847,6 +877,7 @@ export class DrawingManager {
    *  pointer moved at least DRAG_THRESHOLD (else it was a click and point 1 stays pending). pointercancel
    *  places nothing. */
   private dragPlace(spec: OverlaySpec, sp0: Pt): void {
+    this.touchPress = true;
     const rmMove = this.gestureListen(document, "pointermove", (ev) => {
       // keyboard: false reads Shift / Ctrl from the pointer events: the preview follows them.
       this.pointerMods(ev as PointerEvent);
@@ -855,6 +886,7 @@ export class DrawingManager {
     });
     this.onRelease(document, (ev) => {
       rmMove();
+      this.touchPress = false;
       this.releaseChart();
       // The tool or the pending point may be gone (Escape, setTool) while the button was down.
       if (ev.type === "pointercancel" || this.spec !== spec || this.pending.length !== 1) return;
@@ -897,6 +929,7 @@ export class DrawingManager {
     const spec = this.spec!;
     const dp0 = unproject(this.coords, sp0);
     if (!dp0) return;
+    this.touchPress = true;
     this.pending = [dp0];
     this.cursor = sp0;
     let last = sp0;
@@ -914,6 +947,7 @@ export class DrawingManager {
     const rmMove = this.gestureListen(document, "pointermove", (ev) => move(ev as PointerEvent));
     this.onRelease(document, (ev) => {
       rmMove();
+      this.touchPress = false;
       this.releaseChart();
       // A cancelled stroke (the browser took the pointer) is discarded, not committed.
       const pts = ev.type === "pointercancel" ? [] : this.pending;
