@@ -108,9 +108,9 @@ describe("option on", () => {
     expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
     expect(s.doc.liveTotal()).toBe(s.base.doc);
     expect(s.el.live("touchmove")).toBe(0);
-    // point 1 is still pending: one more click places the line
+    // point 1 is still pending: one more tap places the line on release (touch F4)
     s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 300));
-    s.win.dispatchEvent(ptr("pointerup", "touch", 300, 300));
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 300, 300));
     expect(pts(s)).toEqual([[{ time: 100, price: 300 }, { time: 300, price: 200 }]]);
   });
 

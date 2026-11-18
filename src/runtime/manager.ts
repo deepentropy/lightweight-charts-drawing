@@ -745,7 +745,12 @@ export class DrawingManager {
       e.stopPropagation();
       this.holdChart(e);
       if (this.spec.freehand) this.startFreehand(sp);
-      else {
+      else if (isTouchLike(e) && this.pending.length > 0) {
+        // Touch / pen: later points land on release so a second finger can cancel before they stick (F4).
+        this.cursor = this.placementPoint(sp);
+        this.redraw();
+        this.touchReleasePlace(this.spec);
+      } else {
         const first = this.pending.length === 0;
         this.placementClick(sp);
         // Point 1 of a fixed multi-point tool is down (a placed one-point tool leaves nothing pending).
@@ -820,6 +825,22 @@ export class DrawingManager {
     this.cursor = null;
     if (placed) this.placeNew(placed, spec.textEditable ? sp : null);
     else this.afterPlacement();
+  }
+
+  /** Touch / pen: place the next point (or finish) where the finger lifts; pointercancel places nothing. */
+  private touchReleasePlace(spec: OverlaySpec): void {
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      this.pointerMods(ev as PointerEvent);
+      this.cursor = this.placementPoint(this.panePoint(ev as PointerEvent));
+      this.redraw();
+    });
+    this.onRelease(document, (ev) => {
+      rmMove();
+      this.releaseChart();
+      if (ev.type === "pointercancel" || this.spec !== spec) return;
+      this.pointerMods(ev as PointerEvent);
+      this.placementClick(this.placementPoint(this.panePoint(ev as PointerEvent)));
+    });
   }
 
   /** dragToPlace: follow the pointer after the press that placed point 1; the release places point 2 when the
