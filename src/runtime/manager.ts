@@ -109,6 +109,9 @@ type Gesture = DragState & { canDrag: boolean };
 /** A touch or pen pointer (a mouse and pointers of unknown type are not). */
 const isTouchLike = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
 
+/** Ceiling for a touch/pen tap that selects on release (Lightweight Charts LongTap delay). */
+const TOUCH_TAP_MAX_MS = 240;
+
 const newId = () => `dw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
 export class DrawingManager {
@@ -904,6 +907,29 @@ export class DrawingManager {
     });
   }
 
+  /** Deferred select for a touch/pen press on an unselected drawing: select on
+   *  release only when the finger stayed under DRAG_THRESHOLD and under TOUCH_TAP_MAX_MS. */
+  private touchTapSelectCandidate(e: PointerEvent, id: string): void {
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    const t0 = e.timeStamp;
+    const pointerId = e.pointerId;
+    let maxDist = 0;
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      const p = ev as PointerEvent;
+      if (p.pointerId !== pointerId) return;
+      maxDist = Math.max(maxDist, Math.hypot(p.clientX - x0, p.clientY - y0));
+    });
+    this.onRelease(document, (ev) => {
+      rmMove();
+      if (ev.type === "pointercancel") return;
+      const up = ev as PointerEvent;
+      if (up.pointerId !== pointerId) return;
+      maxDist = Math.max(maxDist, Math.hypot(up.clientX - x0, up.clientY - y0));
+      if (maxDist < DRAG_THRESHOLD && up.timeStamp - t0 < TOUCH_TAP_MAX_MS) this.select([id]);
+    });
+  }
+
   private selectionDown(e: PointerEvent, sp: Pt): void {
     const hit = this.hitTopmost(sp, e.pointerType === "touch");
     const multiKey = e.ctrlKey || e.metaKey;
@@ -911,6 +937,12 @@ export class DrawingManager {
       // Ctrl+click on empty space keeps the selection (TV); a plain click
       // clears it and the chart pans as usual.
       if (!multiKey && this.selected.length) this.select([]);
+      return;
+    }
+    // Touch/pen on an unselected drawing: do not hold the chart — a swipe pans,
+    // a short still tap selects on release (TradingView mobile).
+    if (isTouchLike(e) && !multiKey && !this.selected.includes(hit.drawing.id)) {
+      this.touchTapSelectCandidate(e, hit.drawing.id);
       return;
     }
     e.stopPropagation();
