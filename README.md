@@ -141,7 +141,10 @@ events of a gesture, so snap, axis lock, magnet inversion, multi-select and clon
 
 Touch and pen: a press on a drawing or with an armed tool holds the chart until
 the finger lifts or the browser cancels the pointer; elsewhere the chart pans
-and pinches as without the library.
+and pinches as without the library. On touch and pen, later points of a multi-point
+tool and every one-point tool (including Text) are placed when the finger lifts;
+a second finger cancels an unfinished drawing or freehand stroke and keeps the
+tool armed. `dragToPlace` is unchanged (press = point 1, release = point 2).
 
 Drawing flags: `locked` (selectable, but no drag and no Delete) and `hidden`
 (not drawn, hit or selected). A drawing that gets hidden leaves the

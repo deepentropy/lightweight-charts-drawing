@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Touch / pen placement: later points of a multi-point tool and one-point tools
+  (including Text) land on release, not on press; a second finger cancels an
+  unfinished placement or freehand stroke and keeps the tool armed. Mouse
+  placement is unchanged. `dragToPlace` still places point 1 on press and point 2
+  on release for both mouse and touch.
+
 ## 0.10.1 (16/11/2026)
 
 ### Fixed

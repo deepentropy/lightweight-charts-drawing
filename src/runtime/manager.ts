@@ -750,8 +750,8 @@ export class DrawingManager {
       e.stopPropagation();
       this.holdChart(e);
       if (this.spec.freehand) this.startFreehand(sp);
-      else if (isTouchLike(e) && this.pending.length > 0) {
-        // Touch / pen: later points land on release so a second finger can cancel before they stick (F4).
+      else if (isTouchLike(e) && (this.pending.length > 0 || this.spec.pointCount === 1)) {
+        // Touch / pen: later points and one-point tools land on release (F4); point 1 of multi-point stays on press.
         this.cursor = this.placementPoint(sp);
         this.redraw();
         this.touchReleasePlace(this.spec);

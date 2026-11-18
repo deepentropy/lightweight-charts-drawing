@@ -113,3 +113,78 @@ describe("second finger cancels a touch placement or stroke", () => {
     expect(pts(s)).toEqual([[{ time: 120, price: 280 }, { time: 300, price: 200 }]]);
   });
 });
+
+describe("one-point tools and Text on touch release", () => {
+  it.each(["horizontal-line", "vertical-line", "cross-line", "horizontal-ray"] as const)(
+    "%s: nothing at press; placed at pointerup",
+    (kind) => {
+      const s = make();
+      s.dm.setTool(kind);
+      s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200));
+      expect(s.dm.drawings()).toHaveLength(0);
+      s.doc.dispatchEvent(ptr("pointerup", "touch", 140, 220));
+      expect(s.dm.drawings()).toHaveLength(1);
+      expect(s.dm.drawings()[0]!.kind).toBe(kind);
+    },
+  );
+
+  it("Text: placed on release; textEdit fires while handling pointerup", () => {
+    const s = make();
+    const order: string[] = [];
+    s.dm.on("textEdit", () => order.push("textEdit"));
+    s.dm.setTool("text");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200));
+    expect(s.dm.drawings()).toHaveLength(0);
+    expect(order).toEqual([]);
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 100, 200));
+    order.push("afterPointerUp");
+    expect(s.dm.drawings()).toHaveLength(1);
+    expect(order).toEqual(["textEdit", "afterPointerUp"]);
+  });
+
+  it("Parallel channel: point 1 on press, 2 and 3 on release", () => {
+    const s = make();
+    s.dm.setTool("parallel-channel");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200));
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 300, 300));
+    expect(s.dm.drawings()).toHaveLength(0);
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 200, 400));
+    expect(s.dm.drawings()).toHaveLength(0);
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 200, 400));
+    expect(s.dm.drawings()).toHaveLength(1);
+  });
+
+  it("Trendline armed: press on an existing selected line places a point, selection unchanged", () => {
+    const s = make();
+    const id = s.dm.add({ kind: "trend-line", points: [{ time: 100 as never, price: 300 }, { time: 300 as never, price: 200 }] });
+    s.dm.select([id]);
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 200, 250));
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 200, 250));
+    expect(s.dm.drawings()).toHaveLength(1);
+    expect(s.dm.selection()).toEqual([id]);
+    // Point 1 pending from the tap on the line.
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 350, 350));
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 350, 350));
+    expect(s.dm.drawings()).toHaveLength(2);
+  });
+
+  it("pointercancel during release placement places nothing and releases the chart", () => {
+    const s = make();
+    s.dm.setTool("horizontal-line");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF]]);
+    s.doc.dispatchEvent(ptr("pointercancel", "touch", 100, 200));
+    expect(s.dm.drawings()).toHaveLength(0);
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
+  });
+
+  it.each(["pen"] as const)("%s one-point tool places on release like touch", (type) => {
+    const s = make();
+    s.dm.setTool("horizontal-line");
+    s.el.dispatchEvent(ptr("pointerdown", type, 100, 200));
+    expect(s.dm.drawings()).toHaveLength(0);
+    s.doc.dispatchEvent(ptr("pointerup", type, 100, 200));
+    expect(s.dm.drawings()).toHaveLength(1);
+  });
+});
