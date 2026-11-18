@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Touch / pen selection: a swipe that starts on an unselected drawing pans the
+  chart; a short tap (under 3 px and under 240 ms) selects on release; long-press,
+  `pointercancel` and a second finger leave the selection alone. A selected
+  drawing and its handles keep the previous hold-and-drag path. Mouse behaviour
+  is unchanged.
+
 ## 0.10.1 (16/11/2026)
 
 ### Fixed

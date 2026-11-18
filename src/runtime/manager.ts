@@ -915,14 +915,21 @@ export class DrawingManager {
     const t0 = e.timeStamp;
     const pointerId = e.pointerId;
     let maxDist = 0;
+    let cancelled = false;
     const rmMove = this.gestureListen(document, "pointermove", (ev) => {
       const p = ev as PointerEvent;
       if (p.pointerId !== pointerId) return;
       maxDist = Math.max(maxDist, Math.hypot(p.clientX - x0, p.clientY - y0));
     });
+    // Own listener: a second finger must cancel the tap; do not edit the shared
+    // non-primary early return in onPointerDown (61-05 rewrites that).
+    const rmSecond = this.gestureListen(document, "pointerdown", (ev) => {
+      if ((ev as PointerEvent).pointerId !== pointerId) cancelled = true;
+    });
     this.onRelease(document, (ev) => {
       rmMove();
-      if (ev.type === "pointercancel") return;
+      rmSecond();
+      if (ev.type === "pointercancel" || cancelled) return;
       const up = ev as PointerEvent;
       if (up.pointerId !== pointerId) return;
       maxDist = Math.max(maxDist, Math.hypot(up.clientX - x0, up.clientY - y0));

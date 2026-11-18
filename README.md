@@ -139,9 +139,11 @@ With `keyboard: false` the manager adds no key listener: no Escape cascade,
 no Delete / Backspace removal. Shift and Ctrl / Cmd are read from the pointer
 events of a gesture, so snap, axis lock, magnet inversion, multi-select and clone still work.
 
-Touch and pen: a press on a drawing or with an armed tool holds the chart until
-the finger lifts or the browser cancels the pointer; elsewhere the chart pans
-and pinches as without the library.
+Touch and pen: a swipe that starts on an unselected drawing pans the chart; a
+tap (under 3 px, under 240 ms) selects it on release; only a selected drawing
+or its handles are dragged (held until lift or cancel). An armed tool still
+holds the chart for placement. Elsewhere the chart pans and pinches as without
+the library.
 
 Drawing flags: `locked` (selectable, but no drag and no Delete) and `hidden`
 (not drawn, hit or selected). A drawing that gets hidden leaves the
