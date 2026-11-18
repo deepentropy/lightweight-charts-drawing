@@ -116,22 +116,29 @@ describe("touchHitSlop: 16", () => {
     expect(pressDrag(s, "pen", P1.x - 26, P1.y)).toBe(true);
   });
 
-  it("0.10 fill rule: pen inside an unselected filled Rectangle passes through; touch hits the fill", () => {
+  it("0.10 fill rule: a pen tap inside an unselected filled Rectangle passes through; a touch tap selects it", () => {
+    // Asserts the selection after a full tap, not the press-time hold, so it holds whether or not a
+    // touch press on an unselected drawing holds the chart.
     const filled = () => {
       const s = setup({ touchHitSlop: 16 });
-      s.dm.add({
+      const id = s.dm.add({
         kind: "rectangle",
         points: [{ time: 50 as never, price: 350 }, { time: 350 as never, price: 150 }],
         style: { ...defaultStyleFor("rectangle"), fillBackground: true },
       });
-      return s;
+      return { s, id };
+    };
+    const tap = (s: ReturnType<typeof setup>, pointerType: string, x: number, y: number) => {
+      s.el.dispatchEvent(ptr("pointerdown", pointerType, x, y));
+      s.doc.dispatchEvent(ptr("pointerup", pointerType, x, y));
     };
     const pen = filled();
-    expect(pressHit(pen, "pen", 100, 300)).toBe(false);
-    expect(pen.dm.selection()).toEqual([]);
+    tap(pen.s, "pen", 100, 300);
+    expect(pen.s.dm.selection()).toEqual([]);
 
     const touch = filled();
-    expect(pressHit(touch, "touch", 100, 300)).toBe(true);
+    tap(touch.s, "touch", 100, 300);
+    expect(touch.s.dm.selection()).toEqual([touch.id]);
   });
 
   it("MOUSE with touchHitSlop: 16 misses the widened touch targets", () => {
