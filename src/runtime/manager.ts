@@ -12,7 +12,7 @@
  */
 import type { IChartApi, ISeriesApi, ISeriesPrimitive, ISeriesPrimitiveAxisView, IPrimitivePaneRenderer, IPrimitivePaneView, PrimitiveHoveredItem, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
 import type { CanvasRenderingTarget2D } from "fancy-canvas";
-import type { HitResult, Pt } from "../core/_shared";
+import { withTouchHitSlop, type HitResult, type Pt } from "../core/_shared";
 import type { Coords, OHLC } from "../core/coords";
 import type { LabelFormatter } from "../core/labels";
 import { isVisibleOnInterval, type DataPoint, type Drawing, type DrawingKind, type NewDrawing } from "../core/types";
@@ -73,6 +73,10 @@ export type DrawingManagerOptions = {
    *  event is stopped, so the chart pans and zooms over them. A tool armed meanwhile places nothing until it is
    *  switched back. Change it later with setInteractive(). */
   interactive?: boolean;
+  /** Extra CSS px added to the stroke / body hit tolerance and the handle grab radius for touch and pen
+   *  presses only (mouse is unchanged). Default 0. The painted handle size is unchanged — only hit testing
+   *  reads the slop. */
+  touchHitSlop?: number;
 };
 
 export type DrawingManagerEvents = {
@@ -147,6 +151,8 @@ export class DrawingManager {
   private touchGuardOff: (() => void) | null = null;
   /** The last press was a touch: the double-click that follows it hits fills. */
   private lastTouch = false;
+  /** Last press was touch or pen (drives touchHitSlop on double-click). */
+  private lastTouchLike = false;
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -733,6 +739,7 @@ export class DrawingManager {
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) return;
     this.lastTouch = e.pointerType === "touch";
+    this.lastTouchLike = isTouchLike(e);
     this.pointerMods(e);
     let sp = this.panePoint(e);
     const { w, h } = this.paneSize();
@@ -767,7 +774,8 @@ export class DrawingManager {
       return;
     }
     if (this.spec) return;
-    const hit = this.hitTopmost(this.panePoint(e), this.lastTouch);
+    const slop = this.lastTouchLike ? (this.opts.touchHitSlop ?? 0) : 0;
+    const hit = withTouchHitSlop(slop, () => this.hitTopmost(this.panePoint(e), this.lastTouch));
     if (hit && findOverlaySpec(hit.drawing.kind)?.textEditable) {
       e.stopPropagation();
       this.emit("textEdit", hit.drawing, textAnchor(hit.drawing, hit.pts));
@@ -905,7 +913,8 @@ export class DrawingManager {
   }
 
   private selectionDown(e: PointerEvent, sp: Pt): void {
-    const hit = this.hitTopmost(sp, e.pointerType === "touch");
+    const slop = isTouchLike(e) ? (this.opts.touchHitSlop ?? 0) : 0;
+    const hit = withTouchHitSlop(slop, () => this.hitTopmost(sp, e.pointerType === "touch"));
     const multiKey = e.ctrlKey || e.metaKey;
     if (!hit) {
       // Ctrl+click on empty space keeps the selection (TV); a plain click

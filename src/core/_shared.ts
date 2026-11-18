@@ -16,6 +16,31 @@ export const HIT_TOLERANCE = 6;
  *  price-label) used both for rendered size and hit-testing. */
 export const GLYPH_HALF = 9;
 
+/** Extra CSS px added to hit tolerances while a touch/pen hit-test runs (host
+ *  `touchHitSlop`). Nested scopes restore the previous value in `finally`. */
+let touchHitSlopScoped = 0;
+
+/** Run `fn` with `slop` added to stroke tolerance and handle grab radius. */
+export function withTouchHitSlop<T>(slop: number, fn: () => T): T {
+  const prev = touchHitSlopScoped;
+  touchHitSlopScoped = slop > 0 ? slop : 0;
+  try {
+    return fn();
+  } finally {
+    touchHitSlopScoped = prev;
+  }
+}
+
+/** Effective stroke / body hit tolerance (HIT_TOLERANCE + scoped touch slop). */
+export function hitTolerance(): number {
+  return HIT_TOLERANCE + touchHitSlopScoped;
+}
+
+/** Effective handle grab radius (HANDLE_RADIUS + HIT_TOLERANCE + scoped slop). */
+export function handleGrabRadius(): number {
+  return HANDLE_RADIUS + HIT_TOLERANCE + touchHitSlopScoped;
+}
+
 export type HitResult =
   | { hit: "handle"; handleIndex: number }
   | {
@@ -37,7 +62,7 @@ export function dashFor(style: DrawingStyle): string | undefined {
 /** Stroke hit slop scaled with the drawing's line width, so a fat stroke is
  *  grabbable across its whole painted body (TV: tolerance + linewidth / 2). */
 export function strokeTolerance(style: DrawingStyle | undefined): number {
-  return Math.max(HIT_TOLERANCE, (style?.width ?? 1) / 2 + 2);
+  return Math.max(hitTolerance(), (style?.width ?? 1) / 2 + 2);
 }
 
 /** Resolve a shape's interior fill from the TV-faithful params

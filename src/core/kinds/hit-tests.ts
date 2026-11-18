@@ -13,6 +13,7 @@ import {
   HIT_TOLERANCE,
   bboxCorners,
   distToSegment,
+  handleGrabRadius,
   pointInPolygon,
   strokeTolerance,
   type HitResult,
@@ -93,8 +94,9 @@ function inBox(c: Pt, b: { left: number; top: number; width: number; height: num
 }
 
 function endpointHit(pts: Pt[], cursor: Pt): HitResult | null {
+  const r = handleGrabRadius();
   for (let i = 0; i < pts.length; i++) {
-    if (Math.hypot(pts[i].x - cursor.x, pts[i].y - cursor.y) <= HANDLE_R) {
+    if (Math.hypot(pts[i].x - cursor.x, pts[i].y - cursor.y) <= r) {
       return { hit: "handle", handleIndex: i };
     }
   }
