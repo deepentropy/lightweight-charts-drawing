@@ -25,7 +25,7 @@ import { drawingImageFailed, imageInitialSize, onImagesChanged } from "../core/k
 import { sceneLockedAnchors, sceneOf } from "../core/scene";
 import type { Scene } from "../core/scene/types";
 import { parseDrawings } from "../core/serialize";
-import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS, TAP_SLOP } from "../core/interact/constants";
+import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS, TAP_MAX_DURATION, TAP_SLOP } from "../core/interact/constants";
 import { magnetSnap, magnetSnapSource, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../core/interact/project";
 import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../core/interact/placement";
 import { lockAxisDelta, shiftPlacementPoint } from "../core/interact/shift";
@@ -74,11 +74,21 @@ export type DrawingManagerOptions = {
    *  switched back. Change it later with setInteractive(). */
   interactive?: boolean;
   /** Hit slop in px for touch and pen presses (a fingertip is wider than the 6 px mouse slop). Off by default:
-   *  every pointer uses the mouse values (strokes 6 px, handles 12 px from their centre). 16 to 20 suits a phone.
-   *  Handles, strokes and text boxes all grow by the difference over 6; the mouse is unchanged. A drawing that a
+   *  every pointer uses the mouse values (strokes 6 px, handles 12 px from their centre). The value is the whole
+   *  slop on each side of a stroke, not an amount added to the mouse slop: 16 hits a line within 16 px (a 32 px
+   *  band); 22 gives the 44 px touch target of the iOS / Android guidelines. Handles and text boxes grow by the
+   *  same difference over 6 (22: handles within 28 px of their centre); the mouse is unchanged. A drawing that a
    *  touch hits with the mouse slop still wins over one that only the widened slop reaches, so a precise touch
    *  picks the drawing under the finger. Change it later with setTouchHitTolerance(). */
   touchHitTolerance?: number;
+  /** Touch / pen press on an unselected drawing: the longest press (ms) that still selects it at the lift. A
+   *  longer hold selects nothing, so a host's long-press menu does not also select. Default 240 (the
+   *  lightweight-charts long tap); Infinity = no limit (0.11.0). */
+  tapMaxDuration?: number;
+  /** A second finger during a touch / pen placement cancels the unfinished drawing. Default false: the chart
+   *  stays held (no pan, no pinch) until every finger has lifted, so the pinch that cancelled does not also zoom.
+   *  The same applies to a second finger during a drag. true = the chart gets pan and pinch back at once (0.11.0). */
+  secondFingerPinch?: boolean;
 };
 
 export type DrawingManagerEvents = {
@@ -96,7 +106,9 @@ export type DrawingManagerEvents = {
   /** A text tool was placed (or double-clicked): the host opens its editor
    *  at `screen` (pane coordinates) and calls update with the text. */
   textEdit: (d: Drawing, screen: Pt) => void;
-  /** A drag / placement gesture ended (undo coalescing). */
+  /** A drag / placement gesture ended (undo coalescing), also when nothing was placed: a placement dropped by a
+   *  second finger or Escape, a touch press of a placement that the browser cancels or that lifts outside the
+   *  pane with no point left pending. */
   gestureEnd: () => void;
   /** A click on a cell of a selected table (TV in-place editing): the host
    *  opens its editor over `box` (pane coordinates) and calls
@@ -151,6 +163,12 @@ export class DrawingManager {
   private readonly gestureOff: (() => void)[] = [];
   /** Remover of the touchmove guard of a touch / pen hold. */
   private touchGuardOff: (() => void) | null = null;
+  /** Touch / pen pointers down while the chart is held (pointerId): the chart is given back once they have all
+   *  lifted (not with secondFingerPinch). */
+  private heldTouches: Set<number> | null = null;
+  private heldTouchesOff: (() => void) | null = null;
+  /** The gesture asked for the chart back while a finger was still down. */
+  private releaseWanted = false;
   /** The last press was a touch: the double-click that follows it hits fills. */
   private lastTouch = false;
   /** The last press was a touch or a pen: the double-click that follows it is hit with touchHitTolerance. */
@@ -426,6 +444,7 @@ export class DrawingManager {
 
   destroy(): void {
     this.endGesture();
+    this.releaseChart(true);
     for (const f of [...this.gestureOff]) f();
     for (const f of this.off) f();
     this.series.detachPrimitive(this.primitive as ISeriesPrimitive<Time>);
@@ -647,9 +666,37 @@ export class DrawingManager {
       const stop = (ev: Event) => ev.preventDefault();
       this.el.addEventListener("touchmove", stop, { passive: false });
       this.touchGuardOff = () => this.el.removeEventListener("touchmove", stop);
+      if (!this.opts.secondFingerPinch) this.trackTouches(e.pointerId);
     }
   }
-  private releaseChart(): void {
+  /** Follow the touch / pen pointers of a hold: a later finger joins (onPointerDown), each lift leaves; the
+   *  release the gesture asked for meanwhile happens when the last one is up. */
+  private trackTouches(id: number): void {
+    this.heldTouches = new Set([id]);
+    const up = (ev: Event) => {
+      const p = ev as PointerEvent;
+      if (!isTouchLike(p) || !this.heldTouches) return;
+      this.heldTouches.delete(p.pointerId);
+      if (!this.heldTouches.size && this.releaseWanted) this.releaseChart();
+    };
+    // Capture on window: seen before any gesture listener, and even when a host stops the event.
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    this.heldTouchesOff = () => {
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+    };
+  }
+  /** Give the chart its pan / zoom back; deferred while a finger of the hold is still down, unless `force`. */
+  private releaseChart(force = false): void {
+    if (!force && this.heldTouches?.size) {
+      this.releaseWanted = true;
+      return;
+    }
+    this.releaseWanted = false;
+    this.heldTouchesOff?.();
+    this.heldTouchesOff = null;
+    this.heldTouches = null;
     this.touchGuardOff?.();
     this.touchGuardOff = null;
     if (!this.savedScroll) return;
@@ -705,6 +752,7 @@ export class DrawingManager {
       if (this.pending.length) {
         this.pending = [];
         this.redraw();
+        this.emit("gestureEnd");
       } else if (this.spec) this.setTool(null);
       else if (this.selected.length) this.select([]);
       else return;
@@ -756,11 +804,15 @@ export class DrawingManager {
     // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) {
+      // A held chart stays held until this finger lifts too (secondFingerPinch off).
+      this.heldTouches?.add(e.pointerId);
       // It cancels an unfinished drawing or brush stroke (the tool stays armed) and a pending tap.
       if (this.spec) this.cancelPlacement();
       this.cancelTap?.();
       return;
     }
+    // A first finger: no other touch is down, so a hold still waiting for fingers missed their lift.
+    if (isTouchLike(e) && this.heldTouches) this.releaseChart(true);
     this.lastTouch = e.pointerType === "touch";
     this.lastTouchLike = isTouchLike(e);
     this.pointerMods(e);
@@ -891,12 +943,17 @@ export class DrawingManager {
     this.onRelease(window, (ev) => {
       rmMove();
       this.releaseChart();
-      if (ev.type === "pointercancel" || this.spec !== spec) return;
+      if (this.spec !== spec) return;
+      // Nothing placed: the placement is over unless a point is still pending.
+      const dropped = () => {
+        if (!this.pending.length) this.emit("gestureEnd");
+      };
+      if (ev.type === "pointercancel") return dropped();
       this.pointerMods(ev as PointerEvent);
       let up = this.panePoint(ev as PointerEvent);
       const { w, h } = this.paneSize();
       if (up.x < 0 || up.x > w || up.y < 0 || up.y > h) {
-        if (!this.opts.clampToPane) return;
+        if (!this.opts.clampToPane) return dropped();
         up = this.toPane(up);
       }
       this.placementClick(up);
@@ -904,18 +961,22 @@ export class DrawingManager {
   }
 
   /** A second finger during a placement: drop the pending points, the brush stroke and the press in progress
-   *  (nothing is placed, no event); the tool stays armed and the chart gets its pan / zoom back. */
+   *  (nothing is placed; gestureEnd when something was in progress); the tool stays armed. The chart is given
+   *  back once every finger has lifted (at once with secondFingerPinch). */
   private cancelPlacement(): void {
+    const active = this.gestureOff.length > 0 || this.pending.length > 0;
     for (const f of [...this.gestureOff]) f();
     this.releaseChart();
     this.pending = [];
     this.cursor = null;
     this.redraw();
+    if (active) this.emit("gestureEnd");
   }
 
   /** Touch / pen press on an unselected drawing (TV mobile): the chart keeps the gesture, so a swipe pans; a
-   *  release within TAP_SLOP of the press (a tap) selects the drawing. */
+   *  release within TAP_SLOP and tapMaxDuration of the press (a tap) selects the drawing; a longer hold does not. */
   private tapSelect(id: string, sp0: Pt): void {
+    const t0 = performance.now();
     let moved = false;
     const far = (ev: Event) => {
       const p = this.panePoint(ev as PointerEvent);
@@ -932,7 +993,8 @@ export class DrawingManager {
     };
     const rmUp = this.gestureListen(document, "pointerup", (ev) => {
       done();
-      if (moved || far(ev) || !this.get(id)) return;
+      const held = performance.now() - t0 > (this.opts.tapMaxDuration ?? TAP_MAX_DURATION);
+      if (moved || held || far(ev) || !this.get(id)) return;
       this.select([id]);
       this.emit("gestureEnd");
     });

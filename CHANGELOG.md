@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Touch tap duration (#39): `DrawingManager` option `tapMaxDuration` (ms, default 240, the
+  lightweight-charts long tap). A touch or pen press on an unselected drawing selects it only when it
+  lifts within that time, so a long press (a host's context menu) no longer selects as well.
+  `Infinity` restores the 0.11.0 behaviour.
+- Second finger (#39): `DrawingManager` option `secondFingerPinch` (default false). A second finger
+  still cancels an unfinished touch placement, but the chart now stays held (no pan, no pinch) until
+  every finger has lifted, so the pinch that cancelled no longer zooms the chart. A second finger
+  during a drag also keeps the chart held past the first lift. `true` gives the chart pan and pinch
+  back at once (0.11.0).
+
+### Changed
+
+- `gestureEnd` (#39) also fires when a placement is dropped without a drawing: by a second finger, by
+  Escape on pending points, or by a touch press of a placement that the browser cancels or that lifts
+  outside the pane, when no point is left pending.
+
+### Documentation
+
+- `touchHitTolerance` (#39) is the whole slop on each side of a stroke, not an amount added to the
+  6 px mouse slop: 16 hits within 16 px (a 32 px band), 22 gives the 44 px touch target of the
+  platform guidelines.
+
 ## 0.11.0 (19/11/2026)
 
 ### Added

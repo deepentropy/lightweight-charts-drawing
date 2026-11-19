@@ -157,10 +157,11 @@ describe("#37 touch / pen placement at the lift", () => {
     s.dm.setTool("trend-line");
     s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200));
     s.win.dispatchEvent(ptr("pointerup", "touch", 100, 200));
-    s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 300));
-    s.el.dispatchEvent(ptr("pointerdown", "touch", 400, 100, { isPrimary: false }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 300, { pointerId: 1 }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 400, 100, { pointerId: 2, isPrimary: false }));
+    s.win.dispatchEvent(ptr("pointerup", "touch", 300, 300, { pointerId: 1 }));
+    s.win.dispatchEvent(ptr("pointerup", "touch", 400, 100, { pointerId: 2 }));
     expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED], [OFF], [SAVED]]);
-    s.win.dispatchEvent(ptr("pointerup", "touch", 300, 300));
     expect(s.dm.drawings()).toHaveLength(0);
     expect(s.dm.tool()).toBe("trend-line");
     expect(s.doc.liveTotal()).toBe(s.base.doc);
@@ -202,5 +203,153 @@ describe("#37 touch / pen placement at the lift", () => {
     s.el.dispatchEvent(ptr("pointerdown", "mouse", 300, 300));
     expect(pointsOf(s)).toEqual([[{ time: 100, price: 300 }, { time: 300, price: 200 }]]);
     s.win.dispatchEvent(ptr("pointerup", "mouse", 300, 300));
+  });
+});
+
+describe("#39 touch: tap duration, second-finger hold, gestureEnd on cancel", () => {
+  /** performance.now() under the test's control. */
+  function clock() {
+    let t = 1000;
+    vi.spyOn(performance, "now").mockImplementation(() => t);
+    return (ms: number) => (t += ms);
+  }
+  afterEach(() => vi.restoreAllMocks());
+
+  it("a hold longer than 240 ms selects nothing; a quick tap still selects", () => {
+    const s = setup();
+    const id = addLine(s);
+    const ends = vi.fn();
+    s.dm.on("gestureEnd", ends);
+    const wait = clock();
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 200, 250));
+    wait(300);
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 200, 250));
+    expect(s.dm.selection()).toEqual([]);
+    expect(ends).not.toHaveBeenCalled();
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 200, 250));
+    wait(240);
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 200, 250));
+    expect(s.dm.selection()).toEqual([id]);
+    expect(s.doc.liveTotal()).toBe(s.base.doc);
+  });
+
+  it("tapMaxDuration: Infinity selects after any hold (0.11.0), a custom limit applies", () => {
+    for (const [limit, held, selects] of [[Infinity, 5000, true], [500, 400, true], [100, 150, false]] as const) {
+      const s = setup({ tapMaxDuration: limit });
+      const id = addLine(s);
+      const wait = clock();
+      s.el.dispatchEvent(ptr("pointerdown", "pen", 200, 250));
+      wait(held);
+      s.doc.dispatchEvent(ptr("pointerup", "pen", 200, 250));
+      expect(s.dm.selection()).toEqual(selects ? [id] : []);
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("a second finger cancels the placement; the chart stays held until both fingers lift (either order)", () => {
+    for (const firstUp of [1, 2]) {
+      const s = setup();
+      const ends = vi.fn();
+      s.dm.on("gestureEnd", ends);
+      s.dm.setTool("trend-line");
+      s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200, { pointerId: 1 }));
+      s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 200, { pointerId: 2, isPrimary: false }));
+      expect(s.dm.drawings()).toHaveLength(0);
+      expect(ends).toHaveBeenCalledTimes(1);
+      expect(s.chart.applyOptions.mock.calls).toEqual([[OFF]]);
+      expect(s.el.live("touchmove")).toBe(1);
+      s.doc.dispatchEvent(ptr("pointerup", "touch", 0, 0, { pointerId: firstUp }));
+      expect(s.chart.applyOptions.mock.calls).toEqual([[OFF]]);
+      s.doc.dispatchEvent(ptr("pointercancel", "touch", 0, 0, { pointerId: 3 - firstUp }));
+      expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
+      expect(s.el.live("touchmove")).toBe(0);
+      expect(s.win.liveTotal()).toBe(s.base.win);
+      expect(s.doc.liveTotal()).toBe(s.base.doc);
+      expect(s.dm.tool()).toBe("trend-line");
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("a third finger joins the hold", () => {
+    const s = setup();
+    s.dm.setTool("brush");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 50, 50, { pointerId: 1 }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 100, { pointerId: 2, isPrimary: false }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 400, 100, { pointerId: 3, isPrimary: false }));
+    for (const id of [2, 1]) s.doc.dispatchEvent(ptr("pointerup", "touch", 0, 0, { pointerId: id }));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF]]);
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 0, 0, { pointerId: 3 }));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
+    expect(s.dm.drawings()).toHaveLength(0);
+  });
+
+  it("secondFingerPinch: the chart gets pan and pinch back at the second finger (0.11.0)", () => {
+    const s = setup({ secondFingerPinch: true });
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200, { pointerId: 1 }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 200, { pointerId: 2, isPrimary: false }));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
+    expect(s.el.live("touchmove")).toBe(0);
+    expect(s.win.liveTotal()).toBe(s.base.win);
+  });
+
+  it("a drag of a selected drawing: a second finger keeps the chart held past the first lift", () => {
+    const s = setup();
+    const id = withSelectedLine(s);
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 200, 250, { pointerId: 1 }));
+    s.doc.dispatchEvent(ptr("pointermove", "touch", 220, 250, { pointerId: 1 }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 400, 100, { pointerId: 2, isPrimary: false }));
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 220, 250, { pointerId: 1 }));
+    expect(s.dm.get(id)!.points).toEqual([{ time: 120, price: 300 }, { time: 320, price: 200 }]);
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF]]);
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 400, 100, { pointerId: 2 }));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED]]);
+  });
+
+  it("a first finger after a missed lift: the stale hold is given back", () => {
+    const s = setup();
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200, { pointerId: 1 }));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 200, { pointerId: 2, isPrimary: false }));
+    s.doc.dispatchEvent(ptr("pointerup", "touch", 0, 0, { pointerId: 1 }));
+    // Finger 2's lift never arrives.
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200, { pointerId: 3 }));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED], [OFF]]);
+    s.win.dispatchEvent(ptr("pointerup", "touch", 100, 200, { pointerId: 3 }));
+    expect(s.chart.applyOptions.mock.calls).toEqual([[OFF], [SAVED], [OFF], [SAVED]]);
+  });
+
+  it("gestureEnd: a cancelled one-point press and Escape on pending points; not while a point stays pending", () => {
+    const s = setup();
+    const ends = vi.fn();
+    s.dm.on("gestureEnd", ends);
+    s.dm.setTool("horizontal-line");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 100));
+    s.win.dispatchEvent(ptr("pointercancel", "touch", 100, 100));
+    expect(ends).toHaveBeenCalledTimes(1);
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 100));
+    s.win.dispatchEvent(ptr("pointerup", "touch", 900, 100));
+    expect(ends).toHaveBeenCalledTimes(2);
+    s.dm.setTool("trend-line");
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 100, 200));
+    s.win.dispatchEvent(ptr("pointerup", "touch", 100, 200));
+    s.el.dispatchEvent(ptr("pointerdown", "touch", 300, 300));
+    s.win.dispatchEvent(ptr("pointercancel", "touch", 300, 300));
+    expect(ends).toHaveBeenCalledTimes(2);
+    s.win.dispatchEvent(Object.assign(new Event("keydown"), { key: "Escape" }));
+    expect(ends).toHaveBeenCalledTimes(3);
+    expect(s.dm.drawings()).toHaveLength(0);
+  });
+
+  it("touchHitTolerance is the whole slop: 22 reaches a tap 18 px from a line, 16 does not", () => {
+    for (const [tol, hits] of [[22, true], [16, false]] as const) {
+      const s = setup({ touchHitTolerance: tol });
+      const id = s.dm.add({ kind: "trend-line", points: [{ time: 100 as never, price: 300 }, { time: 300 as never, price: 300 }] });
+      s.el.dispatchEvent(ptr("pointerdown", "touch", 200, 218));
+      s.doc.dispatchEvent(ptr("pointerup", "touch", 200, 218));
+      expect(s.dm.selection()).toEqual(hits ? [id] : []);
+      vi.unstubAllGlobals();
+    }
   });
 });

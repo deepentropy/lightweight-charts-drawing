@@ -19,7 +19,9 @@ const dm = new DrawingManager(chart, series, {
   dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
   clampToPane: false,                  // pending press / preview / drag pointer kept inside the pane (else outside presses are ignored)
   interactive: true,                   // false = view-only: paints, no pointer input, no key action, stops no event
-  touchHitTolerance: 16,               // hit slop (px) of touch / pen presses; unset = mouse slop (6) for every pointer
+  touchHitTolerance: 22,               // whole hit slop (px) of touch / pen presses (22 = 44 px target); unset = mouse slop (6)
+  tapMaxDuration: 240,                 // touch tap on an unselected drawing selects only if lifted within this (ms)
+  secondFingerPinch: false,            // true: a second finger that cancels a placement gives pinch back at once
 });
 ```
 
@@ -141,7 +143,7 @@ Events (`dm.on(name, cb)` returns an unsubscribe function):
 | `change` | all drawings | persist (debounce it: it fires on every drag frame) |
 | `add`, `remove` | drawing | |
 | `update` | drawing, previous | undo entries |
-| `gestureEnd` | | end of a drag / placement: close an undo group, save |
+| `gestureEnd` | | end of a drag / placement (also a dropped one: second finger, Escape, cancelled touch press): close an undo group, save |
 | `selection` | ids | |
 | `tool` | kind or null | toolbar state |
 | `visibility` | visible | |

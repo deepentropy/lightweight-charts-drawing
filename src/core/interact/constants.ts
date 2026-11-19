@@ -19,3 +19,7 @@ export const FREEHAND_SAMPLE_PX = 2;
  *  before it lifts is a tap (selects it); farther, it is a swipe and the chart
  *  pans. A finger wobbles more than the mouse DRAG_THRESHOLD. */
 export const TAP_SLOP = 10;
+
+/** Touch / pen: a press on an unselected drawing that lifts within this many ms is a tap (selects it); a longer
+ *  hold is left to the host and the chart (lightweight-charts starts its long-tap crosshair at 240 ms). */
+export const TAP_MAX_DURATION = 240;

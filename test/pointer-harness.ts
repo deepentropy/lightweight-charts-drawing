@@ -22,11 +22,14 @@ export class FakeTarget {
     this.entries.splice(i, 1);
     this.removes[type] = (this.removes[type] ?? 0) + 1;
   }
+  /** Where an event bubbles next (document -> window), unless a listener stops it. */
+  parent: FakeTarget | null = null;
   dispatchEvent(e: Event): boolean {
     for (const x of this.entries.filter((y) => y.type === e.type)) {
       if (x.once) this.entries.splice(this.entries.indexOf(x), 1);
       x.fn(e);
     }
+    if (this.parent && e.bubbles && !e.cancelBubble) this.parent.dispatchEvent(e);
     return !e.defaultPrevented;
   }
   live(type: string): number {
@@ -56,6 +59,7 @@ export const OFF = { handleScroll: false, handleScale: false };
 export function setup(managerOpts: DrawingManagerOptions = {}) {
   const win = new FakeTarget();
   const doc = new FakeTarget();
+  doc.parent = win;
   vi.stubGlobal("window", win);
   vi.stubGlobal("document", doc);
   const el = new FakeTarget() as FakeTarget & { getBoundingClientRect(): object };

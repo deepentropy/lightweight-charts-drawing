@@ -66,8 +66,12 @@ pointer of a drag and the placement preview are kept inside the pane; default `f
 (default `true`; `false` = view-only: drawings paint but take no pointer input and no key action
 (Escape, Delete / Backspace), and no event is stopped, so the chart pans over them;
 `setInteractive(false)` also clears the selection and a half-placed drawing), `touchHitTolerance`
-(hit slop in px for touch and pen presses, e.g. 16; unset = the mouse slop of 6 px for every
-pointer; the mouse is never widened).
+(hit slop in px for touch and pen presses, the whole slop on each side of a stroke: 16 = a 32 px
+band, 22 = the 44 px touch target of the platform guidelines; unset = the mouse slop of 6 px for every
+pointer; the mouse is never widened), `tapMaxDuration` (ms, default 240: a longer touch hold on an
+unselected drawing does not select it; `Infinity` = no limit), `secondFingerPinch` (default `false`:
+after a second finger cancels a placement, the chart stays held until every finger has lifted; `true`
+= it pans and pinches at once).
 
 ### Labels and number format
 
@@ -128,7 +132,8 @@ Events: `change`, `add`, `update`, `remove`, `selection`, `tool`,
 `textEdit` (a text tool was placed or double-clicked: open your editor at
 the given pane point and `update` the drawing's `text`), `tableEdit` (a click
 on a cell of the selected table: open your editor over the given cell box),
-`gestureEnd` (end of a drag / placement, for undo grouping).
+`gestureEnd` (end of a drag / placement, for undo grouping; also when a placement is dropped
+by a second finger, Escape or a cancelled touch press).
 
 Mouse and keys (TradingView behaviour): placement by clicks, press-drag for
 brush / highlighter, double-click (or a click on the last point) finishes a
@@ -144,10 +149,11 @@ events of a gesture, so snap, axis lock, magnet inversion, multi-select and clon
 Touch and pen (TV mobile): a press on a selected drawing, its handles, or with an
 armed tool holds the chart until the finger lifts or the browser cancels the pointer.
 A press on an unselected drawing leaves the gesture to the chart: a swipe pans, a
-tap (under 10 px of movement) selects it. With a tool armed, the first point of a
+tap (under 10 px of movement, lifted within 240 ms) selects it. With a tool armed, the first point of a
 multi-point tool lands at the press; later points and one-point tools follow the
 finger and land where it lifts. A second finger (a pinch) cancels the unfinished
-drawing or brush stroke and keeps the tool armed. Elsewhere the chart pans and
+drawing or brush stroke and keeps the tool armed; the chart stays held until every
+finger has lifted, so that pinch does not zoom. Elsewhere the chart pans and
 pinches as without the library. The mouse places and selects at the press.
 
 Drawing flags: `locked` (selectable, but no drag and no Delete) and `hidden`
