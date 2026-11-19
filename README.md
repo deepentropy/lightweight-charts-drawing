@@ -65,7 +65,9 @@ so click-click still works; default `false`), `clampToPane`
 pointer of a drag and the placement preview are kept inside the pane; default `false`), `interactive`
 (default `true`; `false` = view-only: drawings paint but take no pointer input and no key action
 (Escape, Delete / Backspace), and no event is stopped, so the chart pans over them;
-`setInteractive(false)` also clears the selection and a half-placed drawing).
+`setInteractive(false)` also clears the selection and a half-placed drawing), `touchHitTolerance`
+(hit slop in px for touch and pen presses, e.g. 16; unset = the mouse slop of 6 px for every
+pointer; the mouse is never widened).
 
 ### Labels and number format
 
@@ -108,7 +110,7 @@ for a host changing only part of it. The labels then reach `formatLabel` with th
 |---|---|
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm / disarm a tool (`kind` from docs/TOOLS.md) |
 | `cancelPending()` | cancel a half-placed drawing, the tool stays armed |
-| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)`, `setInteractive(on)` | settings |
+| `setMagnet(mode)`, `setInterval(i)`, `setStayInDrawingMode(on)`, `setFormatLabel(fn \| undefined)`, `setInteractive(on)`, `setTouchHitTolerance(px \| undefined)` | settings |
 | `add(drawing)`, `update(drawing)`, `remove(id)`, `clear()`, `get(id)`, `drawings()` | drawings |
 | `setHidden(id, hidden)` | hide / show one drawing without removing it (the drawing's `hidden` flag, saved with it) |
 | `setDrawingsVisible(visible)`, `drawingsVisible()` | hide / show every drawing at once (TV "Hide all drawings"; not saved, the drawings are untouched) |

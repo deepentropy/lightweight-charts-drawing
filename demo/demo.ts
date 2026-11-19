@@ -59,7 +59,7 @@ async function main() {
     else url.searchParams.delete("keyboard");
     location.assign(url.toString());
   });
-  const dm = new DrawingManager(chart, series, { magnet: "off", keyboard: !keyboardOff });
+  const dm = new DrawingManager(chart, series, { magnet: "off", keyboard: !keyboardOff, touchHitTolerance: 16 });
   Object.assign(window, { dm, chart, series, lwcd });
 
   $("version").textContent = `v${VERSION}`;

@@ -5,7 +5,7 @@
  * overlay renderer, the hit test and the drag code.
  */
 import type { Drawing, DrawingStyle } from "../types";
-import type { Pt } from "../_shared";
+import { hitSlopExtra, type Pt } from "../_shared";
 import { measureTextStyled, tvWordWrap } from "./tv-text";
 
 /** TV table constants (enum T): CellPadding 8, CellBorderWidth 1,
@@ -140,10 +140,10 @@ export function tableHitCell(l: TableLayout, cur: Pt, selected: boolean): { edge
     let row: number | null = null;
     let col: number | null = null;
     if (cur.x >= l.left && cur.x <= l.right) {
-      for (let r = 0; r < l.ys.length - 1; r++) if (Math.abs(cur.y - l.ys[r + 1]) <= TABLE_EDGE_TOL) { row = r; break; }
+      for (let r = 0; r < l.ys.length - 1; r++) if (Math.abs(cur.y - l.ys[r + 1]) <= TABLE_EDGE_TOL + hitSlopExtra()) { row = r; break; }
     }
     if (cur.y >= l.top && cur.y <= l.bottom) {
-      for (let c = 0; c < l.xs.length - 1; c++) if (Math.abs(cur.x - l.xs[c + 1]) <= TABLE_EDGE_TOL) { col = c; break; }
+      for (let c = 0; c < l.xs.length - 1; c++) if (Math.abs(cur.x - l.xs[c + 1]) <= TABLE_EDGE_TOL + hitSlopExtra()) { col = c; break; }
     }
     if (row != null || col != null) return { edge: { row, col } };
   }

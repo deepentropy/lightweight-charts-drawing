@@ -10,8 +10,39 @@ export type Pt = { x: number; y: number };
 
 /** Anchor radius in px — TV `RegularAnchorRadius` (lt-pane-views). */
 export const HANDLE_RADIUS = 6;
-/** Slop added to every hit-test so thin strokes are still grabbable. */
+/** Slop added to every hit-test so thin strokes are still grabbable (mouse). */
 export const HIT_TOLERANCE = 6;
+
+let hitSlop = HIT_TOLERANCE;
+
+/** The stroke slop of the hit test in progress: HIT_TOLERANCE, or the wider
+ *  one given to withHitTolerance (a touch press). */
+export function hitTolerance(): number {
+  return hitSlop;
+}
+
+/** What the current slop adds to the mouse one: the padding of the hit
+ *  areas that have no slop for a mouse (text boxes, markers). 0 for a mouse. */
+export function hitSlopExtra(): number {
+  return hitSlop - HIT_TOLERANCE;
+}
+
+/** Grab radius of an anchor: its drawn radius + the current slop. */
+export function handleHitRadius(): number {
+  return HANDLE_RADIUS + hitSlop;
+}
+
+/** Run `fn` with the hit slop widened to `tolerance` px (never narrower than
+ *  HIT_TOLERANCE): handles, strokes and boxes all grow by the difference. */
+export function withHitTolerance<T>(tolerance: number, fn: () => T): T {
+  const prev = hitSlop;
+  hitSlop = Math.max(HIT_TOLERANCE, Number.isFinite(tolerance) ? tolerance : HIT_TOLERANCE);
+  try {
+    return fn();
+  } finally {
+    hitSlop = prev;
+  }
+}
 /** Half-extent of the bbox around a 1-point glyph (arrow-mark-up / -down,
  *  price-label) used both for rendered size and hit-testing. */
 export const GLYPH_HALF = 9;
@@ -37,7 +68,7 @@ export function dashFor(style: DrawingStyle): string | undefined {
 /** Stroke hit slop scaled with the drawing's line width, so a fat stroke is
  *  grabbable across its whole painted body (TV: tolerance + linewidth / 2). */
 export function strokeTolerance(style: DrawingStyle | undefined): number {
-  return Math.max(HIT_TOLERANCE, (style?.width ?? 1) / 2 + 2);
+  return Math.max(hitSlop, (style?.width ?? 1) / 2 + 2 + hitSlopExtra());
 }
 
 /** Resolve a shape's interior fill from the TV-faithful params

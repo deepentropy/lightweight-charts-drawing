@@ -6,11 +6,15 @@
  * or null. The overlay's render switch handles the visual side.
  *
  * Geometry primitives (distToSegment, pointInPolygon, bboxCorners,
- * GLYPH_HALF, HIT_TOLERANCE, HANDLE_RADIUS) live in ../_shared.ts.
+ * GLYPH_HALF, HIT_TOLERANCE, HANDLE_RADIUS) live in ../_shared.ts. The slop
+ * is read through hitTolerance() / handleHitRadius() / hitSlopExtra(), so
+ * hitTestKind's `tolerance` (a touch press) widens every test at once.
  */
 import {
-  HANDLE_RADIUS,
-  HIT_TOLERANCE,
+  handleHitRadius,
+  hitSlopExtra,
+  hitTolerance,
+  withHitTolerance,
   bboxCorners,
   distToSegment,
   pointInPolygon,
@@ -40,8 +44,6 @@ import { tableAnchors, tableEdgeIndex, tableHitCell, tableLayout } from "./table
 import { imageAnchors, imageBox } from "./images";
 import { signpostLayout } from "./signpost";
 import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, priceLabelText, textToolLayout } from "./text-tools";
-
-const HANDLE_R = HANDLE_RADIUS + HIT_TOLERANCE;
 
 /** A press on a fill, off the strokes (see HitResult `background`). */
 const background = (): HitResult => ({ hit: "body", background: true });
@@ -88,52 +90,57 @@ export function pickTopmostHit<T>(
   return bg;
 }
 
+/** Inside a box drawn without hit slop (text, label), grown by the extra slop
+ *  of a touch press (none for a mouse). */
 function inBox(c: Pt, b: { left: number; top: number; width: number; height: number }): boolean {
-  return c.x >= b.left && c.x <= b.left + b.width && c.y >= b.top && c.y <= b.top + b.height;
+  return inRect(c, b.left, b.top, b.left + b.width, b.top + b.height);
 }
 
+/** inBox for left / top / right / bottom bounds. */
+function inRect(c: Pt, left: number, top: number, right: number, bottom: number): boolean {
+  const e = hitSlopExtra();
+  return c.x >= left - e && c.x <= right + e && c.y >= top - e && c.y <= bottom + e;
+}
+
+/** The anchor nearest the cursor within the grab radius (the nearest, not the
+ *  first: with a wide touch radius the anchors of a small drawing overlap). */
 function endpointHit(pts: Pt[], cursor: Pt): HitResult | null {
+  let best = -1;
+  let bestD = handleHitRadius();
   for (let i = 0; i < pts.length; i++) {
-    if (Math.hypot(pts[i].x - cursor.x, pts[i].y - cursor.y) <= HANDLE_R) {
-      return { hit: "handle", handleIndex: i };
+    const d = Math.hypot(pts[i].x - cursor.x, pts[i].y - cursor.y);
+    if (d <= bestD && (best < 0 || d < bestD)) {
+      best = i;
+      bestD = d;
     }
   }
-  return null;
+  return best < 0 ? null : { hit: "handle", handleIndex: best };
 }
 
-function bboxCornerHit(a: Pt, b: Pt, cursor: Pt): HitResult | null {
-  const cs = bboxCorners(a, b);
-  for (let i = 0; i < 4; i++) {
-    if (Math.hypot(cs[i].x - cursor.x, cs[i].y - cursor.y) <= HANDLE_R) {
-      return { hit: "handle", handleIndex: i };
-    }
-  }
-  return null;
-}
 
-function horizontalLineHit(pts: Pt[], cursor: Pt, w: number, tol = HIT_TOLERANCE): HitResult | null {
+function horizontalLineHit(pts: Pt[], cursor: Pt, w: number, tol = hitTolerance()): HitResult | null {
   const a = pts[0];
   // Anchor at 90% of the pane width (TV line-tool-horizontal-line).
-  if (Math.hypot(0.9 * w - cursor.x, a.y - cursor.y) <= HANDLE_R) {
+  if (Math.hypot(0.9 * w - cursor.x, a.y - cursor.y) <= handleHitRadius()) {
     return { hit: "handle", handleIndex: 0 };
   }
   if (Math.abs(cursor.y - a.y) <= tol) return { hit: "body" };
   return null;
 }
 
-function verticalLineHit(pts: Pt[], cursor: Pt, h: number, tol = HIT_TOLERANCE): HitResult | null {
+function verticalLineHit(pts: Pt[], cursor: Pt, h: number, tol = hitTolerance()): HitResult | null {
   const a = pts[0];
   // Anchor at 90% of the pane height (TV line-tool-vertical-line).
-  if (Math.hypot(a.x - cursor.x, 0.9 * h - cursor.y) <= HANDLE_R) {
+  if (Math.hypot(a.x - cursor.x, 0.9 * h - cursor.y) <= handleHitRadius()) {
     return { hit: "handle", handleIndex: 0 };
   }
   if (Math.abs(cursor.x - a.x) <= tol) return { hit: "body" };
   return null;
 }
 
-function crossLineHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function crossLineHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   const a = pts[0];
-  if (Math.hypot(a.x - cursor.x, a.y - cursor.y) <= HANDLE_R) {
+  if (Math.hypot(a.x - cursor.x, a.y - cursor.y) <= handleHitRadius()) {
     return { hit: "handle", handleIndex: 0 };
   }
   if (Math.abs(cursor.y - a.y) <= tol || Math.abs(cursor.x - a.x) <= tol) {
@@ -142,13 +149,13 @@ function crossLineHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | n
   return null;
 }
 
-function horizontalRayHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function horizontalRayHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   const a = pts[0];
-  if (Math.hypot(a.x - cursor.x, a.y - cursor.y) <= HANDLE_R) {
+  if (Math.hypot(a.x - cursor.x, a.y - cursor.y) <= handleHitRadius()) {
     return { hit: "handle", handleIndex: 0 };
   }
   // Body only to the right of the anchor (the ray extends rightward).
-  if (cursor.x >= a.x - HANDLE_R && Math.abs(cursor.y - a.y) <= tol) {
+  if (cursor.x >= a.x - handleHitRadius() && Math.abs(cursor.y - a.y) <= tol) {
     return { hit: "body" };
   }
   return null;
@@ -165,8 +172,8 @@ function fibHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
   const top = Math.min(pts[0].y, pts[1].y);
   const bottom = Math.max(pts[0].y, pts[1].y);
   if (
-    cursor.x >= left - HIT_TOLERANCE && cursor.x <= right + HIT_TOLERANCE &&
-    cursor.y >= top - HIT_TOLERANCE && cursor.y <= bottom + HIT_TOLERANCE
+    cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() &&
+    cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()
   ) {
     return { hit: "body" };
   }
@@ -198,7 +205,7 @@ function extendableLineHit(d: Drawing, pts: Pt[], cursor: Pt, width: number, hei
   return null;
 }
 
-function lineHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function lineHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   if (distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= tol) {
@@ -224,8 +231,8 @@ function positionHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | n
   const top = Math.min(yTarget, yStop);
   const bottom = Math.max(yTarget, yStop);
   if (
-    cursor.x >= left - HIT_TOLERANCE && cursor.x <= right + HIT_TOLERANCE &&
-    cursor.y >= top - HIT_TOLERANCE && cursor.y <= bottom + HIT_TOLERANCE
+    cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() &&
+    cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()
   ) {
     return { hit: "body" };
   }
@@ -279,7 +286,7 @@ function pitchforkHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, he
     }
   }
   for (const [a, b] of lines) {
-    if (distToSegment(cursor.x, cursor.y, a, b) <= HIT_TOLERANCE) return { hit: "body" };
+    if (distToSegment(cursor.x, cursor.y, a, b) <= hitTolerance()) return { hit: "body" };
   }
   // TV ChannelRenderer (hittestOnBackground): the filled bands between the
   // median and the outermost visible level on each side, forward from the
@@ -303,8 +310,8 @@ function fibExtHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
   const top = Math.min(pts[0].y, pts[1].y, pts[2].y);
   const bottom = Math.max(pts[0].y, pts[1].y, pts[2].y);
   if (
-    cursor.x >= left - HIT_TOLERANCE && cursor.x <= right + HIT_TOLERANCE &&
-    cursor.y >= top - HIT_TOLERANCE && cursor.y <= bottom + HIT_TOLERANCE
+    cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() &&
+    cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()
   ) {
     return { hit: "body" };
   }
@@ -323,7 +330,7 @@ function gannFanHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, heig
     const v = gannFanDir(a, b, lvl.coeff);
     const len = Math.hypot(v.x, v.y) || 1;
     const e = { x: a.x + (v.x / len) * big, y: a.y + (v.y / len) * big };
-    if (distToSegment(cursor.x, cursor.y, a, e) <= HIT_TOLERANCE) return { hit: "body" };
+    if (distToSegment(cursor.x, cursor.y, a, e) <= hitTolerance()) return { hit: "body" };
   }
   return null;
 }
@@ -353,15 +360,15 @@ function fibCirclesHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | nul
     const coeffs = (drawing.style.levels ?? FIB_CIRCLE_LEVEL_DEFAULTS).filter((l) => l.visible).map((l) => l.coeff);
     if (coeffs.length === 0) return null;
     const k = Math.max(...coeffs);
-    const hx = (Math.abs(pts[1].x - pts[0].x) / 2) * k + HIT_TOLERANCE;
-    const hy = (Math.abs(pts[1].y - pts[0].y) / 2) * k + HIT_TOLERANCE;
+    const hx = (Math.abs(pts[1].x - pts[0].x) / 2) * k + hitTolerance();
+    const hy = (Math.abs(pts[1].y - pts[0].y) / 2) * k + hitTolerance();
     const dx = (cursor.x - (pts[0].x + pts[1].x) / 2) / hx;
     const dy = (cursor.y - (pts[0].y + pts[1].y) / 2) / hy;
     return dx * dx + dy * dy <= 1 ? { hit: "body" } : null;
   }
   const r = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
   const d = Math.hypot(cursor.x - pts[0].x, cursor.y - pts[0].y);
-  if (d <= r + HIT_TOLERANCE) return { hit: "body" };
+  if (d <= r + hitTolerance()) return { hit: "body" };
   return null;
 }
 
@@ -497,25 +504,18 @@ export function rectEdgeMidpoints(a: Pt, b: Pt): [Pt, Pt, Pt, Pt] {
 
 function rectangleHit(pts: Pt[], cursor: Pt, withMidpoints = false): HitResult | null {
   const [a, b] = pts;
-  const ch = bboxCornerHit(a, b, cursor);
+  // Corners 0-3, then (TV rectangle) the edge midpoints 4-7.
+  const ch = endpointHit(withMidpoints ? [...bboxCorners(a, b), ...rectEdgeMidpoints(a, b)] : bboxCorners(a, b), cursor);
   if (ch) return ch;
-  if (withMidpoints) {
-    const mids = rectEdgeMidpoints(a, b);
-    for (let i = 0; i < 4; i++) {
-      if (Math.hypot(mids[i].x - cursor.x, mids[i].y - cursor.y) <= HANDLE_R) {
-        return { hit: "handle", handleIndex: 4 + i };
-      }
-    }
-  }
   const left = Math.min(a.x, b.x);
   const right = Math.max(a.x, b.x);
   const top = Math.min(a.y, b.y);
   const bottom = Math.max(a.y, b.y);
   if (
-    cursor.x >= left - HIT_TOLERANCE &&
-    cursor.x <= right + HIT_TOLERANCE &&
-    cursor.y >= top - HIT_TOLERANCE &&
-    cursor.y <= bottom + HIT_TOLERANCE
+    cursor.x >= left - hitTolerance() &&
+    cursor.x <= right + hitTolerance() &&
+    cursor.y >= top - hitTolerance() &&
+    cursor.y <= bottom + hitTolerance()
   ) {
     return { hit: "body" };
   }
@@ -564,7 +564,7 @@ function priceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number): 
   const right = drawing.style.extendRight ? width : Math.max(pts[0].x, pts[1].x);
   const top = Math.min(pts[0].y, pts[1].y);
   const bottom = Math.max(pts[0].y, pts[1].y);
-  if (cursor.x >= left - HIT_TOLERANCE && cursor.x <= right + HIT_TOLERANCE && cursor.y >= top - HIT_TOLERANCE && cursor.y <= bottom + HIT_TOLERANCE) {
+  if (cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() && cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()) {
     return { hit: "body" };
   }
   return null;
@@ -578,7 +578,7 @@ function dateRangeHit(pts: Pt[], cursor: Pt): HitResult | null {
   const right = Math.max(pts[0].x, pts[1].x);
   const top = Math.min(pts[0].y, pts[1].y);
   const bottom = Math.max(pts[0].y, pts[1].y);
-  if (cursor.x >= left - HIT_TOLERANCE && cursor.x <= right + HIT_TOLERANCE && cursor.y >= top - HIT_TOLERANCE && cursor.y <= bottom + HIT_TOLERANCE) {
+  if (cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() && cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()) {
     return { hit: "body" };
   }
   return null;
@@ -605,7 +605,7 @@ function triangleHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitR
 
 /* ---------- fib-fan / cycle / curve family (mirror DrawingsOverlay renderers) ---------- */
 
-function polylineHit(samples: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function polylineHit(samples: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   for (let i = 1; i < samples.length; i++) {
     if (distToSegment(cursor.x, cursor.y, samples[i - 1], samples[i]) <= tol) {
       return { hit: "body" };
@@ -620,7 +620,7 @@ function polylineHit(samples: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult 
 /** Bars pattern (TV): the anchors, then the drawn bars (each 2px bar, x ± 1,
  *  top to bottom, widened by the hit tolerance) or the line in line modes.
  *  Without a snapshot: the two vertical lines and the P0-P1 median. */
-function barsPatternHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null, tol = HIT_TOLERANCE): HitResult | null {
+function barsPatternHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null, tol = hitTolerance()): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   const g = barsPatternGeometry(drawing, pts, coords);
@@ -648,10 +648,10 @@ function arrowMarkHit(drawing: Drawing, pts: Pt[], cursor: Pt, dir: "up" | "down
   if (h) return h;
   const c = pts[0];
   const top = dir === "up" ? c.y : c.y - 22;
-  if (cursor.x >= c.x - 9.75 && cursor.x <= c.x + 9.75 && cursor.y >= top && cursor.y <= top + 22) return { hit: "body" };
+  if (inRect(cursor, c.x - 9.75, top, c.x + 9.75, top + 22)) return { hit: "body" };
   // TV TextRenderer.hitTest: inside the text box.
   const box = arrowMarkTextBox(drawing, c);
-  if (box && cursor.x >= box.left && cursor.x <= box.left + box.width && cursor.y >= box.top && cursor.y <= box.top + box.height) return { hit: "body" };
+  if (box && inBox(cursor, box)) return { hit: "body" };
   return null;
 }
 
@@ -666,13 +666,13 @@ function speedFanHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, coo
   const targets: Pt[] = [...g.h.map((l) => ({ x: b.x, y: l.y })), ...g.v.map((l) => ({ x: l.x, y: b.y }))];
   for (const t of targets) {
     const far = extendRay(a, t, width, size);
-    if (distToSegment(cursor.x, cursor.y, a, far) <= HIT_TOLERANCE) return { hit: "body" };
+    if (distToSegment(cursor.x, cursor.y, a, far) <= hitTolerance()) return { hit: "body" };
   }
   // Box edges.
   const c2 = { x: b.x, y: a.y };
   const c3 = { x: a.x, y: b.y };
   for (const [u, v] of [[a, c2], [c2, b], [b, c3], [c3, a]] as [Pt, Pt][]) {
-    if (distToSegment(cursor.x, cursor.y, u, v) <= HIT_TOLERANCE) return { hit: "body" };
+    if (distToSegment(cursor.x, cursor.y, u, v) <= hitTolerance()) return { hit: "body" };
   }
   return null;
 }
@@ -698,9 +698,9 @@ function pitchfanHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number): Hi
     const dx = t.x - p0.x, dy = t.y - p0.y;
     const len = Math.hypot(dx, dy) || 1;
     const e = { x: p0.x + (dx / len) * big, y: p0.y + (dy / len) * big };
-    if (distToSegment(cursor.x, cursor.y, p0, e) <= HIT_TOLERANCE) return { hit: "body" };
+    if (distToSegment(cursor.x, cursor.y, p0, e) <= hitTolerance()) return { hit: "body" };
   }
-  if (distToSegment(cursor.x, cursor.y, p1, p2) <= HIT_TOLERANCE) return { hit: "body" };
+  if (distToSegment(cursor.x, cursor.y, p1, p2) <= hitTolerance()) return { hit: "body" };
   return null;
 }
 
@@ -726,7 +726,7 @@ function gannSquareHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | nul
   const f = gannFrame(drawing, pts);
   if (!f) return null;
   const b = gannBox(f);
-  return cursor.x >= b.left - HIT_TOLERANCE && cursor.x <= b.right + HIT_TOLERANCE && cursor.y >= b.top - HIT_TOLERANCE && cursor.y <= b.bottom + HIT_TOLERANCE
+  return cursor.x >= b.left - hitTolerance() && cursor.x <= b.right + hitTolerance() && cursor.y >= b.top - hitTolerance() && cursor.y <= b.bottom + hitTolerance()
     ? { hit: "body" }
     : null;
 }
@@ -766,8 +766,8 @@ function wedgeHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
   const a1 = Math.atan2(p1.y - p0.y, p1.x - p0.x);
   const a2 = Math.atan2(p2raw.y - p0.y, p2raw.x - p0.x);
   const p2 = { x: p0.x + Math.cos(a2) * len1, y: p0.y + Math.sin(a2) * len1 };
-  if (distToSegment(cursor.x, cursor.y, p0, p1) <= HIT_TOLERANCE) return { hit: "body" };
-  if (distToSegment(cursor.x, cursor.y, p0, p2) <= HIT_TOLERANCE) return { hit: "body" };
+  if (distToSegment(cursor.x, cursor.y, p0, p1) <= hitTolerance()) return { hit: "body" };
+  if (distToSegment(cursor.x, cursor.y, p0, p2) <= hitTolerance()) return { hit: "body" };
   // Level arcs: radius within tolerance of coeff·edge AND angle inside the sweep.
   let sweep = a2 - a1;
   while (sweep > Math.PI) sweep -= 2 * Math.PI;
@@ -780,7 +780,7 @@ function wedgeHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
   if (inSweep) {
     const levels = (drawing.style.levels ?? FIB_WEDGE_LEVEL_DEFAULTS).filter((l) => l.visible);
     for (const lvl of levels) {
-      if (Math.abs(r - len1 * lvl.coeff) <= HIT_TOLERANCE) return { hit: "body" };
+      if (Math.abs(r - len1 * lvl.coeff) <= hitTolerance()) return { hit: "body" };
     }
   }
   return null;
@@ -796,11 +796,11 @@ function arcsHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
   // TV geometry: half circles cut by the horizontal through p0, opening
   // toward p1's vertical side — the cursor must be on that side.
   const dir = edge.y >= c.y ? 1 : -1;
-  if ((cursor.y - c.y) * dir < -HIT_TOLERANCE) return null;
+  if ((cursor.y - c.y) * dir < -hitTolerance()) return null;
   const dist = Math.hypot(cursor.x - c.x, cursor.y - c.y);
   const levels = (drawing.style.levels ?? SPEED_ARC_LEVEL_DEFAULTS).filter((l) => l.visible);
   for (const lvl of levels) {
-    if (Math.abs(dist - unit * lvl.coeff) <= HIT_TOLERANCE) return { hit: "body" };
+    if (Math.abs(dist - unit * lvl.coeff) <= hitTolerance()) return { hit: "body" };
   }
   return null;
 }
@@ -950,15 +950,15 @@ function labeledPolylineHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult 
 /** Freehand stroke (brush/highlighter): the sampled path has many vertices, but
  *  only its two endpoints are draggable handles — the rest is body (the whole
  *  stroke moves together). Mirrors how the overlay renders freehand handles. */
-function freehandHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function freehandHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   if (pts.length === 0) return null;
   const last = pts.length - 1;
-  if (Math.hypot(pts[0].x - cursor.x, pts[0].y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 0 };
-  if (Math.hypot(pts[last].x - cursor.x, pts[last].y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: last };
+  const end = endpointHit([pts[0], pts[last]], cursor);
+  if (end?.hit === "handle") return { hit: "handle", handleIndex: end.handleIndex === 0 ? 0 : last };
   return polylineHit(pts, cursor, tol);
 }
 
-function sampledHit(samples: Pt[], pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function sampledHit(samples: Pt[], pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   return polylineHit(samples, cursor, tol);
@@ -1009,10 +1009,10 @@ function timeCyclesHit(pts: Pt[], cursor: Pt, paneW: number, tol: number): HitRe
 function priceNoteHit(d: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null | undefined): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= HIT_TOLERANCE) return { hit: "body" };
+  if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= hitTolerance()) return { hit: "body" };
   const pip = coords?.pipSize() ?? 0.01;
   const box = priceNoteLabel(d, pts, Math.max(0, Math.min(8, Math.round(-Math.log10(pip)))), coords)?.box;
-  if (box && cursor.x >= box.left && cursor.x <= box.left + box.width && cursor.y >= box.top && cursor.y <= box.top + box.height) return { hit: "body" };
+  if (box && inBox(cursor, box)) return { hit: "body" };
   return null;
 }
 
@@ -1029,7 +1029,7 @@ function regressionHit(d: Drawing, pts: Pt[], cursor: Pt, width: number, coords:
   if (!lines) return lineHit(pts, cursor);
   const segs: ([Pt, Pt] | null)[] = [lines.center, lines.upper, lines.lower];
   for (const seg of segs) {
-    if (seg && distToSegment(cursor.x, cursor.y, seg[0], seg[1]) <= HIT_TOLERANCE) {
+    if (seg && distToSegment(cursor.x, cursor.y, seg[0], seg[1]) <= hitTolerance()) {
       return { hit: "body" };
     }
   }
@@ -1040,7 +1040,7 @@ function regressionHit(d: Drawing, pts: Pt[], cursor: Pt, width: number, coords:
  *  visible ±σ band (recomputed via the shared helper). Falls back to a
  *  near-anchor ray before bars load. */
 function vwapHit(d: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null): HitResult | null {
-  if (Math.hypot(pts[0].x - cursor.x, pts[0].y - cursor.y) <= HANDLE_R) {
+  if (Math.hypot(pts[0].x - cursor.x, pts[0].y - cursor.y) <= handleHitRadius()) {
     return { hit: "handle", handleIndex: 0 };
   }
   const series = vwapScreenSeries(d, coords);
@@ -1057,7 +1057,7 @@ function vwapHit(d: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null): HitR
 /** Position forecast: endpoint handles + the quarter-ellipse vector (TV hit
  *  tests the ellipse; the source/target balloons stay grabbable through their
  *  anchor handles). */
-function forecastHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | null {
+function forecastHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   return polylineHit(forecastArcSamples(pts[0], pts[1]), cursor, tol);
@@ -1067,11 +1067,11 @@ function forecastHit(pts: Pt[], cursor: Pt, tol = HIT_TOLERANCE): HitResult | nu
  *  flies up-and-right of it (matches renderFlagMark's box). */
 function flagMarkHit(pts: Pt[], cursor: Pt): HitResult | null {
   const c = pts[0];
-  if (Math.hypot(c.x - cursor.x, c.y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 0 };
+  if (Math.hypot(c.x - cursor.x, c.y - cursor.y) <= handleHitRadius()) return { hit: "handle", handleIndex: 0 };
   const POLE_H = 22, FLAG_W = 17;
   if (
-    cursor.x >= c.x - HIT_TOLERANCE && cursor.x <= c.x + FLAG_W + HIT_TOLERANCE &&
-    cursor.y >= c.y - POLE_H - HIT_TOLERANCE && cursor.y <= c.y + HIT_TOLERANCE
+    cursor.x >= c.x - hitTolerance() && cursor.x <= c.x + FLAG_W + hitTolerance() &&
+    cursor.y >= c.y - POLE_H - hitTolerance() && cursor.y <= c.y + hitTolerance()
   ) {
     return { hit: "body" };
   }
@@ -1086,7 +1086,7 @@ function ghostFeedHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | 
   if (!drawing.ghost) return rectangleHit(pts, cursor);
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  let band = HIT_TOLERANCE;
+  let band = hitTolerance();
   if (coords) {
     const y0 = coords.priceToY(drawing.points[0].price);
     const y1 = coords.priceToY(drawing.points[0].price + drawing.ghost.amplitude);
@@ -1109,9 +1109,14 @@ export function hitTestKind(
   coords: Coords | null,
   /** The drawing is selected (table: its row / column edges resize). */
   selected = false,
+  /** Hit slop in px; default HIT_TOLERANCE (6, a mouse). A wider one (a
+   *  finger) grows every handle, stroke and box by the difference; a
+   *  narrower one is ignored. */
+  tolerance?: number,
 ): HitResult | null {
   // Hit boxes build the same labels as the scene (price note / price label), so the hook sees the same context.
-  return withLabelContext(coords, drawing, () => hitTestKindOf(drawing, pts, cursor, width, height, coords, selected));
+  const run = () => withLabelContext(coords, drawing, () => hitTestKindOf(drawing, pts, cursor, width, height, coords, selected));
+  return tolerance == null ? run() : withHitTolerance(tolerance, run);
 }
 
 function hitTestKindOf(
@@ -1155,7 +1160,7 @@ function hitTestKindOf(
       if (!b) return null;
       const a = endpointHit(imageAnchors(b), cursor);
       if (a) return a;
-      return cursor.x >= b.left && cursor.x <= b.right && cursor.y >= b.top && cursor.y <= b.bottom ? { hit: "body" } : null;
+      return inRect(cursor, b.left, b.top, b.right, b.bottom) ? { hit: "body" } : null;
     }
     case "price-label": {
       const h = endpointHit(pts, cursor);
@@ -1258,7 +1263,7 @@ function hitTestKindOf(
       if (a) return a;
       const t = pinLayout(drawing, pts[0], width, coords);
       const m = t.marker;
-      if (cursor.x >= m.left && cursor.x <= m.right && cursor.y >= m.top && cursor.y <= m.bottom) return { hit: "body" };
+      if (inRect(cursor, m.left, m.top, m.right, m.bottom)) return { hit: "body" };
       if (selected && inBox(cursor, { left: t.left, top: t.top, width: t.width, height: t.height })) return { hit: "body" };
       return null;
     }
@@ -1266,16 +1271,16 @@ function hitTestKindOf(
       // TV: the anchor (label point), the pole (3px), the plate, the label.
       if (!coords) return null;
       const g = signpostLayout(drawing, pts[0], coords, height);
-      if (Math.hypot(g.anchor.x - cursor.x, g.anchor.y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 0 };
-      if (distToSegment(cursor.x, cursor.y, { x: g.x, y: g.poleStart }, { x: g.x, y: g.poleEnd }) < 3) return { hit: "body" };
-      if (drawing.style.showImage && Math.hypot(cursor.x - g.x, cursor.y - g.plateY) <= 38) return { hit: "body" };
+      if (Math.hypot(g.anchor.x - cursor.x, g.anchor.y - cursor.y) <= handleHitRadius()) return { hit: "handle", handleIndex: 0 };
+      if (distToSegment(cursor.x, cursor.y, { x: g.x, y: g.poleStart }, { x: g.x, y: g.poleEnd }) < 3 + hitSlopExtra()) return { hit: "body" };
+      if (drawing.style.showImage && Math.hypot(cursor.x - g.x, cursor.y - g.plateY) <= 38 + hitSlopExtra()) return { hit: "body" };
       return inBox(cursor, g.l.box) ? { hit: "body" } : null;
     }
     case "note": {
       // TV text note: the leader line or the label box around P1.
       const h = endpointHit(pts, cursor);
       if (h) return h;
-      if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= HIT_TOLERANCE) return { hit: "body" };
+      if (pts[1] && distToSegment(cursor.x, cursor.y, pts[0], pts[1]) <= hitTolerance()) return { hit: "body" };
       // The box as drawn (noteLayout); TV TextRenderer.hitTest: inside it.
       if (pts[1] && inBox(cursor, noteLayout(drawing, drawing.style, pts[0], pts[1], coords).box)) return { hit: "body" };
       return null;
@@ -1286,8 +1291,8 @@ function hitTestKindOf(
       // TV callout: p0 (3px), the wrap anchor (index 1, while wrapping), the
       // box.
       const c = calloutLayout(drawing, pts[1], coords);
-      if (Math.hypot(pts[0].x - cursor.x, pts[0].y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 0 };
-      if (selected && c.wrap != null && Math.hypot(pts[1].x + c.wrap / 2 + 10 - cursor.x, pts[1].y - cursor.y) <= HANDLE_R) return { hit: "handle", handleIndex: 1 };
+      if (Math.hypot(pts[0].x - cursor.x, pts[0].y - cursor.y) <= handleHitRadius()) return { hit: "handle", handleIndex: 0 };
+      if (selected && c.wrap != null && Math.hypot(pts[1].x + c.wrap / 2 + 10 - cursor.x, pts[1].y - cursor.y) <= handleHitRadius()) return { hit: "handle", handleIndex: 1 };
       return inBox(cursor, { left: c.x, top: c.y, width: c.w, height: c.h }) ? { hit: "body" } : null;
     }
     case "regression-trend":
@@ -1297,14 +1302,14 @@ function hitTestKindOf(
       if (h) return h;
       const box = fixedVpBox(drawing, pts, coords);
       if (!box) return null;
-      return cursor.x >= box.left && cursor.x <= box.right && cursor.y >= box.top && cursor.y <= box.bottom ? { hit: "body" } : null;
+      return inRect(cursor, box.left, box.top, box.right, box.bottom) ? { hit: "body" } : null;
     }
     case "anchored-volume-profile": {
       const h = endpointHit([pts[0]], cursor);
       if (h) return h;
       const box = anchoredVpBox(drawing, pts, coords);
       if (!box) return null;
-      return cursor.x >= box.left && cursor.x <= box.right && cursor.y >= box.top && cursor.y <= box.bottom ? { hit: "body" } : null;
+      return inRect(cursor, box.left, box.top, box.right, box.bottom) ? { hit: "body" } : null;
     }
     case "anchored-vwap":
       return vwapHit(drawing, pts, cursor, coords);

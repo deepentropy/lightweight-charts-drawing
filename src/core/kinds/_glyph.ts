@@ -6,20 +6,20 @@
  */
 import {
   GLYPH_HALF,
-  HANDLE_RADIUS,
-  HIT_TOLERANCE,
+  handleHitRadius,
+  hitTolerance,
   type HitResult,
   type Pt,
 } from "../_shared";
 
 export function glyphHitTest(pts: Pt[], cursor: Pt): HitResult | null {
   const c = pts[0];
-  if (Math.hypot(c.x - cursor.x, c.y - cursor.y) <= HANDLE_RADIUS + HIT_TOLERANCE) {
+  if (Math.hypot(c.x - cursor.x, c.y - cursor.y) <= handleHitRadius()) {
     return { hit: "handle", handleIndex: 0 };
   }
   if (
-    Math.abs(cursor.x - c.x) <= GLYPH_HALF + HIT_TOLERANCE &&
-    Math.abs(cursor.y - c.y) <= GLYPH_HALF + HIT_TOLERANCE
+    Math.abs(cursor.x - c.x) <= GLYPH_HALF + hitTolerance() &&
+    Math.abs(cursor.y - c.y) <= GLYPH_HALF + hitTolerance()
   ) {
     return { hit: "body" };
   }

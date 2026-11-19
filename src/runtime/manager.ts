@@ -12,7 +12,7 @@
  */
 import type { IChartApi, ISeriesApi, ISeriesPrimitive, ISeriesPrimitiveAxisView, IPrimitivePaneRenderer, IPrimitivePaneView, PrimitiveHoveredItem, SeriesAttachedParameter, SeriesType, Time } from "lightweight-charts";
 import type { CanvasRenderingTarget2D } from "fancy-canvas";
-import type { HitResult, Pt } from "../core/_shared";
+import { HIT_TOLERANCE, type HitResult, type Pt } from "../core/_shared";
 import type { Coords, OHLC } from "../core/coords";
 import type { LabelFormatter } from "../core/labels";
 import { isVisibleOnInterval, type DataPoint, type Drawing, type DrawingKind, type NewDrawing } from "../core/types";
@@ -73,6 +73,12 @@ export type DrawingManagerOptions = {
    *  event is stopped, so the chart pans and zooms over them. A tool armed meanwhile places nothing until it is
    *  switched back. Change it later with setInteractive(). */
   interactive?: boolean;
+  /** Hit slop in px for touch and pen presses (a fingertip is wider than the 6 px mouse slop). Off by default:
+   *  every pointer uses the mouse values (strokes 6 px, handles 12 px from their centre). 16 to 20 suits a phone.
+   *  Handles, strokes and text boxes all grow by the difference over 6; the mouse is unchanged. A drawing that a
+   *  touch hits with the mouse slop still wins over one that only the widened slop reaches, so a precise touch
+   *  picks the drawing under the finger. Change it later with setTouchHitTolerance(). */
+  touchHitTolerance?: number;
 };
 
 export type DrawingManagerEvents = {
@@ -147,6 +153,8 @@ export class DrawingManager {
   private touchGuardOff: (() => void) | null = null;
   /** The last press was a touch: the double-click that follows it hits fills. */
   private lastTouch = false;
+  /** The last press was a touch or a pen: the double-click that follows it is hit with touchHitTolerance. */
+  private lastTouchLike = false;
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -247,6 +255,10 @@ export class DrawingManager {
   }
   setStayInDrawingMode(on: boolean): void {
     this.opts.stayInDrawingMode = on;
+  }
+  /** Change the `touchHitTolerance` option; undefined = mouse slop for every pointer. */
+  setTouchHitTolerance(px: number | undefined): void {
+    this.opts.touchHitTolerance = px;
   }
   /** View-only switch (see the `interactive` option). Turning it off clears the selection, the pending points of
    *  a half-placed drawing, the hover and the preview cursor; the armed tool and the drawings are left as they are,
@@ -589,17 +601,27 @@ export class DrawingManager {
   }
 
   /** `touch`: a fill counts as the drawing's body; a mouse or pen press on
-   *  a fill passes through to the chart (TV MOVEPOINT_BACKGROUND). */
-  private hitTopmost(sp: Pt, touch: boolean): { drawing: Drawing; mode: HitResult; pts: Pt[] } | null {
+   *  a fill passes through to the chart (TV MOVEPOINT_BACKGROUND).
+   *  `touchLike`: a touch / pen pointer, hit with `touchHitTolerance`. */
+  private hitTopmost(sp: Pt, touch: boolean, touchLike: boolean): { drawing: Drawing; mode: HitResult; pts: Pt[] } | null {
     const { w, h } = this.paneSize();
     // Drawings are clipped to the pane (TV): nothing hits over the axes.
     if (sp.x < 0 || sp.x > w || sp.y < 0 || sp.y > h) return null;
-    // Strokes, handles and text of every drawing before any fill (TV).
-    const pick = pickTopmostHit(this.list, (d) => {
+    const test = (tolerance?: number) => (d: Drawing): HitResult | null => {
       if (!this.shown(d)) return null;
       const pts = screenPoints(this.coords, d, { w, h });
-      return pts ? hitTestKind(d, pts, sp, w, h, this.coords, this.selected.includes(d.id)) : null;
-    }, { fills: touch });
+      return pts ? hitTestKind(d, pts, sp, w, h, this.coords, this.selected.includes(d.id), tolerance) : null;
+    };
+    const wide = touchLike ? this.opts.touchHitTolerance : undefined;
+    let pick: { item: Drawing; hit: HitResult } | null = null;
+    if (wide != null && wide > HIT_TOLERANCE) {
+      // The drawing a mouse would hit stays the pick (the finger is on it); the wide slop then chooses its
+      // handle or body. Only when no stroke is that close does the wide slop reach the drawings around.
+      const exact = pickTopmostHit(this.list, test(), { fills: false });
+      if (exact) pick = { item: exact.item, hit: test(wide)(exact.item) ?? exact.hit };
+    }
+    // Strokes, handles and text of every drawing before any fill (TV).
+    pick ??= pickTopmostHit(this.list, test(wide), { fills: touch });
     const pts = pick && screenPoints(this.coords, pick.item, { w, h });
     return pick && pts ? { drawing: pick.item, mode: pick.hit, pts } : null;
   }
@@ -702,7 +724,7 @@ export class DrawingManager {
       this.redraw();
       return;
     }
-    const hit = this.hitTopmost(sp, e.pointerType === "touch");
+    const hit = this.hitTopmost(sp, e.pointerType === "touch", isTouchLike(e));
     this.setHover(hit ? { id: hit.drawing.id, anchor: hit.mode.hit === "handle" ? hit.mode.handleIndex : -1 } : null);
     // TV table: the hovered row / column edge of the selected table.
     const edge = hit?.drawing.kind === "table" && hit.mode.hit === "handle" ? tableEdgeOf(hit.mode.handleIndex) : null;
@@ -733,6 +755,7 @@ export class DrawingManager {
     // isPrimary false or missing and stays on the old path.
     if (isTouchLike(e) && e.isPrimary === false) return;
     this.lastTouch = e.pointerType === "touch";
+    this.lastTouchLike = isTouchLike(e);
     this.pointerMods(e);
     let sp = this.panePoint(e);
     const { w, h } = this.paneSize();
@@ -767,7 +790,7 @@ export class DrawingManager {
       return;
     }
     if (this.spec) return;
-    const hit = this.hitTopmost(this.panePoint(e), this.lastTouch);
+    const hit = this.hitTopmost(this.panePoint(e), this.lastTouch, this.lastTouchLike);
     if (hit && findOverlaySpec(hit.drawing.kind)?.textEditable) {
       e.stopPropagation();
       this.emit("textEdit", hit.drawing, textAnchor(hit.drawing, hit.pts));
@@ -905,7 +928,7 @@ export class DrawingManager {
   }
 
   private selectionDown(e: PointerEvent, sp: Pt): void {
-    const hit = this.hitTopmost(sp, e.pointerType === "touch");
+    const hit = this.hitTopmost(sp, e.pointerType === "touch", isTouchLike(e));
     const multiKey = e.ctrlKey || e.metaKey;
     if (!hit) {
       // Ctrl+click on empty space keeps the selection (TV); a plain click

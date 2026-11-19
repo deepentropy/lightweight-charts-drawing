@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Touch hit tolerance (#33): `DrawingManager` option `touchHitTolerance` (px, e.g. 16; also
+  `setTouchHitTolerance()`) widens hit testing for touch and pen presses only: handles, strokes,
+  text boxes, markers and table edges grow by the difference over the 6 px mouse slop. The drawing
+  that the mouse slop hits still wins over one only the wide slop reaches. Off by default; the mouse
+  is unchanged. `hitTestKind` takes the slop as an optional last argument for hosts that hit-test
+  themselves.
+
+### Changed
+
+- Handles: a press within range of several anchors grabs the nearest one, not the first in index
+  order (a short line's far end, a small rectangle's edge midpoint, a brush's end).
+
 ## 0.10.1 (16/11/2026)
 
 ### Fixed

@@ -19,6 +19,7 @@ const dm = new DrawingManager(chart, series, {
   dragToPlace: false,                  // press-drag-release places points 1 and 2 (under 3 px = click)
   clampToPane: false,                  // pending press / preview / drag pointer kept inside the pane (else outside presses are ignored)
   interactive: true,                   // false = view-only: paints, no pointer input, no key action, stops no event
+  touchHitTolerance: 16,               // hit slop (px) of touch / pen presses; unset = mouse slop (6) for every pointer
 });
 ```
 
@@ -126,7 +127,7 @@ the chart element. Call `dm.destroy()` before removing the chart or the series.
 | `toggleAnchored(id)` | text / pin / table: fix to the pane position or back to time / price |
 | `setTool(kind \| null, { glyph? })`, `tool()` | arm a tool for the user (`glyph` for `font-icon`) |
 | `cancelPending()` | cancels a half-placed drawing and its preview, keeps the tool armed; no-op with nothing pending |
-| `setMagnet`, `setInterval`, `setStayInDrawingMode`, `setInteractive` | settings |
+| `setMagnet`, `setInterval`, `setStayInDrawingMode`, `setInteractive`, `setTouchHitTolerance` | settings |
 | `setFormatLabel(fn \| undefined)` | swap the `formatLabel` hook and repaint; `undefined` = library defaults |
 | `exportJSON()`, `importJSON(json)` → count | save / load (load replaces everything, clears the selection) |
 | `addImage({ name, width, height })` | image tool; the file must be in the image cache (`cacheImage` / `setImageReader`) |
@@ -210,9 +211,12 @@ Without the manager (SVG, another canvas, server-side rendering), use the core d
   `screenPoints` = each point through `timeToX` / `priceToY` (or the `anchored` fractions times
   the pane size).
 - `drawScene(ctx2d, scene, { fontFamily, anchors: { fillAt, selected } })` paints it on a canvas.
-- `hitTestKind(drawing, screenPoints, cursor, w, h, coords, selected)` returns
-  `{ hit: "handle", handleIndex }`, `{ hit: "body" }` (`background: true` inside a fill; inside a
-  selected rectangle, circle or ellipse the fill is the body) or null.
+- `hitTestKind(drawing, screenPoints, cursor, w, h, coords, selected, tolerance?)` returns
+  `{ hit: "handle", handleIndex }` (the nearest anchor in range), `{ hit: "body" }`
+  (`background: true` inside a fill; inside a selected rectangle, circle or ellipse the fill is the
+  body) or null. `tolerance` (px, default 6 = a mouse) widens every handle, stroke and text box by
+  the difference: pass 16 to 20 for a finger. The manager first picks the drawing a 6 px test
+  hits, then reads its handle / body with the wide one, so a precise touch keeps its drawing.
   `pickTopmostHit(drawings, test, { fills })` picks over the z-order: the topmost handle / stroke
   hit of any drawing, else the topmost fill; `fills: false` (a mouse press) drops the fill hits so
   the press pans the chart, as the `DrawingManager` does for a mouse or pen.
