@@ -13,6 +13,13 @@
 
 ### Changed
 
+- Touch and pen, selection (#35): a press on an unselected drawing no longer holds the chart. A
+  swipe that starts on it pans the chart; a tap (released within 10 px of the press)
+  selects it at the release. A selected drawing and its handles still drag at once. Mouse unchanged.
+- Touch and pen, placement (#37): the first point of a multi-point tool still lands at the press;
+  later points and one-point tools (text included) follow the finger and are placed where it lifts
+  (pointercancel places nothing). A second finger cancels the unfinished drawing, the pending points
+  or the brush stroke, gives the chart its pinch back and keeps the tool armed. Mouse unchanged.
 - Handles: a press within range of several anchors grabs the nearest one, not the first in index
   order (a short line's far end, a small rectangle's edge midpoint, a brush's end).
 

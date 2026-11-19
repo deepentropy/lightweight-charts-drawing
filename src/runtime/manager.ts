@@ -25,7 +25,7 @@ import { drawingImageFailed, imageInitialSize, onImagesChanged } from "../core/k
 import { sceneLockedAnchors, sceneOf } from "../core/scene";
 import type { Scene } from "../core/scene/types";
 import { parseDrawings } from "../core/serialize";
-import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS } from "../core/interact/constants";
+import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS, TAP_SLOP } from "../core/interact/constants";
 import { magnetSnap, magnetSnapSource, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../core/interact/project";
 import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../core/interact/placement";
 import { lockAxisDelta, shiftPlacementPoint } from "../core/interact/shift";
@@ -155,6 +155,8 @@ export class DrawingManager {
   private lastTouch = false;
   /** The last press was a touch or a pen: the double-click that follows it is hit with touchHitTolerance. */
   private lastTouchLike = false;
+  /** Drops the pending tap of a touch press on an unselected drawing (a second finger). */
+  private cancelTap: (() => void) | null = null;
   private readonly off: (() => void)[] = [];
 
   constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, opts: DrawingManagerOptions = {}) {
@@ -753,7 +755,12 @@ export class DrawingManager {
     if (this.opts.interactive === false || e.button !== 0) return;
     // A second finger belongs to the chart (pinch). Scoped to touch / pen: a synthetic mouse event may have
     // isPrimary false or missing and stays on the old path.
-    if (isTouchLike(e) && e.isPrimary === false) return;
+    if (isTouchLike(e) && e.isPrimary === false) {
+      // It cancels an unfinished drawing or brush stroke (the tool stays armed) and a pending tap.
+      if (this.spec) this.cancelPlacement();
+      this.cancelTap?.();
+      return;
+    }
     this.lastTouch = e.pointerType === "touch";
     this.lastTouchLike = isTouchLike(e);
     this.pointerMods(e);
@@ -768,7 +775,11 @@ export class DrawingManager {
       e.stopPropagation();
       this.holdChart(e);
       if (this.spec.freehand) this.startFreehand(sp);
-      else {
+      else if (isTouchLike(e) && !(this.pending.length === 0 && (this.spec.variableLength || this.spec.pointCount > 1))) {
+        // Touch / pen: a later point or a one-point tool would land under the finger: it follows the finger
+        // and is placed where it lifts. The first point of a multi-point tool is placed at the press.
+        this.liftPlace(this.spec, sp);
+      } else {
         const first = this.pending.length === 0;
         this.placementClick(sp);
         // Point 1 of a fixed multi-point tool is down (a placed one-point tool leaves nothing pending).
@@ -867,6 +878,68 @@ export class DrawingManager {
     });
   }
 
+  /** Touch / pen placement: the preview follows the finger from the press; the release places the point
+   *  (a release outside the pane only with clampToPane). pointercancel places nothing. */
+  private liftPlace(spec: OverlaySpec, sp0: Pt): void {
+    this.cursor = this.placementPoint(sp0);
+    this.redraw();
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      this.pointerMods(ev as PointerEvent);
+      this.cursor = this.placementPoint(this.panePoint(ev as PointerEvent));
+      this.redraw();
+    });
+    this.onRelease(window, (ev) => {
+      rmMove();
+      this.releaseChart();
+      if (ev.type === "pointercancel" || this.spec !== spec) return;
+      this.pointerMods(ev as PointerEvent);
+      let up = this.panePoint(ev as PointerEvent);
+      const { w, h } = this.paneSize();
+      if (up.x < 0 || up.x > w || up.y < 0 || up.y > h) {
+        if (!this.opts.clampToPane) return;
+        up = this.toPane(up);
+      }
+      this.placementClick(up);
+    });
+  }
+
+  /** A second finger during a placement: drop the pending points, the brush stroke and the press in progress
+   *  (nothing is placed, no event); the tool stays armed and the chart gets its pan / zoom back. */
+  private cancelPlacement(): void {
+    for (const f of [...this.gestureOff]) f();
+    this.releaseChart();
+    this.pending = [];
+    this.cursor = null;
+    this.redraw();
+  }
+
+  /** Touch / pen press on an unselected drawing (TV mobile): the chart keeps the gesture, so a swipe pans; a
+   *  release within TAP_SLOP of the press (a tap) selects the drawing. */
+  private tapSelect(id: string, sp0: Pt): void {
+    let moved = false;
+    const far = (ev: Event) => {
+      const p = this.panePoint(ev as PointerEvent);
+      return Math.hypot(p.x - sp0.x, p.y - sp0.y) >= TAP_SLOP;
+    };
+    const rmMove = this.gestureListen(document, "pointermove", (ev) => {
+      if (far(ev)) moved = true;
+    });
+    const done = () => {
+      rmMove();
+      rmUp();
+      rmCancel();
+      this.cancelTap = null;
+    };
+    const rmUp = this.gestureListen(document, "pointerup", (ev) => {
+      done();
+      if (moved || far(ev) || !this.get(id)) return;
+      this.select([id]);
+      this.emit("gestureEnd");
+    });
+    const rmCancel = this.gestureListen(document, "pointercancel", done);
+    this.cancelTap = done;
+  }
+
   private finishVariable(closed: boolean): void {
     const spec = this.spec;
     if (!spec?.variableLength || this.pending.length < 2) return;
@@ -934,6 +1007,11 @@ export class DrawingManager {
       // Ctrl+click on empty space keeps the selection (TV); a plain click
       // clears it and the chart pans as usual.
       if (!multiKey && this.selected.length) this.select([]);
+      return;
+    }
+    // Touch / pen on an unselected drawing: a swipe pans the chart, a tap selects (TV mobile).
+    if (isTouchLike(e) && !this.selected.includes(hit.drawing.id)) {
+      this.tapSelect(hit.drawing.id, sp);
       return;
     }
     e.stopPropagation();

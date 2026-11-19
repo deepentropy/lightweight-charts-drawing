@@ -14,3 +14,8 @@ export const MIN_DISTANCE_BETWEEN_POINTS = 5;
  *  once the cursor has travelled this many screen-px from the last sample, so the
  *  stroke stays smooth without an unbounded point count. */
 export const FREEHAND_SAMPLE_PX = 2;
+
+/** Touch / pen: a press on an unselected drawing that moves less than this
+ *  before it lifts is a tap (selects it); farther, it is a swipe and the chart
+ *  pans. A finger wobbles more than the mouse DRAG_THRESHOLD. */
+export const TAP_SLOP = 10;
