@@ -265,6 +265,42 @@ describe("gann square / gann square fixed", () => {
   });
 });
 
+describe("fib circles", () => {
+  // Centre (200, 300) = the p0-p1 midpoint, half-axes 100 × 100 · coeff: rings at 23.6, 38.2, 50,
+  // 61.8, 78.6, 100, 161.8, …, 461.8 px.
+  const fc = (style: Partial<DrawingStyle> = {}, pts: [number, number][] = [[100, 100], [300, 300]]) =>
+    ({ ...dr("fib-circles", pts, style), fmt: 2 }) as Drawing;
+
+  it("between two rings and inside the innermost: background, selected or not; null without the fill", () => {
+    expect(both(fc(), { x: 330, y: 300 })).toEqual(BG);
+    expect(both(fc(), { x: 205, y: 300 })).toEqual(BG);
+    expect(both(fc({ fillBackground: false }), { x: 330, y: 300 })).toBeNull();
+    expect(both(fc({ fillBackground: false }), { x: 205, y: 300 })).toBeNull();
+  });
+  it("on a ring: the body; outside the outer ring: nothing", () => {
+    expect(both(fc(), { x: 300, y: 300 })).toEqual(BODY);
+    expect(both(fc(), { x: 200, y: 361.8 + 3 })).toEqual(BODY);
+    expect(both(fc({ fillBackground: false }), { x: 300, y: 300 })).toEqual(BODY);
+    expect(hit(fc(), { x: 200 + 480, y: 300 })).toBeNull();
+  });
+  it("an ellipse: the rings follow both half-axes", () => {
+    // p0 (100, 400), p1 (300, 300): centre (200, 350), half-axes 100 × 50 · coeff.
+    const d = fc({}, [[100, 100], [300, 200]]);
+    expect(hit(d, { x: 300, y: 350 })).toEqual(BODY);
+    expect(hit(d, { x: 200, y: 300 })).toEqual(BODY);
+    expect(hit(d, { x: 330, y: 350 })).toEqual(BG);
+    expect(hit(d, { x: 200, y: 285 })).toEqual(BG);
+  });
+  it("the anchors win", () => {
+    expect(hit(fc(), { x: 100, y: 400 })).toEqual({ hit: "handle", handleIndex: 0 });
+    expect(hit(fc(), { x: 300, y: 200 })).toEqual({ hit: "handle", handleIndex: 1 });
+  });
+  it("a touch tolerance widens the rings", () => {
+    expect(hit(fc(), { x: 310, y: 300 })).toEqual(BG);
+    expect(hit(fc(), { x: 310, y: 300 }, { tolerance: 16 })).toEqual(BODY);
+  });
+});
+
 describe("box tools: the rectangle model", () => {
   const sel = (d: Drawing, c: Pt) => hit(d, c, { selected: true });
 

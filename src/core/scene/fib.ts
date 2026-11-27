@@ -10,7 +10,7 @@ import { labelOrDefault } from "../labels";
 import { fixedText, percentText, shortText } from "../numbers";
 import type { Drawing, DrawingStyle, LevelDef } from "../types";
 import {
-  FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_TREND_LINE_DEFAULT, FIB_WEDGE_LEVEL_DEFAULTS,
+  FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_TREND_LINE_DEFAULT, FIB_WEDGE_LEVEL_DEFAULTS,
   FIB_WEDGE_TREND_LINE_DEFAULT, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_GRID_DEFAULT, SPEED_FAN_LEVEL_DEFAULTS,
   TREND_FIB_TIME_LEVEL_DEFAULTS, TREND_FIB_TIME_TREND_DEFAULT,
 } from "../specs";
@@ -18,6 +18,7 @@ import { tvTextLayout } from "../kinds/tv-text";
 import { fibCoeffText, fibLevelLabel, fibLevelText } from "../kinds/fib-labels";
 import { trendFibTimeLevels } from "../kinds/fib-time";
 import { fibLevelGeom } from "../kinds/fib-levels";
+import { fibCircleRings } from "../kinds/fib-circles";
 import { extendRay, speedFanGeometry } from "../kinds/speed-fan";
 import { spiralSamples } from "../kinds/hit-tests";
 import type { Scene, SceneItem } from "./types";
@@ -294,28 +295,25 @@ export function sceneFibTimeZone(pts: Pt[], selected: boolean, h: number, s: Dra
   return items;
 }
 
-const FIB_CIRCLE_LEVELS = [0.236, 0.382, 0.5, 0.618, 1];
-
 /** Fib circles (TV line-tool-fib-circles): axis-aligned ellipses centred on
  *  the p0-p1 midpoint, half-axes 0.5·|dx|·coeff × 0.5·|dy|·coeff, ring
  *  fills, the value label at each ellipse bottom, dashed trend line. */
 export function sceneFibCircles(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle): Scene {
   const [a, b] = pts;
+  const { cx, cy, rings } = fibCircleRings(d, pts);
   if (d.fmt !== 2) {
     // Legacy entries (before 24/09/2026): circles centred on p0, radius |p1 − p0|.
-    const r = Math.hypot(b.x - a.x, b.y - a.y);
     const dash = dashFor(s);
+    const outer = rings[rings.length - 1].rx;
     return [
-      ...FIB_CIRCLE_LEVELS.map((lvl) => ({ t: "circle" as const, cx: a.x, cy: a.y, r: r * lvl, fill: "none", stroke: s.color, strokeWidth: s.width, dash, strokeOpacity: lvl === 1 ? 1 : 0.55 })),
+      ...rings.map((g) => ({ t: "circle" as const, cx, cy, r: g.rx, fill: "none", stroke: s.color, strokeWidth: s.width, dash, strokeOpacity: g.rx === outer ? 1 : 0.55 })),
       { t: "line", a, b, stroke: s.color, strokeWidth: 1, strokeOpacity: 0.4, dash: "2 3" },
       ...anchorsIf(selected, pts),
     ];
   }
-  const cx = (a.x + b.x) / 2;
-  const cy = (a.y + b.y) / 2;
   const hx = Math.abs(b.x - a.x) / 2;
   const hy = Math.abs(b.y - a.y) / 2;
-  const levels = (s.levels ?? FIB_CIRCLE_LEVEL_DEFAULTS).filter((l) => l.visible);
+  const levels = rings.map((g) => g.lvl!);
   const fillO = levelFillOpacity(s);
   const ell = (c: number) => `M ${cx - hx * c} ${cy} a ${hx * c} ${hy * c} 0 1 0 ${2 * hx * c} 0 a ${hx * c} ${hy * c} 0 1 0 ${-2 * hx * c} 0 Z`;
   const items: SceneItem[] = [];

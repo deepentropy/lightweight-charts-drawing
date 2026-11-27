@@ -26,13 +26,14 @@ import { glyphHitTest } from "./_glyph";
 import { rotatedRectCorners } from "../rotated-rect";
 import type { Drawing } from "../types";
 import { GANN_ARC_DEFAULTS, GANN_FAN_DEFAULTS, GANN_LEVEL_DEFAULTS, TREND_FIB_TIME_LEVEL_DEFAULTS } from "../specs";
-import { FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_WEDGE_LEVEL_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, PARALLEL_CHANNEL_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_LEVEL_DEFAULTS } from "../specs";
+import { FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_WEDGE_LEVEL_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, PARALLEL_CHANNEL_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_LEVEL_DEFAULTS } from "../specs";
 import type { Coords } from "../coords";
 import { withLabelContext } from "../labels";
 import { positionAnchors } from "./position";
 import { gannArcs, gannArcSamples, gannBox, gannFanLines, gannFrame, gannLevelLines } from "./gann-square";
 import { gannBoxGeom } from "./gann-box";
 import { fibLevelGeom } from "./fib-levels";
+import { fibCircleRings } from "./fib-circles";
 import { gannFanDir } from "./gann-fan";
 import { pitchforkExtendRight, pitchforkGeom } from "./pitchfork";
 import { trendFibTimeLevels } from "./fib-time";
@@ -340,25 +341,30 @@ function fibTimeZoneHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): H
   return null;
 }
 
-/** Fib circles: concentric rings centred on pt0, outer radius = |pt1 - pt0|. */
-function fibCirclesHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
+/** Distance from `p` (relative to the centre) to the axis-aligned ellipse
+ *  rx × ry: first-order |f − 1| / |∇f| (exact on a circle); a flat ellipse
+ *  is its segment. */
+function ellipseDist(px: number, py: number, rx: number, ry: number): number {
+  if (rx < 1e-6 || ry < 1e-6) return distToSegment(px, py, { x: -rx, y: -ry }, { x: rx, y: ry });
+  const f = (px / rx) ** 2 + (py / ry) ** 2;
+  const g = 2 * Math.hypot(px / (rx * rx), py / (ry * ry));
+  return g < 1e-12 ? Math.min(rx, ry) : Math.abs(f - 1) / g;
+}
+
+/** Fib circles (kinds/fib-circles, as drawn): the anchors, each ring, then
+ *  inside the outer ring as a background hit while the fill is on (not
+ *  grabbed when selected). The trend line and labels are inert. */
+function fibCirclesHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  if (drawing.fmt === 2) {
-    // TV model: inside the outermost visible ellipse (centre = p0-p1 midpoint).
-    const coeffs = (drawing.style.levels ?? FIB_CIRCLE_LEVEL_DEFAULTS).filter((l) => l.visible).map((l) => l.coeff);
-    if (coeffs.length === 0) return null;
-    const k = Math.max(...coeffs);
-    const hx = (Math.abs(pts[1].x - pts[0].x) / 2) * k + hitTolerance();
-    const hy = (Math.abs(pts[1].y - pts[0].y) / 2) * k + hitTolerance();
-    const dx = (cursor.x - (pts[0].x + pts[1].x) / 2) / hx;
-    const dy = (cursor.y - (pts[0].y + pts[1].y) / 2) / hy;
-    return dx * dx + dy * dy <= 1 ? { hit: "body" } : null;
-  }
-  const r = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-  const d = Math.hypot(cursor.x - pts[0].x, cursor.y - pts[0].y);
-  if (d <= r + hitTolerance()) return { hit: "body" };
-  return null;
+  const { cx, cy, rings } = fibCircleRings(drawing, pts);
+  if (rings.length === 0) return null;
+  const px = cursor.x - cx;
+  const py = cursor.y - cy;
+  if (rings.some((g) => ellipseDist(px, py, g.rx, g.ry) <= tol)) return { hit: "body" };
+  const outer = rings.reduce((m, g) => (g.rx + g.ry > m.rx + m.ry ? g : m));
+  const inside = outer.rx > 0 && outer.ry > 0 && (px / outer.rx) ** 2 + (py / outer.ry) ** 2 <= 1;
+  return inside && filled(drawing) ? background() : null;
 }
 
 /** Parallel channel (TV anchors): 0/1 = main-edge ends, 2/3 = offset-edge
@@ -1237,7 +1243,7 @@ function hitTestKindOf(
     case "fib-time-zone":
       return fibTimeZoneHit(drawing, pts, cursor, tol);
     case "fib-circles":
-      return fibCirclesHit(drawing, pts, cursor);
+      return fibCirclesHit(drawing, pts, cursor, tol);
     case "fib-speed-resistance-fan":
       return speedFanHit(drawing, pts, cursor, width, coords);
     case "pitchfan":

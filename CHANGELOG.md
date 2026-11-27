@@ -4,9 +4,9 @@
 
 ### Fixed
 
-- Level and grid tools: fib retracement, trend-based fib extension, Gann box, Gann square and Gann
-  square fixed no longer take a mouse press anywhere in their box. Their visible level, grid, fan and
-  arc lines are the body; the gaps between them are a background hit (`{ hit: "body", background:
+- Level and grid tools: fib retracement, trend-based fib extension, fib circles, Gann box, Gann
+  square and Gann square fixed no longer take a mouse press anywhere in their box. Their visible
+  level, grid, fan, arc and ring lines are the body (fib circles: inside the outer ring); the gaps between them are a background hit (`{ hit: "body", background:
   true }`) while the fill is on (Gann box: either fill), else nothing, so a drag between the lines
   pans the chart, selected or not. The fib hit follows the drawn level y (log-scale levels,
   `reverse`, levels above 1) through a helper shared with the scenes and `fibLevelAt`; the band now
