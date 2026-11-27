@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Level, grid and box tools (#40): a mouse press inside them no longer always grabs the drawing.
+  These tools hit-tested their whole bounding box as the body, so the chart could not be dragged
+  between their lines, the fill switches had no effect on hits, and the box hid the lines of the
+  drawings under it.
+  - Fib retracement, trend-based fib extension, fib circles, Gann box, Gann square and Gann square
+    fixed (like the fib channel): the drawn level, grid, fan and arc lines and the fib trend line
+    are the body; the gaps are a background hit while the fill is on (Gann box: the price-level
+    bands with Background, the time-level bands with the vertical fill), else nothing. A mouse press
+    between the lines pans the chart, selected or not.
+  - Price range, date range, date and price range, long and short position (like the rectangle):
+    the drawn lines (price / time lines, distance lines, the border when drawn, entry / target /
+    stop lines) are the body; the box is a background hit, the body while selected. The ranges'
+    box hits only while filled; the position zones are always filled.
+  - Fib retracement and extension levels past the anchors (1.618 and up) and fib circle rings past
+    ratio 1 are now grabbable: they were outside the old box. The date range box follows
+    `extendTop` / `extendBottom`.
+  - Touch: a touch in a gap still grabs the drawing while the fill is on; with the fill off it no
+    longer does, and a line under the drawing now wins the touch (#30).
+
 ## 0.11.1 (19/11/2026)
 
 ### Added

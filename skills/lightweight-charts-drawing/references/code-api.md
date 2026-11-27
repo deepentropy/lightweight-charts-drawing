@@ -215,8 +215,8 @@ Without the manager (SVG, another canvas, server-side rendering), use the core d
 - `drawScene(ctx2d, scene, { fontFamily, anchors: { fillAt, selected } })` paints it on a canvas.
 - `hitTestKind(drawing, screenPoints, cursor, w, h, coords, selected, tolerance?)` returns
   `{ hit: "handle", handleIndex }` (the nearest anchor in range), `{ hit: "body" }`
-  (`background: true` inside a fill; inside a selected rectangle, circle or ellipse the fill is the
-  body) or null. `tolerance` (px, default 6 = a mouse) widens every handle, stroke and text box by
+  (`background: true` inside a fill or between the lines of a level / grid tool; inside a selected
+  rectangle, circle, ellipse, range or position the fill is the body) or null. `tolerance` (px, default 6 = a mouse) widens every handle, stroke and text box by
   the difference: pass 16 to 20 for a finger. The manager first picks the drawing a 6 px test
   hits, then reads its handle / body with the wide one, so a precise touch keeps its drawing.
   `pickTopmostHit(drawings, test, { fills })` picks over the z-order: the topmost handle / stroke
