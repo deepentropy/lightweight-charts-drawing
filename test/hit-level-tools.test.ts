@@ -5,7 +5,7 @@
 // lines are the body, the inside is a background hit while unselected and the body while selected.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Time } from "lightweight-charts";
-import { defaultStyleFor, hitTestKind, sceneOf, type Coords, type Drawing, type DrawingStyle, type HitResult, type Pt } from "../src";
+import { defaultStyleFor, fibLevelAt, hitTestKind, sceneOf, type Coords, type Drawing, type DrawingStyle, type HitResult, type Pt } from "../src";
 import { ptr, setup } from "./pointer-harness";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -167,6 +167,12 @@ describe("fib retracement", () => {
     expect(hit(d, { x: 200, y: 300 })).toBeNull();
   });
 
+  it("fibLevelAt reads the same levels", () => {
+    const d = fib({ extendRight: true });
+    expect(fibLevelAt(d, proj(d, LIN), { x: 600, y: 252 }, W, LIN)).toEqual({ index: 3, y: 250, left: 100, right: W, textX: (100 + W) / 2 });
+    expect(fibLevelAt(d, proj(d, LIN), { x: 600, y: 190 }, W, LIN)).toBeNull();
+  });
+
   it("a touch tolerance widens the level lines", () => {
     expect(hit(fib(), { x: 200, y: 262 })).toEqual(BG);
     expect(hit(fib(), { x: 200, y: 262 }, { tolerance: 16 })).toEqual(BODY);
@@ -271,8 +277,12 @@ describe("box tools: the rectangle model", () => {
     expect(hit(d, { x: 200, y: 300 })).toEqual(BODY);
     expect(hit(d, { x: 100, y: 200 })).toEqual({ hit: "handle", handleIndex: 0 });
     expect(hit(d, { x: 350, y: 300 })).toBeNull();
-    // The scene keeps the box a pointer target with the fill off (a transparent rect).
-    expect(hit(dr("price-range", [[100, 300], [300, 100]], { fillBackground: false }), { x: 150, y: 300 })).toEqual(BG);
+    // Fill off: the inside is no target, selected or not (the rectangle); the lines still hit.
+    const off = dr("price-range", [[100, 300], [300, 100]], { fillBackground: false });
+    expect(both(off, { x: 150, y: 300 })).toBeNull();
+    expect(both(off, { x: 200, y: 300 })).toEqual(BODY);
+    expect(both(dr("date-range", [[100, 300], [300, 100]], { fillBackground: false }), { x: 150, y: 250 })).toBeNull();
+    expect(both(dr("date-and-price-range", [[100, 300], [300, 100]], { fillBackground: false }), { x: 150, y: 250 })).toBeNull();
     expect(hit(dr("price-range", [[100, 300], [300, 100]], { extendRight: true }), { x: 600, y: 300 })).toEqual(BG);
   });
 

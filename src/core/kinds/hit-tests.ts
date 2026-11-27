@@ -50,8 +50,9 @@ import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, 
 /** A press on a fill, off the strokes (see HitResult `background`). */
 const background = (): HitResult => ({ hit: "body", background: true });
 
-/** Rectangle, circle, ellipse, the range tools and the long / short position
- *  (TV backgroundHitTarget = MovePoint while selected): the fill of the selected shape is its body, so a press there
+/** Rectangle, circle and ellipse (TV backgroundHitTarget = MovePoint while
+ *  selected), and by the same model the range tools and the long / short
+ *  position (the position's zones always hit): the fill of the selected shape is its body, so a press there
  *  keeps the selection and drags it; unselected it stays a background hit. */
 const grabbedWhenSelected = (hit: HitResult | null, selected: boolean): HitResult | null =>
   selected && hit?.hit === "body" && hit.background ? { hit: "body" } : hit;
@@ -545,8 +546,8 @@ function circleHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitRes
 
 /* Range tools (scene/ranges.ts): the anchors, the drawn lines (borders and
  * distance lines), then the box as a background hit, grabbed when selected
- * like the rectangle. The box stays a target with the fill off: the scene
- * keeps it a transparent pointer target. */
+ * like the rectangle; with the fill off the box is not a target (as the
+ * rectangle). */
 
 function priceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
@@ -563,7 +564,7 @@ function priceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, t
     [{ x: midX, y: a.y }, { x: midX, y: b.y }],
   ];
   if (onSegments(cursor, lines, tol)) return { hit: "body" };
-  return inBounds(cursor, left, Math.min(a.y, b.y), right, Math.max(a.y, b.y)) ? background() : null;
+  return filled(drawing) && inBounds(cursor, left, Math.min(a.y, b.y), right, Math.max(a.y, b.y)) ? background() : null;
 }
 
 function dateRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, height: number, tol: number): HitResult | null {
@@ -582,7 +583,7 @@ function dateRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, height: number, t
     [{ x: a.x, y: midY }, { x: b.x, y: midY }],
   ];
   if (onSegments(cursor, lines, tol)) return { hit: "body" };
-  return inBounds(cursor, Math.min(a.x, b.x), top, Math.max(a.x, b.x), bottom) ? background() : null;
+  return filled(drawing) && inBounds(cursor, Math.min(a.x, b.x), top, Math.max(a.x, b.x), bottom) ? background() : null;
 }
 
 function dateAndPriceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
@@ -595,7 +596,7 @@ function dateAndPriceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: numb
   const midY = Math.round((a.y + b.y) / 2);
   if (onSegments(cursor, [[{ x: a.x, y: midY }, { x: b.x, y: midY }], [{ x: midX, y: a.y }, { x: midX, y: b.y }]], tol)) return { hit: "body" };
   if (drawing.style.drawBorder && onOutline(cursor, bboxCorners(a, b), tol)) return { hit: "body" };
-  return inBounds(cursor, Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)) ? background() : null;
+  return filled(drawing) && inBounds(cursor, Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)) ? background() : null;
 }
 
 /** Rotated rectangle: pts 0-1 are one edge; pt2 sets the perpendicular width. */

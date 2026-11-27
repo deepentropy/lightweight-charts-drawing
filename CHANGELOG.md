@@ -13,7 +13,8 @@
   runs from the lowest to the highest visible level instead of over the anchors.
 - Range tools and long / short position: hit like the rectangle (#32). Their drawn lines (borders,
   distance lines, entry / target / stop) are the body; the box is a background hit, the body while
-  selected. The date range box now follows `extendTop` / `extendBottom`.
+  selected, and no target with the range's fill off. The date range box now follows `extendTop` /
+  `extendBottom`.
 
 ## 0.11.1 (19/11/2026)
 
