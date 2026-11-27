@@ -17,6 +17,7 @@ import {
 import { tvTextLayout } from "../kinds/tv-text";
 import { fibCoeffText, fibLevelLabel, fibLevelText } from "../kinds/fib-labels";
 import { trendFibTimeLevels } from "../kinds/fib-time";
+import { fibLevelGeom } from "../kinds/fib-levels";
 import { extendRay, speedFanGeometry } from "../kinds/speed-fan";
 import { spiralSamples } from "../kinds/hit-tests";
 import type { Scene, SceneItem } from "./types";
@@ -99,48 +100,15 @@ export function fibLevelAt(
   coords: Coords | null,
 ): { index: number; y: number; left: number; right: number; textX: number } | null {
   const s = d.style;
-  let yOf: ((c: number) => number) | null = null;
-  let left = 0;
-  let right = 0;
-  if (d.kind === "fib-retracement" && pts.length >= 2) {
-    const [a, b] = pts;
-    const priceA = d.points[0].price;
-    const priceB = d.points[1].price;
-    left = s.extendLeft ? 0 : Math.min(a.x, b.x);
-    right = s.extendRight ? w : Math.max(a.x, b.x);
-    const useLog = !!s.fibLevelsBasedOnLogScale && !!coords?.isLog() && priceA > 0 && priceB > 0;
-    const priceOf = (c: number) => {
-      const pEnd = s.reverse ? priceA : priceB;
-      const pStart = s.reverse ? priceB : priceA;
-      return useLog ? Math.exp(Math.log(pEnd) + c * (Math.log(pStart) - Math.log(pEnd))) : pEnd + c * (pStart - pEnd);
-    };
-    const yLin = (c: number) => (s.reverse ? a.y + (b.y - a.y) * c : b.y + (a.y - b.y) * c);
-    yOf = (c) => (useLog ? yLin(c) : coords?.priceToY(priceOf(c)) ?? yLin(c));
-  } else if (d.kind === "trend-based-fib-extension" && pts.length >= 3 && d.points.length >= 3) {
-    const [, b, c] = pts;
-    const p0 = d.points[0].price;
-    const p1 = d.points[1].price;
-    const pc = d.points[2].price;
-    const move = s.reverse ? p0 - p1 : p1 - p0;
-    const moveY = s.reverse ? pts[0].y - pts[1].y : pts[1].y - pts[0].y;
-    left = s.extendLeft ? 0 : Math.min(b.x, c.x);
-    right = s.extendRight ? w : Math.max(b.x, c.x);
-    const useLog = !!s.fibLevelsBasedOnLogScale && !!coords?.isLog() && p0 > 0 && p1 > 0 && pc > 0;
-    const priceOf = (lvl: number) => {
-      if (!useLog) return pc + move * lvl;
-      const lnMove = s.reverse ? Math.log(p0) - Math.log(p1) : Math.log(p1) - Math.log(p0);
-      return Math.exp(Math.log(pc) + lvl * lnMove);
-    };
-    const yLin = (lvl: number) => c.y + moveY * lvl;
-    yOf = (lvl) => (useLog ? yLin(lvl) : coords?.priceToY(priceOf(lvl)) ?? yLin(lvl));
-  }
-  if (!yOf) return null;
+  const g = fibLevelGeom(d, pts, w, coords);
+  if (!g) return null;
+  const { left, right, yOf } = g;
   if (cursor.x < left - HIT_TOLERANCE || cursor.x > right + HIT_TOLERANCE) return null;
   const levels = s.levels ?? FIB_LEVEL_DEFAULTS;
   let best: { index: number; y: number; dist: number } | null = null;
   levels.forEach((lvl, index) => {
     if (!lvl.visible) return;
-    const y = yOf!(lvl.coeff);
+    const y = yOf(lvl.coeff);
     const dist = Math.abs(cursor.y - y);
     if (dist <= 6 && (!best || dist < best.dist)) best = { index, y, dist };
   });
@@ -152,29 +120,11 @@ export function fibLevelAt(
 }
 
 export function sceneFib(d: Drawing, pts: Pt[], selected: boolean, w: number, s: DrawingStyle, coords: Coords | null): Scene {
-  if (d.kind !== "fib-retracement") return [];
+  const g = fibLevelGeom(d, pts, w, coords);
+  if (!g) return [];
   const [a, b] = pts;
-  const priceA = d.points[0].price;
-  const priceB = d.points[1].price;
-  // TV: levels span the anchors' x-range; the extend flags (default off)
-  // stretch them to the pane edges.
-  const left = s.extendLeft ? 0 : Math.min(a.x, b.x);
-  const right = s.extendRight ? w : Math.max(a.x, b.x);
+  const { left, right, yOf, priceOf } = g;
   const levels = activeLevels(s, FIB_LEVEL_DEFAULTS);
-  // "Fib levels based on log scale" (TV fibLevelsBasedOnLogScale): level
-  // prices interpolate in ln(price) space; TV only honours it on a log price
-  // scale, and non-positive anchors (no ln) fall back to linear.
-  const useLog = !!s.fibLevelsBasedOnLogScale && !!coords?.isLog() && priceA > 0 && priceB > 0;
-  // reverse mirrors the ladder: 0 at the first click instead of the second.
-  const priceOf = (c: number) => {
-    const pEnd = s.reverse ? priceA : priceB; // coeff-0 anchor
-    const pStart = s.reverse ? priceB : priceA;
-    return useLog ? Math.exp(Math.log(pEnd) + c * (Math.log(pStart) - Math.log(pEnd))) : pEnd + c * (pStart - pEnd);
-  };
-  // TV fibLevelCoordinate: log mode interpolates the anchors' coordinates;
-  // linear mode maps the level price through the scale.
-  const yLin = (c: number) => (s.reverse ? a.y + (b.y - a.y) * c : b.y + (a.y - b.y) * c);
-  const yOf = (c: number) => (useLog ? yLin(c) : coords?.priceToY(priceOf(c)) ?? yLin(c));
   const digits = digitsOf(coords);
   return [
     ...hBands(levels, yOf, left, right, levelFillOpacity(s)),
@@ -188,25 +138,10 @@ export function sceneFib(d: Drawing, pts: Pt[], selected: boolean, w: number, s:
 /** Trend-based fib extension: levels of the pt0→pt1 move projected from pt2
  *  over the x-range of points 2 and 3; `reverse` flips the measured leg. */
 export function sceneFibExtension(d: Drawing, pts: Pt[], selected: boolean, w: number, s: DrawingStyle, coords: Coords | null): Scene {
-  if (d.kind !== "trend-based-fib-extension") return [];
-  const [, b, c] = pts;
-  const p0 = d.points[0].price;
-  const p1 = d.points[1].price;
-  const pc = d.points[2].price;
-  const move = s.reverse ? p0 - p1 : p1 - p0;
-  const moveY = s.reverse ? pts[0].y - pts[1].y : pts[1].y - pts[0].y;
+  const g = fibLevelGeom(d, pts, w, coords);
+  if (!g) return [];
+  const { left, right, yOf, priceOf } = g;
   const levels = activeLevels(s, FIB_LEVEL_DEFAULTS);
-  const left = s.extendLeft ? 0 : Math.min(b.x, c.x);
-  const right = s.extendRight ? w : Math.max(b.x, c.x);
-  // Log scale (TV): the move projects from pc in ln(price) space.
-  const useLog = !!s.fibLevelsBasedOnLogScale && !!coords?.isLog() && p0 > 0 && p1 > 0 && pc > 0;
-  const priceOf = (lvl: number) => {
-    if (!useLog) return pc + move * lvl;
-    const lnMove = s.reverse ? Math.log(p0) - Math.log(p1) : Math.log(p1) - Math.log(p0);
-    return Math.exp(Math.log(pc) + lvl * lnMove);
-  };
-  const yLin = (lvl: number) => c.y + moveY * lvl;
-  const yOf = (lvl: number) => (useLog ? yLin(lvl) : coords?.priceToY(priceOf(lvl)) ?? yLin(lvl));
   const digits = digitsOf(coords);
   return [
     ...hBands(levels, yOf, left, right, levelFillOpacity(s)),

@@ -86,6 +86,20 @@ export function gannArcPaths(f: GannFrame, r: number, prev: number): { stroke: s
   return { stroke, fill };
 }
 
+/** Screen samples of the arc stroke of gannArcPaths (the quarter ellipse,
+ *  start's x-axis point → its y-axis point), for the hit test. */
+export function gannArcSamples(f: GannFrame, r: number): Pt[] {
+  const sx = f.dx < 0 ? -1 : 1;
+  const sy = f.dy < 0 ? -1 : 1;
+  const k = f.dx !== 0 ? Math.abs(f.dy / f.dx) : 1;
+  const out: Pt[] = [];
+  for (let i = 0; i <= 32; i++) {
+    const t = (i / 32) * (Math.PI / 2);
+    out.push({ x: f.start.x + sx * r * Math.cos(t), y: f.start.y + sy * r * k * Math.sin(t) });
+  }
+  return out;
+}
+
 /** Box rectangle (screen). */
 export function gannBox(f: GannFrame) {
   return {

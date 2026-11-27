@@ -25,12 +25,14 @@ import {
 import { glyphHitTest } from "./_glyph";
 import { rotatedRectCorners } from "../rotated-rect";
 import type { Drawing } from "../types";
-import { TREND_FIB_TIME_LEVEL_DEFAULTS } from "../specs";
+import { GANN_ARC_DEFAULTS, GANN_FAN_DEFAULTS, GANN_LEVEL_DEFAULTS, TREND_FIB_TIME_LEVEL_DEFAULTS } from "../specs";
 import { FIB_CIRCLE_LEVEL_DEFAULTS, FIB_LEVEL_DEFAULTS, FIB_TIMEZONE_LEVEL_DEFAULTS, FIB_WEDGE_LEVEL_DEFAULTS, GANN_FAN_LEVEL_DEFAULTS, PARALLEL_CHANNEL_LEVEL_DEFAULTS, PITCHFORK_LEVEL_DEFAULTS, SPEED_ARC_LEVEL_DEFAULTS, SPEED_FAN_LEVEL_DEFAULTS } from "../specs";
 import type { Coords } from "../coords";
 import { withLabelContext } from "../labels";
 import { positionAnchors } from "./position";
-import { gannBox, gannFrame } from "./gann-square";
+import { gannArcs, gannArcSamples, gannBox, gannFanLines, gannFrame, gannLevelLines } from "./gann-square";
+import { gannBoxGeom } from "./gann-box";
+import { fibLevelGeom } from "./fib-levels";
 import { gannFanDir } from "./gann-fan";
 import { pitchforkExtendRight, pitchforkGeom } from "./pitchfork";
 import { trendFibTimeLevels } from "./fib-time";
@@ -48,8 +50,8 @@ import { calloutLayout, commentLayout, noteLayout, pinLayout, priceLabelLayout, 
 /** A press on a fill, off the strokes (see HitResult `background`). */
 const background = (): HitResult => ({ hit: "body", background: true });
 
-/** Rectangle, circle and ellipse (TV backgroundHitTarget = MovePoint while
- *  selected): the fill of the selected shape is its body, so a press there
+/** Rectangle, circle, ellipse, the range tools and the long / short position
+ *  (TV backgroundHitTarget = MovePoint while selected): the fill of the selected shape is its body, so a press there
  *  keeps the selection and drags it; unselected it stays a background hit. */
 const grabbedWhenSelected = (hit: HitResult | null, selected: boolean): HitResult | null =>
   selected && hit?.hit === "body" && hit.background ? { hit: "body" } : hit;
@@ -161,23 +163,32 @@ function horizontalRayHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResul
   return null;
 }
 
-function fibHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
+/** Fib retracement / trend-based extension (kinds/fib-levels, as drawn):
+ *  the anchors, each visible level line, then the gaps between the lowest and
+ *  highest level as a background hit while the fill is on. Not grabbed when
+ *  selected: a press between the levels pans the chart. The trend line is
+ *  inert in the scene, so it is no target here either. */
+function fibLevelsHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, coords: Coords | null, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  // Body anywhere within the price band the levels span, limited to the
-  // anchors' x-range (TV: levels don't extend unless the extend flags are on).
-  const s = drawing.style;
-  const left = s.extendLeft ? -Infinity : Math.min(pts[0].x, pts[1].x);
-  const right = s.extendRight ? Infinity : Math.max(pts[0].x, pts[1].x);
-  const top = Math.min(pts[0].y, pts[1].y);
-  const bottom = Math.max(pts[0].y, pts[1].y);
-  if (
-    cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() &&
-    cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()
-  ) {
-    return { hit: "body" };
-  }
-  return null;
+  const g = fibLevelGeom(drawing, pts, width, coords);
+  if (!g) return null;
+  // A level with no screen y (a negative price on a log scale) is not drawn.
+  const ys = (drawing.style.levels ?? FIB_LEVEL_DEFAULTS).filter((l) => l.visible).map((l) => g.yOf(l.coeff)).filter(Number.isFinite);
+  if (ys.length === 0) return null;
+  if (onSegments(cursor, ys.map((y): [Pt, Pt] => [{ x: g.left, y }, { x: g.right, y }]), tol)) return { hit: "body" };
+  const inside = inBounds(cursor, g.left, Math.min(...ys), g.right, Math.max(...ys));
+  return inside && filled(drawing) ? background() : null;
+}
+
+/** Cursor within `tol` of one of the segments. */
+function onSegments(cursor: Pt, segs: [Pt, Pt][], tol: number): boolean {
+  return segs.some(([a, b]) => distToSegment(cursor.x, cursor.y, a, b) <= tol);
+}
+
+/** Inside the bounds, no slop (the edges hit as strokes). */
+function inBounds(c: Pt, left: number, top: number, right: number, bottom: number): boolean {
+  return c.x >= left && c.x <= right && c.y >= top && c.y <= bottom;
 }
 
 /** Trend-line family: the hit segment follows the RENDERED extension (TV's
@@ -215,10 +226,12 @@ function lineHit(pts: Pt[], cursor: Pt, tol = hitTolerance()): HitResult | null 
 }
 
 /** Position tool (TV model): 4 virtual anchors — 0 = entry (free), 1 = close
- *  point (time-only), 2 = stop (price-only), 3 = target (price-only) — plus
- *  the risk/reward box body. Anchors come from positionAnchors, the same
- *  source as the renderer, so a drawn handle is always the grabbed one. */
-function positionHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null | undefined): HitResult | null {
+ *  point (time-only), 2 = stop (price-only), 3 = target (price-only) — then
+ *  the entry / target / stop lines, then the risk / reward zones as a
+ *  background hit (grabbed when selected, like the rectangle). Anchors come
+ *  from positionAnchors, the same source as the renderer, so a drawn handle
+ *  is always the grabbed one. */
+function positionHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null | undefined, tol: number): HitResult | null {
   if (!drawing.points[0] || !drawing.points[1]) return null;
   const geo = positionAnchors(drawing, pts, coords);
   if (!geo) return null;
@@ -228,15 +241,9 @@ function positionHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | n
   if (ah) return ah;
   const left = Math.min(a.x, b.x);
   const right = Math.max(a.x, b.x);
-  const top = Math.min(yTarget, yStop);
-  const bottom = Math.max(yTarget, yStop);
-  if (
-    cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() &&
-    cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()
-  ) {
-    return { hit: "body" };
-  }
-  return null;
+  const line = (y: number): [Pt, Pt] => [{ x: left, y }, { x: right, y }];
+  if (onSegments(cursor, [line(a.y), line(yTarget), line(yStop)], tol)) return { hit: "body" };
+  return inBounds(cursor, left, Math.min(yTarget, yStop), right, Math.max(yTarget, yStop)) ? background() : null;
 }
 
 /** A segment continued past its ends to beyond the pane (TV extendleft /
@@ -295,25 +302,6 @@ function pitchforkHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, he
     const kmax = Math.max(...levels.map((l) => l.coeff));
     const b = { x: g.mid.x + g.dir.x, y: g.mid.y + g.dir.y };
     if (inBand(cursor, g.mid, b, g.half, -kmax, kmax, !!s.extendLines, true)) return background();
-  }
-  return null;
-}
-
-/** Trend-based fib extension: pts 0-1 are the measured move, pt2 the projection
- *  anchor. Hit an endpoint or anywhere within the projected band. */
-function fibExtHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
-  const h = endpointHit(pts, cursor);
-  if (h) return h;
-  const s = drawing.style;
-  const left = s.extendLeft ? -Infinity : Math.min(pts[1].x, pts[2].x);
-  const right = s.extendRight ? Infinity : Math.max(pts[1].x, pts[2].x);
-  const top = Math.min(pts[0].y, pts[1].y, pts[2].y);
-  const bottom = Math.max(pts[0].y, pts[1].y, pts[2].y);
-  if (
-    cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() &&
-    cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()
-  ) {
-    return { hit: "body" };
   }
   return null;
 }
@@ -555,33 +543,59 @@ function circleHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitRes
   return d < r && filled(drawing) ? background() : null;
 }
 
-function priceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number): HitResult | null {
+/* Range tools (scene/ranges.ts): the anchors, the drawn lines (borders and
+ * distance lines), then the box as a background hit, grabbed when selected
+ * like the rectangle. The box stays a target with the fill off: the scene
+ * keeps it a transparent pointer target. */
+
+function priceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, width: number, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   // TV: the box between the two prices over the P0-P1 x range (extend flags
-  // stretch it to the pane edges).
-  const left = drawing.style.extendLeft ? 0 : Math.min(pts[0].x, pts[1].x);
-  const right = drawing.style.extendRight ? width : Math.max(pts[0].x, pts[1].x);
-  const top = Math.min(pts[0].y, pts[1].y);
-  const bottom = Math.max(pts[0].y, pts[1].y);
-  if (cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() && cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()) {
-    return { hit: "body" };
-  }
-  return null;
+  // stretch it to the pane edges); the distance line at the middle x.
+  const [a, b] = pts;
+  const left = drawing.style.extendLeft ? 0 : Math.min(a.x, b.x);
+  const right = drawing.style.extendRight ? width : Math.max(a.x, b.x);
+  const midX = Math.round((a.x + b.x) / 2);
+  const lines: [Pt, Pt][] = [
+    [{ x: left, y: a.y }, { x: right, y: a.y }],
+    [{ x: left, y: b.y }, { x: right, y: b.y }],
+    [{ x: midX, y: a.y }, { x: midX, y: b.y }],
+  ];
+  if (onSegments(cursor, lines, tol)) return { hit: "body" };
+  return inBounds(cursor, left, Math.min(a.y, b.y), right, Math.max(a.y, b.y)) ? background() : null;
 }
 
-function dateRangeHit(pts: Pt[], cursor: Pt): HitResult | null {
+function dateRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, height: number, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
-  // TV: the box between the two times over the P0-P1 price range.
-  const left = Math.min(pts[0].x, pts[1].x);
-  const right = Math.max(pts[0].x, pts[1].x);
-  const top = Math.min(pts[0].y, pts[1].y);
-  const bottom = Math.max(pts[0].y, pts[1].y);
-  if (cursor.x >= left - hitTolerance() && cursor.x <= right + hitTolerance() && cursor.y >= top - hitTolerance() && cursor.y <= bottom + hitTolerance()) {
-    return { hit: "body" };
-  }
-  return null;
+  // TV: the box between the two times over the P0-P1 price range
+  // (extendTop / extendBottom: to the pane edge); the distance line at the
+  // middle y.
+  const [a, b] = pts;
+  const top = drawing.style.extendTop ? 0 : Math.min(a.y, b.y);
+  const bottom = drawing.style.extendBottom ? height : Math.max(a.y, b.y);
+  const midY = Math.round((a.y + b.y) / 2);
+  const lines: [Pt, Pt][] = [
+    [{ x: a.x, y: top }, { x: a.x, y: bottom }],
+    [{ x: b.x, y: top }, { x: b.x, y: bottom }],
+    [{ x: a.x, y: midY }, { x: b.x, y: midY }],
+  ];
+  if (onSegments(cursor, lines, tol)) return { hit: "body" };
+  return inBounds(cursor, Math.min(a.x, b.x), top, Math.max(a.x, b.x), bottom) ? background() : null;
+}
+
+function dateAndPriceRangeHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
+  const h = endpointHit(pts, cursor);
+  if (h) return h;
+  // TV: the two distance lines through the middle; the border only with
+  // drawBorder (off by default).
+  const [a, b] = pts;
+  const midX = Math.round((a.x + b.x) / 2);
+  const midY = Math.round((a.y + b.y) / 2);
+  if (onSegments(cursor, [[{ x: a.x, y: midY }, { x: b.x, y: midY }], [{ x: midX, y: a.y }, { x: midX, y: b.y }]], tol)) return { hit: "body" };
+  if (drawing.style.drawBorder && onOutline(cursor, bboxCorners(a, b), tol)) return { hit: "body" };
+  return inBounds(cursor, Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)) ? background() : null;
 }
 
 /** Rotated rectangle: pts 0-1 are one edge; pt2 sets the perpendicular width. */
@@ -719,16 +733,43 @@ function trendFibTimeHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number, c
   return null;
 }
 
-/** Gann squares: the anchors, then the box (levels / fans / arcs cover it). */
-function gannSquareHit(drawing: Drawing, pts: Pt[], cursor: Pt): HitResult | null {
+/** Gann squares (kinds/gann-square, as drawn): the anchors, the level, fan
+ *  and arc lines (the arcs clipped to the box), then the gaps inside the box
+ *  as a background hit while the fill is on (not grabbed when selected). */
+function gannSquareHit(drawing: Drawing, pts: Pt[], cursor: Pt, tol: number): HitResult | null {
   const h = endpointHit(pts, cursor);
   if (h) return h;
   const f = gannFrame(drawing, pts);
   if (!f) return null;
+  const s = drawing.style;
   const b = gannBox(f);
-  return cursor.x >= b.left - hitTolerance() && cursor.x <= b.right + hitTolerance() && cursor.y >= b.top - hitTolerance() && cursor.y <= b.bottom + hitTolerance()
-    ? { hit: "body" }
-    : null;
+  const lines: [Pt, Pt][] = [];
+  for (const l of gannLevelLines(f, s.gannLevels ?? GANN_LEVEL_DEFAULTS)) {
+    lines.push([{ x: l.x, y: f.start.y }, { x: l.x, y: f.end.y }], [{ x: f.start.x, y: l.y }, { x: f.end.x, y: l.y }]);
+  }
+  for (const l of gannFanLines(f, s.gannFans ?? GANN_FAN_DEFAULTS)) lines.push([l.from, l.to]);
+  if (onSegments(cursor, lines, tol)) return { hit: "body" };
+  const inside = inBounds(cursor, b.left, b.top, b.right, b.bottom);
+  if (inside && gannArcs(f, s.gannArcs ?? GANN_ARC_DEFAULTS).some((a) => polylineHit(gannArcSamples(f, a.r), cursor, tol))) return { hit: "body" };
+  return inside && filled(drawing) ? background() : null;
+}
+
+/** Gann box (kinds/gann-box, as drawn): the four corners, the price / time
+ *  level lines and the angle lines, then the gaps inside the box as a
+ *  background hit while either fill is on (not grabbed when selected). */
+function gannBoxHit(drawing: Drawing, pts: Pt[], cursor: Pt, coords: Coords | null, tol: number): HitResult | null {
+  const ch = endpointHit(bboxCorners(pts[0], pts[1]), cursor);
+  if (ch) return ch;
+  const g = gannBoxGeom(drawing, pts, coords);
+  const lines: [Pt, Pt][] = [
+    ...g.h.map((l): [Pt, Pt] => [{ x: g.left, y: l.y }, { x: g.right, y: l.y }]),
+    ...g.v.map((l): [Pt, Pt] => [{ x: l.x, y: g.top }, { x: l.x, y: g.bottom }]),
+    ...g.fanLines,
+  ];
+  if (onSegments(cursor, lines, tol)) return { hit: "body" };
+  const s = drawing.style;
+  const fill = s.fillBackground !== false || s.fillVertBackground !== false;
+  return fill && inBounds(cursor, g.left, g.top, g.right, g.bottom) ? background() : null;
 }
 
 /** Sector: the anchors, the edges, the arc, then the filled wedge. */
@@ -1183,13 +1224,13 @@ function hitTestKindOf(
       return forecastHit(pts, cursor, tol);
     case "long-position":
     case "short-position":
-      return positionHit(drawing, pts, cursor, coords);
+      return grabbedWhenSelected(positionHit(drawing, pts, cursor, coords, tol), selected);
     case "bar-pattern":
       return barsPatternHit(drawing, pts, cursor, coords, tol);
     case "ghost-feed":
       return ghostFeedHit(drawing, pts, cursor, coords);
     case "gann-box":
-      return rectangleHit(pts, cursor);
+      return gannBoxHit(drawing, pts, cursor, coords, tol);
     case "gann-fan":
       return gannFanHit(drawing, pts, cursor, width, height);
     case "fib-time-zone":
@@ -1206,7 +1247,7 @@ function hitTestKindOf(
       return trendFibTimeHit(drawing, pts, cursor, tol, coords);
     case "gann-square-fixed":
     case "gann-square":
-      return gannSquareHit(drawing, pts, cursor);
+      return gannSquareHit(drawing, pts, cursor, tol);
     case "sector":
       return sectorHit(drawing, pts, cursor, tol);
     case "fib-speed-resistance-arcs":
@@ -1346,9 +1387,8 @@ function hitTestKindOf(
     case "rotated-rectangle":
       return rotatedRectHit(drawing, pts, cursor, tol);
     case "trend-based-fib-extension":
-      return fibExtHit(drawing, pts, cursor);
     case "fib-retracement":
-      return fibHit(drawing, pts, cursor);
+      return fibLevelsHit(drawing, pts, cursor, width, coords, tol);
     case "rectangle":
       return grabbedWhenSelected(rectangleToolHit(drawing, pts, cursor, coords?.timeAxis().width || width, tol), selected);
     case "circle":
@@ -1356,12 +1396,12 @@ function hitTestKindOf(
     case "ellipse":
       return grabbedWhenSelected(ellipse3Hit(drawing, pts, cursor, tol), selected);
     case "price-range":
-      return priceRangeHit(drawing, pts, cursor, width);
+      return grabbedWhenSelected(priceRangeHit(drawing, pts, cursor, width, tol), selected);
     case "date-range":
-      return dateRangeHit(pts, cursor);
+      return grabbedWhenSelected(dateRangeHit(drawing, pts, cursor, height, tol), selected);
     case "date-and-price-range":
       // TV: 2 anchors (P0, P1) + the box.
-      return dateRangeHit(pts, cursor);
+      return grabbedWhenSelected(dateAndPriceRangeHit(drawing, pts, cursor, tol), selected);
     case "triangle":
       return triangleHit(drawing, pts, cursor, tol);
   }
