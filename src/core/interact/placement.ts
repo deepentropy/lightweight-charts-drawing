@@ -17,7 +17,7 @@ import { projectPoint, screenAngleDeg, unproject } from "./project";
  *  clicked), without repeating the cursor up to the full point count: a
  *  repeated point is a zero leg. Every other fixed-arity kind previews the
  *  real tool with the cursor standing in for all unplaced points. */
-export const SEGMENT_PREVIEW_KINDS = new Set<DrawingKind>([
+export const PARTIAL_PREVIEW_KINDS = new Set<DrawingKind>([
   "abcd-pattern", "xabcd-pattern", "cypher-pattern", "head-and-shoulders",
   "triangle-pattern", "three-drives-pattern",
   "elliott-impulse", "elliott-correction", "elliott-triangle",

@@ -19,6 +19,12 @@ const place = (s: S, x: number, y: number) => {
   s.win.dispatchEvent(ptr("pointerup", "mouse", x, y));
 };
 const hover = (s: S, x: number, y: number) => s.el.dispatchEvent(ptr("pointermove", "mouse", x, y));
+/** Setup whose document can measure caption pills (no canvas: the width falls back to a per-char estimate). */
+const setupWithText = (): S => {
+  const s = setup();
+  (s.doc as unknown as { createElement: () => unknown }).createElement = () => ({ getContext: () => null });
+  return s;
+};
 
 describe("pattern placement preview", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -80,9 +86,18 @@ describe("pattern placement preview", () => {
     expect(texts(s)).toEqual(expect.arrayContaining(["X", "A"]));
   });
 
+  it("head and shoulders before its 7th point: the finished drawing's caption words, never the LS / H / RS shorthand", () => {
+    const s = setupWithText();
+    s.dm.setTool("head-and-shoulders");
+    for (const [x, y] of [[100, 400], [150, 250], [200, 350], [250, 150]]) place(s, x, y);
+    hover(s, 300, 350);
+    expect(texts(s)).toEqual(expect.arrayContaining(["Left Shoulder", "Head"]));
+    expect(texts(s).filter((t) => ["LS", "H", "RS"].includes(t))).toEqual([]);
+  });
+
   it("head and shoulders and the triangle pattern preview without errors before their full count", () => {
     for (const kind of ["head-and-shoulders", "triangle-pattern"] as const) {
-      const s = setup();
+      const s = setupWithText();
       s.dm.setTool(kind);
       place(s, 100, 400);
       place(s, 150, 200);

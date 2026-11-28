@@ -22,8 +22,6 @@ export const KIND_LABELS: Record<string, readonly string[]> = {
   "xabcd-pattern": ["X", "A", "B", "C", "D"],
   "cypher-pattern": ["X", "A", "B", "C", "D"],
   "abcd-pattern": ["A", "B", "C", "D"],
-  // 7 points (TV): labels only at the left shoulder / head / right shoulder.
-  "head-and-shoulders": ["", "LS", "", "H", "", "RS", ""],
   "triangle-pattern": ["A", "B", "C", "D"],
   "three-drives-pattern": ["1", "2", "3", "4", "5", "6", "7"],
   // Elliott label sets start at "0" (TV; the first click is the wave origin).
@@ -395,7 +393,19 @@ export function smoothBrush(pts: Pt[], smooth = 5): Pt[] {
  *  wide semi-transparent marker stroke. */
 export function sceneLabeledPolyline(d: Drawing, pts: Pt[], selected: boolean, s: DrawingStyle, coords: Coords | null = null): Scene {
   if (d.kind === "triangle-pattern" && pts.length >= 4) return sceneTrianglePattern(pts, selected, s);
-  if (d.kind === "head-and-shoulders" && pts.length >= 7) return sceneHeadAndShoulders(pts, selected, s, coords);
+  if (d.kind === "head-and-shoulders") {
+    if (pts.length >= 7) return sceneHeadAndShoulders(pts, selected, s, coords);
+    // Unfinished (the placement preview): the polyline and the captions of the shoulders / head
+    // already placed, worded and routed exactly like the finished drawing's.
+    const p = pillText(s);
+    const out: Scene = [hitPolyline(pts), { t: "polyline", pts, fill: "none", stroke: s.color, strokeWidth: s.width, dash: dashFor(s), join: "round" }];
+    (["Left Shoulder", "Head", "Right Shoulder"] as const).forEach((text, k) => {
+      const i = 2 * k + 1;
+      if (pts[i]) out.push(hnsPill(pts[i], pts[i].y < pts[i - 1].y, labelOrDefault(coords, { id: "caption", text }), p));
+    });
+    if (selected) out.push({ t: "anchors", pts });
+    return out;
+  }
   if (d.kind === "abcd-pattern" && pts.length >= 2) return sceneAbcdPattern(d, pts, selected, s);
   if ((d.kind === "xabcd-pattern" || d.kind === "cypher-pattern") && pts.length >= 2) return sceneXabcdPattern(d, pts, selected, s);
   if (d.kind === "three-drives-pattern" && pts.length >= 2) return sceneThreeDrives(d, pts, selected, s);

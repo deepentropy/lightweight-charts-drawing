@@ -27,7 +27,7 @@ import type { Scene } from "../core/scene/types";
 import { parseDrawings } from "../core/serialize";
 import { DRAG_THRESHOLD, FREEHAND_SAMPLE_PX, MIN_DISTANCE_BETWEEN_POINTS, TAP_MAX_DURATION, TAP_SLOP } from "../core/interact/constants";
 import { magnetSnap, magnetSnapSource, projectAll, projectPoint, screenPoints, translateDrawing, unproject } from "../core/interact/project";
-import { buildNewDrawing, finishPlacement, SEGMENT_PREVIEW_KINDS, snapGannSquare } from "../core/interact/placement";
+import { buildNewDrawing, finishPlacement, PARTIAL_PREVIEW_KINDS, snapGannSquare } from "../core/interact/placement";
 import { lockAxisDelta, shiftPlacementPoint } from "../core/interact/shift";
 import { anchorCursor, applyDrag, type DragState } from "../core/interact/drag";
 import { toggleAnchored as toggleAnchoredDrawing } from "../core/interact/anchor";
@@ -1214,7 +1214,7 @@ export class DrawingManager {
     const style = defaultStyleFor(spec.kind);
     const cur = this.aimAt(raw);
     const dots: Scene = placed.map((pt) => ({ t: "circle", cx: pt.x, cy: pt.y, r: 3, fill: style.color }));
-    if (!spec.variableLength && !spec.freehand && !SEGMENT_PREVIEW_KINDS.has(spec.kind) && placed.length === p.length && placed.length < spec.pointCount) {
+    if (!spec.variableLength && !spec.freehand && !PARTIAL_PREVIEW_KINDS.has(spec.kind) && placed.length === p.length && placed.length < spec.pointCount) {
       const cur0 = this.dataAt(cur);
       const sh = cur0 && this.shift ? shiftPlacementPoint(spec.kind, p, cur0, c) : null;
       const curData = sh ? sh.point : cur0;
@@ -1229,7 +1229,7 @@ export class DrawingManager {
         if (d && screen) return [...sceneOf(d, screen, { w, h, coords: c, selected: false }), ...dots];
       }
     }
-    if (SEGMENT_PREVIEW_KINDS.has(spec.kind) && placed.length === p.length && placed.length < spec.pointCount) {
+    if (PARTIAL_PREVIEW_KINDS.has(spec.kind) && placed.length === p.length && placed.length < spec.pointCount) {
       // The real tool over the placed points plus the cursor, never padded to the full count: a
       // repeated point is a zero leg (∞ ratio). A cursor still on the last vertex adds nothing.
       const cur0 = this.dataAt(cur);
