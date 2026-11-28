@@ -1200,8 +1200,9 @@ export class DrawingManager {
   }
 
   /** The live placement preview: the real tool with the cursor standing in
-   *  for the unplaced points (TV), the real freehand stroke, or the segment
-   *  rubber band (patterns, Elliott, variable-length tools). */
+   *  for the unplaced points (TV), the pattern / Elliott tool over the placed
+   *  points plus the cursor, the real freehand stroke, or the segment rubber
+   *  band (variable-length tools). */
   private previewScene(w: number, h: number): Scene | null {
     const spec = this.spec;
     const p = this.pending;
@@ -1226,6 +1227,18 @@ export class DrawingManager {
         const d = nd ? ({ ...nd, id: "__preview__", style } as Drawing) : null;
         const screen = d ? projectAll(c, d.points) : null;
         if (d && screen) return [...sceneOf(d, screen, { w, h, coords: c, selected: false }), ...dots];
+      }
+    }
+    if (SEGMENT_PREVIEW_KINDS.has(spec.kind) && placed.length === p.length && placed.length < spec.pointCount) {
+      // The real tool over the placed points plus the cursor, never padded to the full count: a
+      // repeated point is a zero leg (∞ ratio). A cursor still on the last vertex adds nothing.
+      const cur0 = this.dataAt(cur);
+      const last = placed[placed.length - 1];
+      const pts = cur0 && Math.hypot(cur.x - last.x, cur.y - last.y) >= 1 ? [...p, cur0] : p;
+      const screen = pts.length >= 2 ? projectAll(c, pts) : null;
+      if (screen) {
+        const d = { id: "__preview__", kind: spec.kind, points: pts, style } as Drawing;
+        return [...sceneOf(d, screen, { w, h, coords: c, selected: false }), ...dots];
       }
     }
     if (spec.freehand && placed.length >= 2) {

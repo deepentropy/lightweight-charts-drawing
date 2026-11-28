@@ -12,9 +12,11 @@ import { defaultStyleFor } from "../specs";
 import { barsBetween } from "../kinds/data-series";
 import { projectPoint, screenAngleDeg, unproject } from "./project";
 
-/** Pattern / Elliott polylines keep the plain-segment rubber-band while
- *  placing (TV also shows connected segments for these, not the finished
- *  labeled shape); every other fixed-arity kind previews the REAL tool. */
+/** Pattern / Elliott tools preview the real tool over the points placed so
+ *  far plus the cursor (TV fills X-A-B and shows its ratio before B is
+ *  clicked), without repeating the cursor up to the full point count: a
+ *  repeated point is a zero leg. Every other fixed-arity kind previews the
+ *  real tool with the cursor standing in for all unplaced points. */
 export const SEGMENT_PREVIEW_KINDS = new Set<DrawingKind>([
   "abcd-pattern", "xabcd-pattern", "cypher-pattern", "head-and-shoulders",
   "triangle-pattern", "three-drives-pattern",

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Changed
+
+- Pattern and Elliott tools (XABCD, Cypher, ABCD, head and shoulders, triangle pattern, three
+  drives, the five Elliott waves): the placement preview is the real tool over the points placed
+  so far plus the cursor, like TV, instead of a bare rubber band. The fills, ratios and labels of
+  the legs that already exist show while the next vertex is aimed (XABCD: the X-A-B triangle and
+  its ratio before B is clicked). The cursor is not repeated up to the full point count, and a
+  cursor still on the last vertex adds no leg, so no zero leg or `∞` ratio flashes. Head and
+  shoulders and the triangle pattern keep a labeled line until their full count, as their finished
+  scene needs all points. The stored drawing is unchanged.
+
 ### Fixed
 
 - Level, grid and box tools (#40): a mouse press inside them no longer always grabs the drawing.
